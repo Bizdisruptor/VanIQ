@@ -409,6 +409,22 @@ function drawGrid(ctx, VW, VL) {
   ctx.textAlign = 'left';
   ctx.font = `bold ${Math.max(7, S * 1.4)}px 'Space Mono', monospace`;
   ctx.fillText('CL', ox + px(VL) + 4, oy + px(VW/2) + 3);
+
+  // Van shell outline
+  ctx.strokeStyle = 'rgba(255,255,255,.55)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([]);
+  ctx.strokeRect(ox, oy, px(VL), px(VW));
+
+  // Front wall (cab bulkhead)
+  ctx.strokeStyle = 'rgba(255,255,255,.35)';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox, oy + px(VW)); ctx.stroke();
+
+  // Rear wall
+  ctx.strokeStyle = 'rgba(232,160,32,.5)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(ox + px(VL), oy); ctx.lineTo(ox + px(VL), oy + px(VW)); ctx.stroke();
 }
 
 function makeSVG(w, h) {
@@ -732,21 +748,29 @@ function jumpToViolation(modId) {
 function openAdd() {
   selId = null;
   resetEditForm();
-  document.getElementById('edit-overlay').style.display = 'flex';
-  document.getElementById('edit-modal-title').textContent = '+ Add Module';
+  document.getElementById('moverlay').classList.add('open');
+  document.getElementById('modal-title').textContent = '+ Add Module';
+  document.getElementById('modal-del-btn').style.display = 'none';
+  document.getElementById('modal-dup-btn').style.display = 'none';
 }
 
 function openEdit() {
   const m = modules.find(x => x.id === selId);
   if (!m) return;
   populateEditForm(m);
-  document.getElementById('edit-overlay').style.display = 'flex';
-  document.getElementById('edit-modal-title').textContent = 'Edit: ' + m.name;
+  document.getElementById('moverlay').classList.add('open');
+  document.getElementById('modal-title').textContent = 'Edit: ' + m.name;
+  document.getElementById('modal-del-btn').style.display = 'inline-block';
+  document.getElementById('modal-dup-btn').style.display = 'inline-block';
   toggleAnchorFields();
 }
 
+function closeModalOut(e) {
+  if (e.target === document.getElementById('moverlay')) closeEdit();
+}
+
 function closeEdit() {
-  document.getElementById('edit-overlay').style.display = 'none';
+  document.getElementById('moverlay').classList.remove('open');
 }
 
 function resetEditForm() {
@@ -1344,12 +1368,12 @@ function importBuild() {
 // ── Project Modal ─────────────────────────────────────────────────────────────
 
 function openProjectModal() {
-  document.getElementById('proj-overlay').style.display = 'flex';
+  document.getElementById('proj-overlay').classList.add('open');
   renderProjList();
 }
 
 function closeProjModal() {
-  document.getElementById('proj-overlay').style.display = 'none';
+  document.getElementById('proj-overlay').classList.remove('open');
 }
 
 function closeProjModalOut(e) {
@@ -1436,12 +1460,12 @@ const MODULE_LIBRARY = [
 ];
 
 function openLibrary() {
-  document.getElementById('lib-overlay').style.display = 'flex';
+  document.getElementById('lib-overlay').classList.add('open');
   renderLibrary();
 }
 
 function closeLibrary() {
-  document.getElementById('lib-overlay').style.display = 'none';
+  document.getElementById('lib-overlay').classList.remove('open');
 }
 
 function renderLibrary() {
@@ -1486,7 +1510,10 @@ function addFromLibrary(idx) {
 
 function toggleResMenu() {
   const menu = document.getElementById('res-menu');
-  if (menu) menu.classList.toggle('open');
+  const btn  = document.getElementById('res-btn');
+  if (!menu) return;
+  const isOpen = menu.classList.toggle('open');
+  if (btn) btn.classList.toggle('open', isOpen);
 }
 
 // Close resources menu on outside click
@@ -1494,6 +1521,7 @@ document.addEventListener('click', e => {
   const wrap = document.getElementById('res-wrap');
   if (wrap && !wrap.contains(e.target)) {
     document.getElementById('res-menu')?.classList.remove('open');
+    document.getElementById('res-btn')?.classList.remove('open');
   }
 });
 
