@@ -44,6 +44,7 @@ const PAD = 70, OY = 50; // ruler padding
 // Projects array (in-memory for free users, synced to DB for paid)
 let projects = [];
 let currentProjectIdx = 0;
+let inventory = [];
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
 
@@ -329,7 +330,9 @@ function setCrossY(v) {
 
 function setView(v) {
   VIEW = v;
-  document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  document.querySelectorAll('.vtab').forEach(b => b.classList.remove('active'));
+  const tab = document.getElementById('tab-' + v);
+  if (tab) tab.classList.add('active');
   renderCurrentView();
 }
 
@@ -405,6 +408,20 @@ function drawGrid(ctx, VW, VL) {
   ctx.textAlign = 'left';
   ctx.font = `bold ${Math.max(7, S * 1.4)}px 'Space Mono', monospace`;
   ctx.fillText('CL', ox + px(VL) + 4, oy + px(VW/2) + 3);
+
+  // Van shell outline
+  ctx.strokeStyle = 'rgba(255,255,255,.6)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([]);
+  ctx.strokeRect(ox, oy, px(VL), px(VW));
+  // Front bulkhead
+  ctx.strokeStyle = 'rgba(255,255,255,.4)';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox, oy + px(VW)); ctx.stroke();
+  // Rear doors
+  ctx.strokeStyle = 'rgba(232,160,32,.5)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(ox + px(VL), oy); ctx.lineTo(ox + px(VL), oy + px(VW)); ctx.stroke();
 }
 
 function makeSVG(w, h) {
@@ -728,21 +745,29 @@ function jumpToViolation(modId) {
 function openAdd() {
   selId = null;
   resetEditForm();
-  document.getElementById('edit-overlay').style.display = 'flex';
-  document.getElementById('edit-modal-title').textContent = '+ Add Module';
+  document.getElementById('moverlay').classList.add('open');
+  document.getElementById('modal-title').textContent = '+ Add Module';
+  document.getElementById('modal-del-btn').style.display = 'none';
+  document.getElementById('modal-dup-btn').style.display = 'none';
 }
 
 function openEdit() {
   const m = modules.find(x => x.id === selId);
   if (!m) return;
   populateEditForm(m);
-  document.getElementById('edit-overlay').style.display = 'flex';
-  document.getElementById('edit-modal-title').textContent = 'Edit: ' + m.name;
+  document.getElementById('moverlay').classList.add('open');
+  document.getElementById('modal-title').textContent = 'Edit: ' + m.name;
+  document.getElementById('modal-del-btn').style.display = 'inline-block';
+  document.getElementById('modal-dup-btn').style.display = 'inline-block';
   toggleAnchorFields();
 }
 
 function closeEdit() {
-  document.getElementById('edit-overlay').style.display = 'none';
+  document.getElementById('moverlay').classList.remove('open');
+}
+
+function closeModalOut(e) {
+  if (e.target === document.getElementById('moverlay')) closeEdit();
 }
 
 function resetEditForm() {
@@ -1019,7 +1044,7 @@ function toggleAnchorPt(pt, btn) {
 
 // ── Elevation / Cross / Roof / Systems Views ──────────────────────────────────
 
-function renderElev() {
+function renderElev(side = "driver") {
   const refs = getTransitRefs();
   const VL = refs.vl, VH = refs.vh;
   const W = px(VL) + PAD + 20;
@@ -1135,18 +1160,25 @@ function renderSystems() {
 }
 
 function renderCurrentView() {
-  if      (VIEW === 'plan')    renderPlan();
-  else if (VIEW === 'elev')    renderElev();
-  else if (VIEW === 'cross')   renderCross();
-  else if (VIEW === 'roof')    renderRoof();
-  else if (VIEW === 'systems') renderSystems();
+  if      (VIEW === 'plan')                   renderPlan();
+  else if (VIEW === 'driver' || VIEW === 'elev') renderElev('driver');
+  else if (VIEW === 'pass')                   renderElev('pass');
+  else if (VIEW === 'cross')                  renderCross();
+  else if (VIEW === 'roof')                   renderRoof();
+  else if (VIEW === 'systems')                renderSystems();
 }
 
 // ── Sidebar Tabs ──────────────────────────────────────────────────────────────
 
 function lTab(tab) {
-  document.querySelectorAll('.lpanel-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-  document.querySelectorAll('.lpanel-section').forEach(s => s.style.display = s.dataset.section === tab ? 'block' : 'none');
+  document.querySelectorAll('.lptab').forEach(t => {
+    t.classList.toggle('active', t.id === 'lptab-' + tab);
+  });
+  document.querySelectorAll('.lp-panel').forEach(p => {
+    const pid = p.id?.replace('lp-', '');
+    p.classList.toggle('active', pid === tab);
+    p.style.display = pid === tab ? 'flex' : 'none';
+  });
 }
 
 // ── Export / Import / Share ───────────────────────────────────────────────────
@@ -1208,12 +1240,12 @@ function importBuild() {
 // ── Project Modal ─────────────────────────────────────────────────────────────
 
 function openProjectModal() {
-  document.getElementById('proj-overlay').style.display = 'flex';
+  document.getElementById('proj-overlay').classList.add('open');
   renderProjList();
 }
 
 function closeProjModal() {
-  document.getElementById('proj-overlay').style.display = 'none';
+  document.getElementById('proj-overlay').classList.remove('open');
 }
 
 function closeProjModalOut(e) {
@@ -1300,12 +1332,12 @@ const MODULE_LIBRARY = [
 ];
 
 function openLibrary() {
-  document.getElementById('lib-overlay').style.display = 'flex';
+  document.getElementById('lib-overlay').classList.add('open');
   renderLibrary();
 }
 
 function closeLibrary() {
-  document.getElementById('lib-overlay').style.display = 'none';
+  document.getElementById('lib-overlay').classList.remove('open');
 }
 
 function renderLibrary() {
@@ -1350,8 +1382,18 @@ function addFromLibrary(idx) {
 
 function toggleResMenu() {
   const menu = document.getElementById('res-menu');
-  if (menu) menu.classList.toggle('open');
+  const btn  = document.getElementById('res-btn');
+  if (!menu) return;
+  const isOpen = menu.classList.toggle('open');
+  if (btn) btn.classList.toggle('open', isOpen);
 }
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('res-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById('res-menu')?.classList.remove('open');
+    document.getElementById('res-btn')?.classList.remove('open');
+  }
+});
 
 async function loadGithubResources() {
   const inp = document.getElementById('res-gh-url');
@@ -1426,7 +1468,7 @@ document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
   if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveLayout(); }
   if (e.key === 'Escape') { desel(); closeEdit(); hideAuthModal(); hideUpgradeModal(); }
-  if (e.key === 'Delete' && selId && !document.getElementById('edit-overlay')?.style.display?.includes('flex')) {
+  if (e.key === 'Delete' && selId && !document.getElementById('moverlay')?.classList.contains('open')) {
     delMod();
   }
 });

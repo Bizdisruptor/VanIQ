@@ -1,6 +1,7 @@
 // js/db.js — VanIQ Project Database (Supabase)
 
-function getSB() { return window.supabase.createClient(VANIQ_CONFIG.supabase.url, VANIQ_CONFIG.supabase.anonKey); }
+// Use singleton from auth.js — never createClient here
+function getSB() { return getSupabase(); }
 
 // ── Projects ──────────────────────────────────────────────────────────────────
 
