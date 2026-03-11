@@ -1488,3 +1488,23 @@ async function init() {
 }
 
 window.addEventListener('load', init);
+
+// PATCH: fix lTab to use correct CSS classes
+function lTab(tab) {
+  document.querySelectorAll('.lptab').forEach(t => {
+    t.classList.toggle('active', t.id === 'lptab-' + tab);
+  });
+  document.querySelectorAll('.lp-panel').forEach(p => {
+    const pid = p.id?.replace('lp-', '');
+    p.classList.toggle('active', pid === tab);
+    p.style.display = pid === tab ? 'flex' : 'none';
+  });
+}
+
+// PATCH: fix resources menu close on outside click
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('res-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById('res-menu')?.classList.remove('open');
+  }
+});
