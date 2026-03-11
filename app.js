@@ -1598,7 +1598,7 @@ document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
   if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveLayout(); }
   if (e.key === 'Escape') { desel(); closeEdit(); hideAuthModal(); hideUpgradeModal(); document.getElementById('res-menu')?.classList.remove('open'); }
-  if (e.key === 'Delete' && selId && !document.getElementById('edit-overlay')?.style.display?.includes('flex')) {
+  if (e.key === 'Delete' && selId && !document.getElementById('moverlay')?.classList.contains('open')) {
     delMod();
   }
 });

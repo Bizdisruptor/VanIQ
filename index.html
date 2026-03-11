@@ -219,7 +219,7 @@
 
   <!-- INVENTORY -->
   <div class="lp-panel" id="lp-inv">
-    <div class="sec">Build Budget</div>
+    <div class="sec">Assets</div>
     <div id="inv-list"></div>
     <div class="inv-total" id="inv-total">—</div>
     <div style="padding:5px 7px;border-top:1px solid var(--panelborder)">
@@ -306,16 +306,16 @@
 <div class="modal">
   <h2 id="modal-title">Module</h2>
   <input type="hidden" id="edit-id"/>
-  <div class="field"><label>Name</label><input type="text" id="edit-name"/></div>
+  <div class="field"><label>Name</label><input type="text" id="mod-name"/></div>
   <div class="frow">
-    <div class="field"><label id="lbl-w">Width (in)</label><input type="number" id="edit-w" min="2"/></div>
-    <div class="field"><label id="lbl-d">Depth (in)</label><input type="number" id="edit-d" min="2"/></div>
-    <div class="field"><label>Height (in)</label><input type="number" id="edit-h" min="2"/></div>
+    <div class="field"><label id="lbl-w">Width (in)</label><input type="number" id="mod-w" min="2"/></div>
+    <div class="field"><label id="lbl-d">Depth (in)</label><input type="number" id="mod-d" min="2"/></div>
+    <div class="field"><label>Height (in)</label><input type="number" id="mod-h" min="2"/></div>
   </div>
   <div class="frow">
-    <div class="field"><label>Floor Z (in)</label><input type="number" id="edit-z" min="0"/></div>
+    <div class="field"><label>Floor Z (in)</label><input type="number" id="mod-z" min="0"/></div>
     <div class="field"><label>Category</label>
-      <select id="edit-cat">
+      <select id="mod-cat">
         <option value="utility">Utility (orange)</option>
         <option value="living">Living (green)</option>
         <option value="power">Power (blue)</option>
@@ -326,14 +326,14 @@
   </div>
   <div class="frow">
     <div class="field"><label>Side</label>
-      <select id="edit-side">
+      <select id="mod-side">
         <option value="driver">Driver</option>
         <option value="pass">Passenger</option>
         <option value="both">Full Width</option>
       </select>
     </div>
     <div class="field"><label>Layer</label>
-      <select id="edit-layer" onchange="updateDimLabels()">
+      <select id="mod-layer" onchange="updateDimLabels()">
         <option value="floor">Floor</option>
         <option value="overhead">Overhead</option>
         <option value="roof">Roof</option>
@@ -346,7 +346,7 @@
     <div class="anchor-modal-title">
       📌 Anchor / Lock Position
       <label style="display:flex;align-items:center;gap:5px;font-size:.62rem;font-weight:400;color:var(--pmuted);cursor:pointer">
-        <input type="checkbox" id="edit-anchor-on" style="accent-color:var(--pacc);width:13px;height:13px" onchange="toggleAnchorFields()">
+        <input type="checkbox" id="anchor-enabled" style="accent-color:var(--pacc);width:13px;height:13px" onchange="toggleAnchorFields()">
         Enable anchor
       </label>
     </div>
@@ -363,11 +363,11 @@
       <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px">
         <div class="field" style="margin:0">
           <label>Locked Front (in)</label>
-          <input type="number" id="edit-anchor-y" placeholder="from bulkhead" style="font-family:'Space Mono',monospace;font-size:.62rem"/>
+          <input type="number" id="anchor-y" placeholder="from bulkhead" style="font-family:'Space Mono',monospace;font-size:.62rem"/>
         </div>
         <div class="field" style="margin:0">
           <label>Locked Driver X (in)</label>
-          <input type="number" id="edit-anchor-x" placeholder="from driver wall" style="font-family:'Space Mono',monospace;font-size:.62rem"/>
+          <input type="number" id="anchor-x" placeholder="from driver wall" style="font-family:'Space Mono',monospace;font-size:.62rem"/>
         </div>
       </div>
     </div>
@@ -381,7 +381,7 @@
       <button class="tag-add-btn" onclick="addTag()">＋</button>
     </div>
   </div>
-  <div class="field"><label>Notes</label><textarea id="edit-notes"></textarea></div>
+  <div class="field"><label>Notes</label><textarea id="mod-notes"></textarea></div>
   <div class="field" style="border:1px solid rgba(192,120,48,.25);border-radius:3px;padding:8px;background:rgba(192,120,48,.04)">
     <label style="color:#c07830;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:6px;display:block">🌡 Contains Heater Unit</label>
     <div style="display:flex;align-items:center;gap:8px">
@@ -423,7 +423,7 @@
   <div class="mactions">
     <button class="mdelete" id="modal-del-btn" onclick="deleteEditMod()" style="display:none">Delete</button>
     <button class="mcancel" id="modal-dup-btn" onclick="dupFromModal()" style="display:none">⧉ Dupe</button>
-    <button class="mcancel" onclick="closeModal()">Cancel</button>
+    <button class="mcancel" onclick="closeEdit()">Cancel</button>
     <button class="msave" onclick="saveMod()">Save</button>
   </div>
 </div>
