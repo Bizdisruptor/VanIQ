@@ -18,7 +18,16 @@ const CAT = {
 const VAN_MODELS = {
   'Transit 130 LR':       { vw:78,  vl:130, vh:55,  bpillar:38, cargo:'LR', label:'Transit 130 Low Roof' },
   'Transit 130 MR':       { vw:78,  vl:130, vh:72,  bpillar:38, cargo:'MR', label:'Transit 130 Med Roof' },
-  'Transit 148 HR':       { vw:78,  vl:148, vh:83,  bpillar:42, cargo:'HR', label:'Transit 148 High Roof' },
+  'Transit 148 HR': { vw:78, vl:148, vh:83, bpillar:42, cargo:'HR', label:'Transit 148 High Roof',
+    // Structural references (inches from front bulkhead, driver wall)
+    ribs:      [0, 16, 32, 48, 64, 80, 96, 112, 128, 144, 148],   // floor ribs
+    wheelWellL: { y:78, d:36, x:0,  w:9  },   // driver wheel well (x from driver wall, y from front)
+    wheelWellR: { y:78, d:36, x:69, w:9  },   // pass wheel well
+    frameRails: [3, 75],                        // x positions of frame rails from driver wall
+    garageStart: 84,                            // where garage zone begins from front
+    cPillar:   108,                             // C-pillar position
+    dPillar:   132,                             // D-pillar position
+  },
   'Transit 148 EXT HR':   { vw:78,  vl:170, vh:83,  bpillar:42, cargo:'HR', label:'Transit 148 EXT HR' },
   'Sprinter 144 SR':      { vw:76,  vl:144, vh:67,  bpillar:40, cargo:'SR', label:'Sprinter 144 Std Roof' },
   'Sprinter 144 HR':      { vw:76,  vl:144, vh:79,  bpillar:40, cargo:'HR', label:'Sprinter 144 High Roof' },
@@ -470,14 +479,86 @@ function renderPlan() {
   cvs.style.position = 'absolute'; cvs.style.top = '0'; cvs.style.left = '0';
   wrap.appendChild(cvs);
 
-  // Slide door clearance zone (24" from B-pillar on pass side)
   const bpillar = refs.bpillar || 42;
+  const showRefs = document.getElementById('s-refs')?.checked !== false;
+
+  // SVG overlay for structural references
+  const svg = makeSVG(W, H);
+  wrap.appendChild(svg);
+
+  if (showRefs) {
+    const ox = PAD, oy = OY;
+
+    // Floor ribs
+    (refs.ribs || []).forEach(r => {
+      if (r === 0 || r >= VL) return;
+      const line = svgEl('line', { x1: ox+px(r), y1: oy, x2: ox+px(r), y2: oy+px(VW),
+        stroke:'rgba(255,255,255,.12)', 'stroke-width':'1', 'stroke-dasharray':'3,4' });
+      svg.appendChild(line);
+    });
+
+    // B-pillar
+    const bpx = ox + px(bpillar);
+    const bline = svgEl('line', { x1:bpx, y1:oy, x2:bpx, y2:oy+px(VW),
+      stroke:'rgba(74,176,224,.5)', 'stroke-width':'2' });
+    svg.appendChild(bline);
+    const btxt = svgText(bpx+3, oy+10, 'B', 'rgba(74,176,224,.7)', 8, 'start');
+    svg.appendChild(btxt);
+
+    // C-pillar
+    if (refs.cPillar) {
+      const cpx = ox + px(refs.cPillar);
+      svg.appendChild(svgEl('line', { x1:cpx, y1:oy, x2:cpx, y2:oy+px(VW),
+        stroke:'rgba(74,176,224,.35)', 'stroke-width':'1.5' }));
+      svg.appendChild(svgText(cpx+3, oy+10, 'C', 'rgba(74,176,224,.5)', 8, 'start'));
+    }
+
+    // D-pillar
+    if (refs.dPillar) {
+      const dpx = ox + px(refs.dPillar);
+      svg.appendChild(svgEl('line', { x1:dpx, y1:oy, x2:dpx, y2:oy+px(VW),
+        stroke:'rgba(74,176,224,.35)', 'stroke-width':'1.5' }));
+      svg.appendChild(svgText(dpx+3, oy+10, 'D', 'rgba(74,176,224,.5)', 8, 'start'));
+    }
+
+    // Wheel wells
+    [refs.wheelWellL, refs.wheelWellR].forEach(ww => {
+      if (!ww) return;
+      const wx = ox + px(ww.x), wy = oy + px(ww.y);
+      const wr = svgEl('rect', { x:wx, y:wy, width:px(ww.w), height:px(ww.d),
+        fill:'rgba(232,160,32,.08)', stroke:'rgba(232,160,32,.4)', 'stroke-width':'1.5',
+        rx:'2' });
+      svg.appendChild(wr);
+      svg.appendChild(svgText(wx+px(ww.w/2), wy+px(ww.d/2)+3, 'WW',
+        'rgba(232,160,32,.5)', 7));
+    });
+
+    // Frame rails
+    (refs.frameRails || []).forEach(rx => {
+      const fline = svgEl('line', {
+        x1: ox+px(rx), y1: oy, x2: ox+px(rx), y2: oy+px(VW),
+        stroke:'rgba(160,130,200,.25)', 'stroke-width':'2', 'stroke-dasharray':'6,3'
+      });
+      svg.appendChild(fline);
+    });
+
+    // Garage zone line
+    if (refs.garageStart) {
+      const gz = ox + px(refs.garageStart);
+      svg.appendChild(svgEl('line', { x1:gz, y1:oy, x2:gz, y2:oy+px(VW),
+        stroke:'rgba(232,160,32,.3)', 'stroke-width':'1', 'stroke-dasharray':'8,4' }));
+      svg.appendChild(svgText(gz+3, oy+px(VW)-4, 'GARAGE',
+        'rgba(232,160,32,.4)', 6, 'start'));
+    }
+  }
+
+  // Dropzone div (for module drag/drop)
   const dz = document.createElement('div');
   dz.id = 'plan-dropzone';
   dz.style.cssText = `position:absolute;left:${PAD}px;top:${OY}px;width:${px(VL)}px;height:${px(VW)}px;`;
   wrap.appendChild(dz);
 
-  // Slider door zone overlay
+  // Slide door clearance zone
   const slideZone = document.createElement('div');
   slideZone.style.cssText = `
     position:absolute;
@@ -488,7 +569,7 @@ function renderPlan() {
   `;
   const slideLabel = document.createElement('div');
   slideLabel.style.cssText = 'position:absolute;bottom:2px;left:2px;font-size:6px;color:rgba(82,200,122,.5);font-family:monospace;white-space:nowrap;';
-  slideLabel.textContent = '24" clear';
+  slideLabel.textContent = '24\" clear';
   slideZone.appendChild(slideLabel);
   dz.appendChild(slideZone);
 
