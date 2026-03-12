@@ -23,13 +23,16 @@ const CAT = {
 const VAN_MODELS = {
   'Transit 130 LR':       { vw:78,  vl:130, vh:55,  bpillar:38, cargo:'LR', label:'Transit 130 Low Roof' },
   'Transit 130 MR':       { vw:78,  vl:130, vh:72,  bpillar:38, cargo:'MR', label:'Transit 130 Med Roof' },
-  'Transit 148 HR': { vw:78, vl:148, vh:83, bpillar:42, cargo:'HR', label:'Transit 148 High Roof',
-    // Structural references (inches from front bulkhead, driver wall)
-    ribs:      [0, 16, 32, 48, 64, 80, 96, 112, 128, 144, 148],   // floor ribs
-    wheelWellL: { y:78, d:36, x:0,  w:9  },   // driver wheel well (x from driver wall, y from front)
-    wheelWellR: { y:78, d:36, x:69, w:9  },   // pass wheel well
-    frameRails: [3, 75],                        // x positions of frame rails from driver wall
-    garageStart: 84,                            // where garage zone begins from front
+  'Transit 148 HR': { vw:70, vl:145, vh:83, bpillar:42, cargo:'HR', label:'Transit 148 High Roof',
+    // Structural references — PDF-accurate (Kargomaster + AVC Rig Transit 148 LWB)
+    // vl:145 = interior cargo length (Kargomaster PDF); vw:70 = insulated wall-to-wall width
+    // Coord convention: y=position along LENGTH from bulkhead, x=position along WIDTH from driver wall
+    ribs:      [0, 16, 32, 48, 64, 80, 96, 112, 128, 144],        // floor ribs
+    wheelWellL: { y:67, d:30, x:0,  w:11 },   // driver well: 30"L × 11"W, starts 67" from bulkhead
+    wheelWellR: { y:67, d:30, x:59, w:11 },   // pass well: same, x=vw-w=70-11=59
+    frameRails: [3, 67],                        // frame rail x positions from driver wall
+    garageStart: 85,                            // garage zone starts from rear (rear doors end)
+    slideDoor:  { yStart:42, yEnd:90 },         // slide door 42"–90" from bulkhead (48" opening)
     cPillar:   108,                             // C-pillar position
     dPillar:   132,                             // D-pillar position
   },
@@ -218,7 +221,7 @@ function projectSnapshot() {
 }
 
 async function loadProjectById(id) {
-  if (!canSave()) return; // free users can't load
+  if (!canSave()) return;
   const proj = await dbGetProject(id);
   if (!proj) return;
   currentDbProjectId = proj.id;
@@ -361,36 +364,32 @@ function makeCanvas(w, h) {
 }
 
 function drawGrid(ctx, VW, VL) {
-  const W = px(VL) + PAD;
-  const H = px(VW) + OY + 20;
+  const refs = getTransitRefs();
+  const ox = PAD, oy = OY;
+  const W  = px(VL) + PAD + 20;
+  const H  = px(VW) + OY + 30;
+
   ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--canvas') || '#12121a';
   ctx.fillRect(0, 0, W, H);
 
-  const ox = PAD, oy = OY;
-
   // Minor grid (6")
-  ctx.strokeStyle = 'rgba(255,255,255,.04)';
-  ctx.lineWidth = 0.5;
-  for (let x = 0; x <= VL; x += 6) { ctx.beginPath(); ctx.moveTo(ox + px(x), oy); ctx.lineTo(ox + px(x), oy + px(VW)); ctx.stroke(); }
-  for (let y = 0; y <= VW; y += 6) { ctx.beginPath(); ctx.moveTo(ox, oy + px(y)); ctx.lineTo(ox + px(VL), oy + px(y)); ctx.stroke(); }
+  ctx.strokeStyle = 'rgba(255,255,255,.04)'; ctx.lineWidth = 0.5;
+  for (let x = 0; x <= VL; x += 6) { ctx.beginPath(); ctx.moveTo(ox+px(x), oy); ctx.lineTo(ox+px(x), oy+px(VW)); ctx.stroke(); }
+  for (let y = 0; y <= VW; y += 6) { ctx.beginPath(); ctx.moveTo(ox, oy+px(y)); ctx.lineTo(ox+px(VL), oy+px(y)); ctx.stroke(); }
 
   // Major grid (12" / 1 ft)
-  ctx.strokeStyle = 'rgba(255,255,255,.09)';
-  ctx.lineWidth = 1;
-  for (let x = 0; x <= VL; x += 12) { ctx.beginPath(); ctx.moveTo(ox + px(x), oy); ctx.lineTo(ox + px(x), oy + px(VW)); ctx.stroke(); }
-  for (let y = 0; y <= VW; y += 12) { ctx.beginPath(); ctx.moveTo(ox, oy + px(y)); ctx.lineTo(ox + px(VL), oy + px(y)); ctx.stroke(); }
+  ctx.strokeStyle = 'rgba(255,255,255,.09)'; ctx.lineWidth = 1;
+  for (let x = 0; x <= VL; x += 12) { ctx.beginPath(); ctx.moveTo(ox+px(x), oy); ctx.lineTo(ox+px(x), oy+px(VW)); ctx.stroke(); }
+  for (let y = 0; y <= VW; y += 12) { ctx.beginPath(); ctx.moveTo(ox, oy+px(y)); ctx.lineTo(ox+px(VL), oy+px(y)); ctx.stroke(); }
 
-  // Centerline X (driver/pass midpoint)
-  const cxPx = ox + px(VW / 2);
-  ctx.strokeStyle = 'rgba(74,176,224,.35)';
-  ctx.lineWidth = 1;
+  // Centerline (driver/pass midpoint)
+  ctx.strokeStyle = 'rgba(74,176,224,.35)'; ctx.lineWidth = 1;
   ctx.setLineDash([4, 4]);
-  ctx.beginPath(); ctx.moveTo(ox, oy + px(VW/2)); ctx.lineTo(ox + px(VL), oy + px(VW/2)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox, oy+px(VW/2)); ctx.lineTo(ox+px(VL), oy+px(VW/2)); ctx.stroke();
   ctx.setLineDash([]);
 
-  // Top ruler (length axis — front to rear)
-  ctx.fillStyle = 'rgba(255,255,255,.35)';
-  ctx.font = `${Math.max(7, S * 1.6)}px 'Space Mono', monospace`;
+  // Top ruler (length axis — rear to front/bulkhead)
+  ctx.font = Math.max(7, S * 1.6) + "px 'Space Mono', monospace";
   ctx.textAlign = 'center';
   for (let x = 0; x <= VL; x += (S < 2 ? 24 : S < 3 ? 12 : 6)) {
     const xp = ox + px(x);
@@ -398,11 +397,11 @@ function drawGrid(ctx, VW, VL) {
     ctx.fillRect(xp, oy - 6, 1, 6);
     if (x % 12 === 0) {
       ctx.fillStyle = 'rgba(255,255,255,.5)';
-      ctx.fillText(`${x}"`, xp, oy - 9);
+      ctx.fillText(x + '"', xp, oy - 9);
     }
   }
 
-  // Left ruler (width axis — with CL = 0)
+  // Left ruler (width axis — CL relative)
   ctx.textAlign = 'right';
   const CLy = VW / 2;
   for (let y = 0; y <= VW; y += (S < 2 ? 12 : 6)) {
@@ -412,30 +411,153 @@ function drawGrid(ctx, VW, VL) {
     ctx.fillRect(ox - 6, yp, 6, 1);
     if (y % 12 === 0 || Math.abs(offset) < 1) {
       ctx.fillStyle = offset === 0 ? 'rgba(74,176,224,.8)' : 'rgba(255,255,255,.45)';
-      const label = offset === 0 ? '±0' : (offset > 0 ? `+${offset}` : `${offset}`);
+      const label = offset === 0 ? '+-0' : (offset > 0 ? '+' + offset : '' + offset);
       ctx.fillText(label, ox - 8, yp + 3);
     }
   }
 
-  // CL label
-  ctx.fillStyle = 'rgba(74,176,224,.7)';
-  ctx.textAlign = 'left';
-  ctx.font = `bold ${Math.max(7, S * 1.4)}px 'Space Mono', monospace`;
-  ctx.fillText('CL', ox + px(VL) + 4, oy + px(VW/2) + 3);
+  // Floor interior fill
+  ctx.fillStyle = 'rgba(255,255,255,.02)';
+  ctx.fillRect(ox, oy, px(VL), px(VW));
 
-  // Van shell outline
-  ctx.strokeStyle = 'rgba(255,255,255,.6)';
-  ctx.lineWidth = 2;
+  // ── Wheel wells ──
+  // Coordinate convention:
+  //   ww.y = position along LENGTH axis from bulkhead  → maps to canvas x: ox + px(ww.y)
+  //   ww.x = position along WIDTH axis from driver wall → maps to canvas y: oy + px(ww.x)
+  //   ww.d = fore-aft depth (LENGTH axis)              → canvas width:  px(ww.d)
+  //   ww.w = wall intrusion (WIDTH axis)               → canvas height: px(ww.w)
+  [refs.wheelWellL, refs.wheelWellR].forEach(function(ww) {
+    if (!ww) return;
+    const cx = ox + px(ww.y);   // canvas x = length position
+    const cy = oy + px(ww.x);   // canvas y = width position (0 = driver wall)
+    const cw = px(ww.d);         // canvas width = fore-aft depth
+    const ch = px(ww.w);         // canvas height = wall intrusion
+
+    // Diagonal hatch fill
+    ctx.save();
+    ctx.beginPath(); ctx.rect(cx, cy, cw, ch); ctx.clip();
+    ctx.strokeStyle = 'rgba(232,160,32,.28)'; ctx.lineWidth = 1;
+    for (let i = -ch; i < cw + ch; i += 5) {
+      ctx.beginPath(); ctx.moveTo(cx + i, cy); ctx.lineTo(cx + i + ch, cy + ch); ctx.stroke();
+    }
+    ctx.restore();
+
+    // Block fill + border
+    ctx.fillStyle = 'rgba(232,160,32,.1)';
+    ctx.fillRect(cx, cy, cw, ch);
+    ctx.strokeStyle = 'rgba(232,160,32,.8)'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(cx, cy, cw, ch);
+
+    // "WW" label
+    ctx.fillStyle = 'rgba(232,160,32,.9)';
+    ctx.font = 'bold ' + Math.max(6, S * 1.1) + "px 'Space Mono', monospace";
+    ctx.textAlign = 'center';
+    ctx.fillText('WW', cx + cw/2, cy + ch/2 + 3);
+
+    // Dimension note inside well
+    ctx.fillStyle = 'rgba(232,160,32,.65)';
+    ctx.font = Math.max(5, S * 0.9) + "px 'Space Mono', monospace";
+    ctx.fillText(ww.d + '"x' + ww.w + '"', cx + cw/2, cy + ch/2 + 3 + Math.max(9, S * 1.5));
+
+    // "11 H" note outside van wall (above driver well, below pass well)
+    ctx.fillText('11"H', cx + cw/2, ww.x === 0 ? cy - 8 : cy + ch + 10);
+  });
+
+  // Van shell outline (drawn after wells so walls overlay them)
+  ctx.strokeStyle = 'rgba(255,255,255,.65)'; ctx.lineWidth = 2.5;
   ctx.setLineDash([]);
   ctx.strokeRect(ox, oy, px(VL), px(VW));
-  // Front bulkhead
-  ctx.strokeStyle = 'rgba(255,255,255,.4)';
-  ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox, oy + px(VW)); ctx.stroke();
-  // Rear doors
-  ctx.strokeStyle = 'rgba(232,160,32,.5)';
-  ctx.lineWidth = 2;
+
+  // Front bulkhead — right wall (cab end), thick with slight fill
+  ctx.fillStyle = 'rgba(255,255,255,.1)';
+  ctx.fillRect(ox + px(VL) - 3, oy, 6, px(VW));
+  ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 4;
   ctx.beginPath(); ctx.moveTo(ox + px(VL), oy); ctx.lineTo(ox + px(VL), oy + px(VW)); ctx.stroke();
+  // BULKHEAD label (rotated)
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,255,255,.28)';
+  ctx.font = 'bold ' + Math.max(5, S * 0.9) + "px 'Space Mono', monospace";
+  ctx.textAlign = 'center';
+  ctx.translate(ox + px(VL) + 13, oy + px(VW/2));
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('BULKHEAD', 0, 0);
+  ctx.restore();
+
+  // Rear double doors — left wall (rear of van)
+  ctx.strokeStyle = 'rgba(232,160,32,.85)'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox, oy + px(VW)); ctx.stroke();
+  // Center split between the two doors
+  ctx.strokeStyle = 'rgba(232,160,32,.4)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.moveTo(ox, oy + px(VW/2)); ctx.lineTo(ox + px(8), oy + px(VW/2)); ctx.stroke();
+  ctx.setLineDash([]);
+  // Door swing arcs
+  const arc = px(Math.min(VW/2, 24));
+  ctx.strokeStyle = 'rgba(232,160,32,.18)'; ctx.lineWidth = 1; ctx.setLineDash([2, 4]);
+  ctx.beginPath(); ctx.arc(ox, oy, arc, 0, Math.PI/2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(ox, oy + px(VW), arc, -Math.PI/2, 0); ctx.stroke();
+  ctx.setLineDash([]);
+  // REAR DOORS label
+  ctx.save();
+  ctx.fillStyle = 'rgba(232,160,32,.45)';
+  ctx.font = 'bold ' + Math.max(5, S * 0.9) + "px 'Space Mono', monospace";
+  ctx.textAlign = 'center';
+  ctx.translate(ox - 14, oy + px(VW/2));
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('REAR DOORS', 0, 0);
+  ctx.restore();
+
+  // Slide door — passenger wall (bottom of canvas), measured from bulkhead (right)
+  if (refs.slideDoor) {
+    const sd    = refs.slideDoor;
+    const sdX1  = ox + px(VL) - px(sd.yEnd);
+    const sdX2  = ox + px(VL) - px(sd.yStart);
+    const sdW   = sdX2 - sdX1;
+    const wallY = oy + px(VW);
+
+    // Clear a gap in the bottom wall to show the opening
+    ctx.clearRect(sdX1, wallY - 2, sdW, 5);
+
+    // Colored door line
+    ctx.strokeStyle = 'rgba(82,200,122,.9)'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(sdX1, wallY); ctx.lineTo(sdX2, wallY); ctx.stroke();
+
+    // Parked door indicator (dashed rect showing door slid toward rear)
+    ctx.strokeStyle = 'rgba(82,200,122,.28)'; ctx.lineWidth = 1; ctx.setLineDash([4, 2]);
+    ctx.strokeRect(sdX1 - sdW, wallY - px(3), sdW, px(3));
+    ctx.setLineDash([]);
+
+    // Edge tick marks at door jambs
+    [sdX1, sdX2].forEach(function(tx) {
+      ctx.strokeStyle = 'rgba(82,200,122,.6)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(tx, wallY - px(4)); ctx.lineTo(tx, wallY + 6); ctx.stroke();
+    });
+
+    // Labels
+    ctx.fillStyle = 'rgba(82,200,122,.85)';
+    ctx.font = 'bold ' + Math.max(6, S * 1.1) + "px 'Space Mono', monospace";
+    ctx.textAlign = 'center';
+    ctx.fillText('SLIDE DOOR', (sdX1 + sdX2) / 2, wallY + 14);
+    ctx.fillStyle = 'rgba(82,200,122,.5)';
+    ctx.font = Math.max(5, S) + "px 'Space Mono', monospace";
+    ctx.fillText((sd.yEnd - sd.yStart) + '" opening', (sdX1 + sdX2) / 2, wallY + 23);
+  }
+
+  // CL label (right of centerline)
+  ctx.fillStyle = 'rgba(74,176,224,.7)';
+  ctx.textAlign = 'left';
+  ctx.font = 'bold ' + Math.max(7, S * 1.4) + "px 'Space Mono', monospace";
+  ctx.fillText('CL', ox + px(VL) + 16, oy + px(VW/2) + 3);
+
+  // Overall dimension callouts
+  ctx.fillStyle = 'rgba(255,255,255,.4)';
+  ctx.font = Math.max(6, S * 1.2) + "px 'Space Mono', monospace";
+  ctx.textAlign = 'center';
+  ctx.fillText(VL + '" cargo length', ox + px(VL/2), oy - 18);
+  ctx.save();
+  ctx.translate(ox - 42, oy + px(VW/2));
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText(VW + '" interior width', 0, 0);
+  ctx.restore();
 }
 
 function makeSVG(w, h) {
@@ -702,8 +824,17 @@ function makeDraggable(el, m, dz, VW, VL) {
 function makeResizable(el, m, dz, VW, VL) {
   const handle = document.createElement('div');
   handle.className = 'resize-handle';
-  handle.style.cssText = 'position:absolute;bottom:0;right:0;width:10px;height:10px;cursor:se-resize;';
+  handle.style.cssText = `
+    position:absolute;bottom:0;right:0;width:14px;height:14px;cursor:se-resize;
+    background:linear-gradient(135deg, transparent 40%, rgba(255,255,255,.5) 40%, rgba(255,255,255,.5) 60%, transparent 60%),
+               linear-gradient(135deg, transparent 60%, rgba(255,255,255,.5) 60%);
+    border-radius:0 0 2px 0;
+    opacity:0;transition:opacity .15s;
+    z-index:10;
+  `;
   el.appendChild(handle);
+  el.addEventListener('mouseenter', () => handle.style.opacity = '1');
+  el.addEventListener('mouseleave', () => handle.style.opacity = '0');
 
   handle.addEventListener('mousedown', e => {
     e.preventDefault(); e.stopPropagation();
@@ -797,7 +928,6 @@ function selMod(id) {
 
   const m = modules.find(x => x.id === id);
   if (m) {
-    showAnchorHud(m);
     highlightModCard(id);
   }
 }
@@ -1127,9 +1257,9 @@ function toggleAnchorPt(pt, btn) {
 
 // ── Elevation / Cross / Roof / Systems Views ──────────────────────────────────
 
-function renderElev(side = "driver") {
+function renderElev(side = 'driver') {
   const refs = getTransitRefs();
-  const VL = refs.vl, VH = refs.vh;
+  const VL = refs.vl, VH = refs.vh, VW = refs.vw;
   const W = px(VL) + PAD + 20;
   const H = px(VH) + OY + 30;
   const wrap = document.getElementById('canvas-wrap');
@@ -1142,26 +1272,67 @@ function renderElev(side = "driver") {
   ctx.fillStyle = '#12121a'; ctx.fillRect(0,0,W,H);
 
   const ox = PAD, oy = OY;
+
+  // Grid
   ctx.strokeStyle = 'rgba(255,255,255,.07)'; ctx.lineWidth = 0.5;
   for (let x = 0; x <= VL; x += 12) { ctx.beginPath(); ctx.moveTo(ox+px(x),oy); ctx.lineTo(ox+px(x),oy+px(VH)); ctx.stroke(); }
   for (let y = 0; y <= VH; y += 12) { ctx.beginPath(); ctx.moveTo(ox,oy+px(y)); ctx.lineTo(ox+px(VL),oy+px(y)); ctx.stroke(); }
 
+  // Van shell outline
   ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 1.5;
   ctx.strokeRect(ox, oy, px(VL), px(VH));
 
+  // Floor line
+  ctx.strokeStyle = 'rgba(232,160,32,.3)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(ox, oy + px(VH)); ctx.lineTo(ox + px(VL), oy + px(VH)); ctx.stroke();
+
+  // Side label
+  ctx.fillStyle = 'rgba(255,255,255,.25)';
+  ctx.font = '500 ' + Math.max(9, S*1.8) + 'px Barlow Condensed, sans-serif';
+  ctx.fillText(side === 'driver' ? '◀ DRIVER SIDE (looking inward →)' : '◀ PASSENGER SIDE (looking inward →)', ox + 6, oy - 6);
+
+  // Draw ruler marks
+  ctx.fillStyle = 'rgba(255,255,255,.2)';
+  ctx.font = (Math.max(7, S*1.2)) + 'px Space Mono, monospace';
+  for (let x = 0; x <= VL; x += 24) {
+    ctx.fillText(x + '"', ox + px(x) + 2, oy - 4);
+  }
+
   const svg = makeSVG(W, H);
-  modules.forEach(m => {
-    if (!m.h) return;
+
+  // Filter modules for this side:
+  // driver side: show modules with side='driver' or side='both'
+  // pass side: show modules with side='pass' or side='both'
+  // Also show floor-layer modules
+  const visibleMods = modules.filter(m => {
+    if (!m.h) return false;
+    if (side === 'driver') return m.side === 'driver' || m.side === 'both' || !m.side;
+    if (side === 'pass')   return m.side === 'pass'   || m.side === 'both' || !m.side;
+    return true;
+  });
+
+  visibleMods.forEach(m => {
+    const mh = m.h || 24;
+    const mz = m.z || 0;
+    // x position = front-to-back position (m.x = distance from front)
+    const rx = ox + px(m.x);
+    // y position = from floor up, z is floor offset
+    const ry = oy + px(VH) - px(mh + mz);
+    const rw = Math.max(4, px(m.w));
+    const rh = Math.max(4, px(mh));
+
     const r = svgEl('rect', {
-      x: ox + px(m.x), y: oy + px(VH - m.h),
-      width: px(m.w), height: px(m.h),
+      x: rx, y: ry, width: rw, height: rh,
       fill: (CAT[m.cat]||CAT.frame).bg,
       stroke: (CAT[m.cat]||CAT.frame).border,
       'stroke-width': 1.5, rx: 2
     });
     svg.appendChild(r);
-    const t = svgText(ox + px(m.x) + px(m.w)/2, oy + px(VH - m.h) + 12, m.name, (CAT[m.cat]||CAT.frame).text, Math.max(7,S*1.4));
-    svg.appendChild(t);
+
+    if (rw > 20 && rh > 12) {
+      const t = svgText(rx + rw/2, ry + rh/2 + 4, m.name, (CAT[m.cat]||CAT.frame).text, Math.max(7, S*1.4));
+      svg.appendChild(t);
+    }
   });
 
   cvs.style.cssText = 'position:absolute;top:0;left:0;';
@@ -1216,7 +1387,86 @@ function renderCross() {
 }
 
 function renderRoof() {
-  renderPlan(); // TODO: filter to roof layer items only
+  const refs = getTransitRefs();
+  const VL = refs.vl, VW = refs.vw;
+  const W = px(VL) + PAD + 20;
+  const H = px(VW) + OY + 30;
+  const wrap = document.getElementById('canvas-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  wrap.style.minWidth = W + 'px'; wrap.style.minHeight = H + 'px';
+
+  const cvs = makeCanvas(W, H);
+  const ctx = cvs.getContext('2d');
+  ctx.fillStyle = '#0e0e1a'; ctx.fillRect(0,0,W,H);
+
+  const ox = PAD, oy = OY;
+
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,.06)'; ctx.lineWidth = 0.5;
+  for (let x = 0; x <= VL; x += 12) { ctx.beginPath(); ctx.moveTo(ox+px(x),oy); ctx.lineTo(ox+px(x),oy+px(VW)); ctx.stroke(); }
+  for (let y = 0; y <= VW; y += 12) { ctx.beginPath(); ctx.moveTo(ox,oy+px(y)); ctx.lineTo(ox+px(VL),oy+px(y)); ctx.stroke(); }
+
+  // Van roof outline
+  ctx.strokeStyle = 'rgba(255,255,255,.3)'; ctx.lineWidth = 2;
+  ctx.strokeRect(ox, oy, px(VL), px(VW));
+
+  // Centerline
+  ctx.strokeStyle = 'rgba(74,176,224,.25)'; ctx.lineWidth = 1;
+  ctx.setLineDash([6,4]);
+  ctx.beginPath(); ctx.moveTo(ox, oy + px(VW/2)); ctx.lineTo(ox + px(VL), oy + px(VW/2)); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Label
+  ctx.fillStyle = 'rgba(255,255,255,.25)';
+  ctx.font = '500 ' + Math.max(9, S*1.8) + 'px Barlow Condensed, sans-serif';
+  ctx.fillText('⬡ ROOF PLAN (looking down)', ox + 6, oy - 6);
+
+  // Ruler
+  ctx.fillStyle = 'rgba(255,255,255,.2)';
+  ctx.font = Math.max(7, S*1.2) + 'px Space Mono, monospace';
+  for (let x = 0; x <= VL; x += 24) {
+    ctx.fillText(x + '"', ox + px(x) + 2, oy - 4);
+  }
+
+  const svg = makeSVG(W, H);
+
+  // Show only roof-layer modules
+  const roofMods = modules.filter(m => m.layer === 'roof');
+  roofMods.forEach(m => {
+    const rw = Math.max(4, px(m.w));
+    const rd = Math.max(4, px(m.d || m.w));
+    const rx = ox + px(m.x);
+    const ry = oy + px(m.y);
+    const r = svgEl('rect', {
+      x: rx, y: ry, width: rw, height: rd,
+      fill: (CAT[m.cat]||CAT.frame).bg,
+      stroke: (CAT[m.cat]||CAT.frame).border,
+      'stroke-width': 1.5, rx: 2
+    });
+    svg.appendChild(r);
+    if (rw > 20) {
+      const t = svgText(rx + rw/2, ry + rd/2 + 4, m.name, (CAT[m.cat]||CAT.frame).text, Math.max(7, S*1.4));
+      svg.appendChild(t);
+    }
+  });
+
+  if (roofMods.length === 0) {
+    const msg = svgEl('text', {
+      x: ox + px(VL/2), y: oy + px(VW/2),
+      fill: 'rgba(255,255,255,.2)',
+      'text-anchor': 'middle',
+      'font-size': '11',
+      'font-family': 'Space Mono, monospace'
+    });
+    msg.textContent = 'No roof modules yet — add a module with Layer = Roof';
+    svg.appendChild(msg);
+  }
+
+  cvs.style.cssText = 'position:absolute;top:0;left:0;';
+  wrap.appendChild(cvs);
+  svg.style.cssText = 'position:absolute;top:0;left:0;';
+  wrap.appendChild(svg);
 }
 
 function renderSystems() {
@@ -1372,6 +1622,204 @@ function importBuild() {
   input.click();
   document.body.removeChild(input);
 }
+
+// ── CSV Asset Import ──────────────────────────────────────────────────────────
+// importCSV()          — open file picker, parse CSV, add items to canvas
+// downloadCSVTemplate() — download blank template for users
+//
+// Accepted schemas:
+//   A) VanIQ standard:  name*, category*, width*, depth*, height, cost, notes, status, url
+//   B) Build-list:      Item*, Phase*, Cost, Notes, Status, Brand/Link, URL
+//   (* = required)
+//
+// category values: bed, galley, bath, power, frame, garage, seating, work, storage
+// ─────────────────────────────────────────────────────────────────────────────
+
+function importCSV() {
+  const input = document.createElement('input');
+  input.type   = 'file';
+  input.accept = '.csv,text/csv,application/csv';
+  input.style.display = 'none';
+
+  input.onchange = function(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      try {
+        const raw   = evt.target.result.replace(/^\uFEFF/, ''); // strip BOM
+        const rows  = _parseCSVtoRows(raw);
+        if (rows.length < 2) { showToast('CSV appears empty', 'error'); return; }
+
+        const headers = rows[0].map(function(h) { return h.trim().toLowerCase().replace(/[^a-z0-9]/g, ''); });
+
+        const isStandard  = headers.includes('name') &&
+          (headers.includes('category') || headers.includes('cat')) &&
+          (headers.includes('width') || headers.includes('w'));
+        const isBuildList = headers.includes('item') && headers.includes('phase');
+
+        if (!isStandard && !isBuildList) {
+          showToast('CSV needs: name/item, category/phase, width, depth — or download the template', 'error');
+          return;
+        }
+
+        function colIdx() {
+          var aliases = Array.prototype.slice.call(arguments);
+          for (var a = 0; a < aliases.length; a++) {
+            var i = headers.findIndex(function(h) { return h === aliases[a] || h.startsWith(aliases[a]); });
+            if (i >= 0) return i;
+          }
+          return -1;
+        }
+        function str(row) {
+          var aliases = Array.prototype.slice.call(arguments, 1);
+          var i = colIdx.apply(null, aliases);
+          return i >= 0 ? (row[i] || '').trim() : '';
+        }
+        function num(row, def) {
+          var aliases = Array.prototype.slice.call(arguments, 2);
+          return parseFloat(str.apply(null, [row].concat(aliases))) || def;
+        }
+
+        var CAT_MAP = {
+          bed:'bed', sleep:'bed',
+          galley:'galley', kitchen:'galley', cook:'galley',
+          bath:'bath', plumb:'bath', heat:'bath', water:'bath',
+          power:'power', elec:'power', solar:'power',
+          frame:'frame', wall:'frame', ceil:'frame', insul:'frame', struct:'frame',
+          garage:'garage', bike:'garage', gear:'garage',
+          seat:'seating', chair:'seating',
+          work:'work', office:'work', desk:'work',
+          storage:'storage', addon:'storage', roof:'storage', interior:'storage'
+        };
+        function mapCat(raw) {
+          var key = (raw || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          var match = Object.keys(CAT_MAP).find(function(k) { return key.includes(k); });
+          return match ? CAT_MAP[match] : 'storage';
+        }
+
+        var imported = [], skipped = 0;
+        rows.slice(1).forEach(function(row, idx) {
+          var name, cat, w, d, h, cost, notes, status, url;
+          if (isStandard) {
+            name   = str(row, 'name');
+            cat    = mapCat(str(row, 'category', 'cat'));
+            w      = num(row, 24, 'width', 'w');
+            d      = num(row, 24, 'depth', 'd');
+            h      = num(row, 0,  'height', 'h');
+            cost   = num(row, 0,  'cost', 'price');
+            notes  = str(row, 'notes', 'note');
+            status = str(row, 'status');
+            url    = str(row, 'url', 'link');
+          } else {
+            name   = str(row, 'item');
+            cat    = mapCat(str(row, 'phase'));
+            w = 24; d = 24; h = 0;
+            cost   = num(row, 0,  'cost', 'price');
+            notes  = str(row, 'notes', 'note');
+            status = str(row, 'status');
+            url    = str(row, 'url', 'link', 'brand');
+            var brand     = str(row, 'brand');
+            var powerNote = str(row, 'power');
+            if (brand)     notes = [notes, 'Brand: ' + brand].filter(Boolean).join(' | ');
+            if (powerNote) notes = [notes, 'Power: ' + powerNote].filter(Boolean).join(' | ');
+          }
+          if (!name || /^https?:\/\//.test(name)) { skipped++; return; }
+          imported.push({
+            id:     'csv_' + Date.now() + '_' + idx,
+            name: name, cat: cat,
+            w: Math.max(6, w), d: Math.max(6, d), h: h,
+            cost: cost, notes: notes,
+            status: status || 'To Buy',
+            url: url,
+            x: (idx % 4) * 26,
+            y: Math.floor(idx / 4) * 26,
+            layer: 'floor',
+            anchor: { enabled: false, points: [] }
+          });
+        });
+
+        if (imported.length === 0) { showToast('No valid items found — check column names', 'error'); return; }
+
+        var totalCost = imported.reduce(function(s, m) { return s + (m.cost || 0); }, 0);
+        var msg = 'Import ' + imported.length + ' items from CSV?' +
+          (skipped ? '\n(' + skipped + ' blank rows skipped)' : '') +
+          (totalCost ? '\nEstimated total: $' + totalCost.toLocaleString() : '');
+
+        if (!confirm(msg)) return;
+
+        modules.push.apply(modules, imported);
+        if (typeof pushUndo === 'function') pushUndo();
+        if (typeof runConstraints === 'function') runConstraints();
+        if (typeof renderCurrentView === 'function') renderCurrentView();
+        if (typeof renderModList === 'function') renderModList();
+        if (typeof scheduleAutoSave === 'function') scheduleAutoSave();
+        showToast('Imported ' + imported.length + ' items · $' + totalCost.toLocaleString() + ' total', 'success');
+
+      } catch(err) {
+        console.error('VanIQ CSV import error:', err);
+        showToast('CSV parse failed: ' + err.message, 'error');
+      }
+    };
+    reader.onerror = function() { showToast('Could not read file', 'error'); };
+    reader.readAsText(file);
+  };
+
+  document.body.appendChild(input);
+  input.click();
+  document.body.removeChild(input);
+}
+
+// RFC-4180 CSV parser — handles quoted fields, embedded commas, embedded newlines
+function _parseCSVtoRows(text) {
+  var rows = [], row = [], field = '', inQ = false;
+  for (var i = 0; i < text.length; i++) {
+    var c = text[i], n = text[i + 1];
+    if (inQ) {
+      if (c === '"' && n === '"') { field += '"'; i++; }
+      else if (c === '"')         { inQ = false; }
+      else                        { field += c; }
+    } else {
+      if      (c === '"')  { inQ = true; }
+      else if (c === ',')  { row.push(field); field = ''; }
+      else if (c === '\n') {
+        row.push(field); field = '';
+        if (row.some(function(f) { return f.trim(); })) rows.push(row);
+        row = [];
+      } else if (c !== '\r') { field += c; }
+    }
+  }
+  row.push(field);
+  if (row.some(function(f) { return f.trim(); })) rows.push(row);
+  return rows;
+}
+
+function downloadCSVTemplate() {
+  var rows = [
+    ['name','category','width','depth','height','cost','notes','status','url'],
+    ['Queen Bed Platform','bed','60','80','12','400','Storage drawers below','To Buy',''],
+    ['Galley Counter','galley','70','28','36','1800','Sink + induction top','To Buy',''],
+    ['EcoFlow Power Hub','power','13','16','18','1200','10kWh LiFePO4','To Buy',''],
+    ['Garage Zone','garage','70','60','24','0','E-bike + gear storage','To Buy',''],
+    ['Water Tank','bath','32','14','16','300','29gal under bed','To Buy',''],
+    ['Air Heater','bath','10','10','8','1500','Webasto or Espar','To Buy',''],
+    ['Vent Fan','storage','14','14','6','500','MaxxAir or Fan-Tastic','To Buy',''],
+    ['Swivel Seats','seating','22','22','4','400','Driver + passenger','To Buy',''],
+    ['Work Desk','work','30','20','0','200','Lagun table or fold-out','To Buy','']
+  ];
+  function esc(f) { return f.includes(',') ? '"' + f + '"' : f; }
+  var csv = rows.map(function(r) { return r.map(esc).join(','); }).join('\n');
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'vaniq-build-template.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+  showToast('Template downloaded — open in Excel or Google Sheets', 'success');
+}
+
 
 // ── Project Modal ─────────────────────────────────────────────────────────────
 
@@ -1565,25 +2013,58 @@ async function loadGithubResources() {
   }
 }
 
-function openLocalResource() {
-  const input = document.createElement('input');
-  input.type = 'file'; input.accept = '.html';
-  input.onchange = e => {
-    const file = e.target.files[0];
-    if (!file) return;
+// ── Doc Viewer — iframe modal for HTML resource files ────────────────────────
+
+function openDocViewer(url, title) {
+  let overlay = document.getElementById('doc-viewer-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'doc-viewer-overlay';
+    overlay.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:9999;align-items:flex-start;justify-content:center;padding:20px;box-sizing:border-box;';
+    overlay.innerHTML =
+      '<div style="background:#12121e;border:1px solid rgba(255,255,255,.12);border-radius:8px;width:100%;max-width:900px;height:calc(100vh - 40px);display:flex;flex-direction:column;overflow:hidden;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.1);flex-shrink:0">' +
+          '<span id="doc-viewer-title" style="font-family:\'Barlow Condensed\',sans-serif;font-weight:700;font-size:.85rem;color:#fff;letter-spacing:.04em"></span>' +
+          '<div style="display:flex;gap:8px;align-items:center">' +
+            '<a id="doc-viewer-newwin" href="#" target="_blank" style="font-size:.65rem;color:rgba(255,255,255,.4);text-decoration:none;font-family:\'Space Mono\',monospace">⬡ open tab</a>' +
+            '<button onclick="closeDocViewer()" style="background:none;border:none;color:rgba(255,255,255,.5);font-size:1.1rem;cursor:pointer;line-height:1;padding:2px 6px;">&#x2715;</button>' +
+          '</div>' +
+        '</div>' +
+        '<iframe id="doc-viewer-frame" style="flex:1;border:none;background:#fff;" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeDocViewer(); });
+  }
+  document.getElementById('doc-viewer-title').textContent = title || 'Document';
+  document.getElementById('doc-viewer-frame').src = url;
+  const link = document.getElementById('doc-viewer-newwin');
+  link.href = url;
+  overlay.style.display = 'flex';
+}
+
+function closeDocViewer() {
+  const ov = document.getElementById('doc-viewer-overlay');
+  if (ov) { ov.style.display = 'none'; document.getElementById('doc-viewer-frame').src = 'about:blank'; }
+}
+
+function openLocalResource(evt) {
+  if (evt && evt.target && evt.target.files && evt.target.files[0]) {
+    const file = evt.target.files[0];
     const url = URL.createObjectURL(file);
-    window.open(url, '_blank');
-  };
-  input.click();
+    openDocViewer(url, file.name.replace('.html',''));
+  } else {
+    const inp = document.getElementById('local-res-input');
+    if (inp) inp.click();
+  }
 }
 
 // ── Guide ─────────────────────────────────────────────────────────────────────
 
 function openGuide() {
-  document.getElementById('guide-overlay').style.display = 'flex';
+  openDocViewer('/guide.html', '📖 VanIQ User Guide');
 }
 function closeGuide() {
-  document.getElementById('guide-overlay').style.display = 'none';
+  closeDocViewer();
 }
 
 // ── Panel Toggle ──────────────────────────────────────────────────────────────
@@ -1645,8 +2126,12 @@ async function init() {
 
   setView('plan');
   renderModList();
-  autoFitScale();
   syncDimInputs();
+  // Defer autoFitScale so canvas-wrap has real clientWidth after layout paints
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    autoFitScale();
+    renderCurrentView();
+  }));
 
   if (!canSave()) {
     setTimeout(() => {
