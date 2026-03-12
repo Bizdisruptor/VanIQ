@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>VanIQ User Guide</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f0f1a;
+    color: #c8c8e0;
+    font-size: 13px;
+    line-height: 1.65;
+    padding: 28px 32px 48px;
+    max-width: 780px;
+    margin: 0 auto;
+  }
+  h1 { color: #fff; font-size: 1.3rem; margin-bottom: 6px; letter-spacing: .02em; }
+  .subtitle { color: rgba(255,255,255,.35); font-size: .72rem; font-family: 'Space Mono', monospace; margin-bottom: 28px; }
+  h2 { color: #52c87a; font-size: .82rem; text-transform: uppercase; letter-spacing: .12em; margin: 22px 0 8px; }
+  p { color: rgba(255,255,255,.68); margin-bottom: 10px; }
+  .card {
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-bottom: 10px;
+  }
+  .card strong { color: #e8e8ff; }
+  .key {
+    display: inline-block;
+    background: rgba(255,255,255,.1);
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 3px;
+    padding: 1px 7px;
+    font-family: 'Space Mono', monospace;
+    font-size: .7rem;
+    color: #b0c8ff;
+  }
+  .shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .sc-row { display: flex; align-items: center; gap: 8px; font-size: .78rem; }
+  .sc-row .key { flex-shrink: 0; }
+  .sc-row .desc { color: rgba(255,255,255,.55); }
+  .tip {
+    background: rgba(232,160,32,.06);
+    border-left: 3px solid #e8a020;
+    padding: 8px 12px;
+    border-radius: 0 4px 4px 0;
+    margin: 10px 0;
+    font-size: .78rem;
+    color: rgba(255,255,255,.65);
+  }
+  hr { border: none; border-top: 1px solid rgba(255,255,255,.07); margin: 24px 0; }
+  .footer { color: rgba(255,255,255,.2); font-size: .66rem; text-align: center; margin-top: 40px; font-family: 'Space Mono', monospace; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+  td, th { padding: 6px 10px; text-align: left; font-size: .75rem; border-bottom: 1px solid rgba(255,255,255,.06); }
+  th { color: rgba(255,255,255,.4); text-transform: uppercase; font-size: .6rem; letter-spacing: .1em; }
+  td { color: rgba(255,255,255,.65); }
+  td:first-child { color: #b0c8ff; font-weight: 600; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<h1>📖 VanIQ User Guide</h1>
+<div class="subtitle">v2.0 · Van Build Planner</div>
+
+<h2>Getting Started</h2>
+<p>VanIQ is a precision van conversion layout tool. You place modules (bed frames, cabinets, electrical boxes, etc.) onto an accurate canvas of your van interior and plan your build in multiple views.</p>
+
+<div class="tip">Sign in (top right) to unlock save, share, and multi-project features.</div>
+
+<hr>
+
+<h2>Views</h2>
+<div class="card">
+  <table>
+    <tr><th>Tab</th><th>What you see</th></tr>
+    <tr><td>⊞ Plan</td><td>Top-down floor plan — the main layout view</td></tr>
+    <tr><td>◧ Driver Elev</td><td>Driver-side wall elevation</td></tr>
+    <tr><td>◨ Pass Elev</td><td>Passenger-side wall elevation</td></tr>
+    <tr><td>⊕ Section</td><td>Cross-section cut at the position you set in Dims</td></tr>
+    <tr><td>⬡ Roof</td><td>Roof plan — rack, solar, vents</td></tr>
+    <tr><td>⚡ Systems</td><td>Systems overlay — 12V, fresh water, etc.</td></tr>
+  </table>
+</div>
+
+<h2>The Canvas</h2>
+<p>Modules are drawn on the canvas as colored rectangles. Drag them to reposition. Double-click to edit. Click once to select (shows blue outline).</p>
+<div class="card">
+  <strong>Module categories by color:</strong><br>
+  🟠 <strong>Utility</strong> — storage, cabinets, frames<br>
+  🟢 <strong>Living</strong> — bed, galley, seating<br>
+  🔵 <strong>Power</strong> — battery, inverter, electrical<br>
+  🟣 <strong>Overhead</strong> — upper cabinets, ventilation<br>
+  ⬜ <strong>Frame</strong> — structural, floor platform
+</div>
+
+<h2>Adding Modules</h2>
+<p>Click <strong>＋ Add Module</strong> in the right panel, or open <strong>📦 Module Library</strong> to pick from presets. Fill in the name, dimensions (inches), category, and which side of the van.</p>
+<div class="tip">Dimensions are interior usable space, not including frame or insulation — those are subtracted automatically from your van shell settings.</div>
+
+<h2>Dims Panel</h2>
+<p>The <strong>Dims</strong> tab on the right controls van shell dimensions, insulation stack, build options, and design constraints.</p>
+<div class="card">
+  <strong>Insulation Preset</strong> automatically fills in wall/floor/ceiling thickness based on common build standards. Switch to Custom to override manually.<br><br>
+  <strong>Frame rail width</strong> sets the T-slot extrusion setback used to compute usable wall width.<br><br>
+  <strong>Constraint Checks</strong> — turn on to get real-time warnings for aisle clearance, door clearance, height limits, and module overlaps.
+</div>
+
+<h2>Anchor / Lock Position</h2>
+<p>Click any module, then open the Anchor HUD (appears when a module is selected) to lock one or more edges to a specific measurement. Locked edges cannot be moved by dragging — only by editing the value directly.</p>
+
+<h2>Saving Your Build</h2>
+<div class="card">
+  <strong>💾 Save</strong> (Ctrl+S) — saves to your account in the cloud<br>
+  <strong>⬇ Export</strong> — downloads a .json backup file to your computer<br>
+  <strong>⬆ Import</strong> — restores from a .json file<br>
+  <strong>📥 CSV</strong> — imports a build list (items, dimensions, costs) from a spreadsheet<br>
+  <strong>📋 Template</strong> — downloads a blank CSV to fill in
+</div>
+
+<h2>CSV Import</h2>
+<p>Use the CSV import to bring in your full build list from Excel, Google Sheets, or Notion. Download the template first to see the required columns:</p>
+<div class="card">
+  <table>
+    <tr><th>Column</th><th>Description</th></tr>
+    <tr><td>Item</td><td>Name of the component</td></tr>
+    <tr><td>Width</td><td>Width in inches</td></tr>
+    <tr><td>Height</td><td>Height in inches</td></tr>
+    <tr><td>Depth</td><td>Depth in inches</td></tr>
+    <tr><td>Phase</td><td>Build phase — maps to module category</td></tr>
+    <tr><td>Cost</td><td>Dollar amount (optional)</td></tr>
+    <tr><td>Notes</td><td>Any notes (optional)</td></tr>
+  </table>
+</div>
+
+<h2>Projects</h2>
+<p>Click the <strong>⊕</strong> button next to the project selector to create multiple projects (e.g., one per van model you're comparing). Requires an account.</p>
+
+<h2>Share</h2>
+<p>Click <strong>🔗</strong> to copy a share URL. Anyone with the link can view your layout (read-only). Requires sign-in and a saved project.</p>
+
+<h2>Resources Menu</h2>
+<p>The <strong>⚙ Resources</strong> dropdown opens build documentation for your specific build — rack specs, water diagrams, roof layouts, and more. Use <strong>📂 Open Local File</strong> to load any .html file from your computer.</p>
+
+<hr>
+
+<h2>Keyboard Shortcuts</h2>
+<div class="shortcuts">
+  <div class="sc-row"><span class="key">Ctrl+S</span><span class="desc">Save layout</span></div>
+  <div class="sc-row"><span class="key">Ctrl+Z</span><span class="desc">Undo last action</span></div>
+  <div class="sc-row"><span class="key">Del</span><span class="desc">Delete selected module</span></div>
+  <div class="sc-row"><span class="key">E</span><span class="desc">Edit selected module</span></div>
+  <div class="sc-row"><span class="key">1</span><span class="desc">Plan view</span></div>
+  <div class="sc-row"><span class="key">2</span><span class="desc">Driver elevation</span></div>
+  <div class="sc-row"><span class="key">3</span><span class="desc">Pass elevation</span></div>
+  <div class="sc-row"><span class="key">4</span><span class="desc">Section view</span></div>
+  <div class="sc-row"><span class="key">5</span><span class="desc">Roof view</span></div>
+  <div class="sc-row"><span class="key">6</span><span class="desc">Systems view</span></div>
+  <div class="sc-row"><span class="key">Esc</span><span class="desc">Close modal / deselect</span></div>
+</div>
+
+<hr>
+
+<div class="footer">VanIQ v2.0 · Disruptive Business Solutions, LLC · vaniq.app</div>
+
+</body>
+</html>
