@@ -1631,3 +1631,113 @@ document.addEventListener('click', function(e) {
     document.getElementById('res-menu')?.classList.remove('open');
   }
 });
+// ── Export / Import Build ─────────────────────────────────────────────────────
+// Add these functions to app.js (root level)
+
+function exportBuild() {
+  const proj = projects[currentProjectIdx] || {};
+  const payload = {
+    vaniq_version: '2.0',
+    exported_at: new Date().toISOString(),
+    project: {
+      name: proj.name || 'My Van Build',
+      vanModel: proj.vanModel || 'Transit 148 HR',
+    },
+    modules: modules,
+    inventory: inventory || [],
+    settings: {
+      scale: S,
+      crossY: crossY,
+      view: VIEW
+    }
+  };
+
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const name = (proj.name || 'vaniq-build').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+  a.href     = url;
+  a.download = `${name}-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('⬇ Build exported as JSON', 'success');
+}
+
+function importBuild() {
+  const input = document.createElement('input');
+  input.type  = 'file';
+  input.accept = '.json,application/json';
+
+  input.onchange = e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = evt => {
+      try {
+        const data = JSON.parse(evt.target.result);
+
+        // Validate it's a VanIQ file
+        if (!data.modules || !Array.isArray(data.modules)) {
+          showToast('⚠ Invalid file — no modules found', 'error');
+          return;
+        }
+
+        // Confirm before overwriting
+        const modCount = data.modules.length;
+        const projName = data.project?.name || 'Imported Build';
+        if (!confirm(`Import "${projName}" with ${modCount} module(s)?\n\nThis will replace your current layout.`)) return;
+
+        // Apply the data
+        modules = data.modules;
+
+        // Restore project info
+        if (data.project?.vanModel && projects[currentProjectIdx]) {
+          projects[currentProjectIdx].vanModel = data.project.vanModel;
+          projects[currentProjectIdx].name     = data.project.name || projects[currentProjectIdx].name;
+        }
+
+        // Restore settings
+        if (data.settings) {
+          if (data.settings.scale)  S      = data.settings.scale;
+          if (data.settings.crossY) crossY = data.settings.crossY;
+          if (data.settings.view)   VIEW   = data.settings.view;
+        }
+
+        // Restore inventory
+        if (data.inventory && Array.isArray(data.inventory)) {
+          inventory = data.inventory;
+          renderInvList?.();
+        }
+
+        // Refresh everything
+        pushUndo();
+        runConstraints();
+        renderCurrentView();
+        renderModList();
+        renderProjectSelect();
+        showToast(`✅ Imported "${projName}" — ${modCount} modules loaded`, 'success');
+
+      } catch (err) {
+        console.error('Import error:', err);
+        showToast('⚠ Failed to parse JSON file: ' + err.message, 'error');
+      }
+    };
+
+    reader.onerror = () => {
+      showToast('⚠ Could not read file', 'error');
+    };
+
+    reader.readAsText(file);
+  };
+
+  // Must append to body for Firefox compatibility
+  input.style.display = 'none';
+  document.body.appendChild(input);
+  input.click();
+  document.body.removeChild(input);
+}
