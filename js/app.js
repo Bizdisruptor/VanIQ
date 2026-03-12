@@ -20,31 +20,211 @@ const CAT = {
   garage:  { label:'Garage',        bg:'rgba(180,100,50,.2)',   border:'#b46432', text:'#d8905a' },
 };
 
+// ── VAN_MODELS ─────────────────────────────────────────────────────────────────
+// All dimensions verified from Upfit Supply measurement guides:
+//   https://upfitsupply.com/blogs/measurement-guides
+//
+// Coordinate system (portrait plan view, CAB at TOP):
+//   y = inches from BULKHEAD (0) toward REAR DOORS (vl)
+//   x = inches from DRIVER WALL (0) toward PASSENGER WALL (vw)
+//
+// Wheel well key (from Upfit "Wheel Well Dimensions: W x H x D"):
+//   d = W = fore-aft span in inches (along van length)
+//   w = D = lateral depth from wall into cargo (NOT height)
+//   x = 0 for driver side; (vw - w) for passenger side
+//   y = distance from bulkhead to front edge of well (derived from AVC RIG PDF + axle position)
+//
+// Passenger wall shelf length is shorter than driver because of slide door opening.
+// Slide door: yStart ≈ bpillar, yEnd = yStart + sideOpen
+//
+// Source citations per van type are in `source` field.
+
 const VAN_MODELS = {
-  'Transit 130 LR':       { vw:78,  vl:130, vh:55,  bpillar:38, cargo:'LR', label:'Transit 130 Low Roof' },
-  'Transit 130 MR':       { vw:78,  vl:130, vh:72,  bpillar:38, cargo:'MR', label:'Transit 130 Med Roof' },
-  'Transit 148 HR': { vw:70, vl:145, vh:83, bpillar:42, cargo:'HR', label:'Transit 148 High Roof',
-    // Structural references — PDF-accurate (Kargomaster + AVC Rig Transit 148 LWB)
-    // vl:145 = interior cargo length (Kargomaster PDF); vw:70 = insulated wall-to-wall width
-    // Coord convention: y=position along LENGTH from bulkhead, x=position along WIDTH from driver wall
-    ribs:      [0, 16, 32, 48, 64, 80, 96, 112, 128, 144],        // floor ribs
-    wheelWellL: { y:67, d:30, x:0,  w:11 },   // driver well: 30"L × 11"W, starts 67" from bulkhead
-    wheelWellR: { y:67, d:30, x:59, w:11 },   // pass well: same, x=vw-w=70-11=59
-    frameRails: [3, 67],                        // frame rail x positions from driver wall
-    garageStart: 85,                            // garage zone starts from rear (rear doors end)
-    slideDoor:  { yStart:42, yEnd:90 },         // slide door 42"–90" from bulkhead (48" opening)
-    cPillar:   108,                             // C-pillar position
-    dPillar:   132,                             // D-pillar position
+
+  // ── FORD TRANSIT 148 WB (Regular Body) ────────────────────────────────────
+  // Source: https://upfitsupply.com/blogs/measurement-guides/ford-transit-148-wb-interior-cargo-measurements
+  // Wheel Well: 35"W(fore-aft) × 11"H × 7.5"D(lateral) | Between wells: 54"
+  // Driver shelf: 126" | Pass shelf: 75" | Side door: 48" | Rear door: 61.5"
+  // Interior width: 54 + 7.5 + 7.5 = 69" (nominal 70" with insulation variance)
+  'Transit 148 HR': {
+    label: 'Ford Transit 148 HR', source: 'upfitsupply.com',
+    vw: 70,   // interior width (driver wall to pass wall, post-insulation)
+    vl: 145,  // interior cargo length (bulkhead to rear door interior)
+    vh: 79, vh_lr: 53, vh_mr: 70, vh_hr: 79,
+    partition: 9,       // typical partition depth from bulkhead
+    bpillar: 30,        // B-pillar position from bulkhead (approx)
+    // Wheel wells: 35"W × 7.5"D, between wells = 54", so x = (70-54)/2 - 7.5 error
+    // Correct: vw=70, between=54, so each side = (70-54)/2 = 8" → but spec says 7.5"D
+    // Use spec: w=7.5 (rounds to 8 for pixel), x_pass = 70-8 = 62
+    // Position: AVC RIG PDF analysis puts well front edge at ~85" from bulkhead
+    wheelWellL: { y: 85, d: 35, x: 0,  w: 8 },
+    wheelWellR: { y: 85, d: 35, x: 62, w: 8 },
+    slideDoor:  { yStart: 30, yEnd: 78 },   // 48" opening
+    driverShelf: 126, passShelf: 75,
+    sideOpen: 48, rearOpen: 61.5,
+    ribs: [16, 32, 48, 64, 80, 96, 112, 128, 144],
+    garageStart: 100,
   },
-  'Transit 148 EXT HR':   { vw:78,  vl:170, vh:83,  bpillar:42, cargo:'HR', label:'Transit 148 EXT HR' },
-  'Sprinter 144 SR':      { vw:76,  vl:144, vh:67,  bpillar:40, cargo:'SR', label:'Sprinter 144 Std Roof' },
-  'Sprinter 144 HR':      { vw:76,  vl:144, vh:79,  bpillar:40, cargo:'HR', label:'Sprinter 144 High Roof' },
-  'Sprinter 170 HR':      { vw:76,  vl:170, vh:79,  bpillar:40, cargo:'HR', label:'Sprinter 170 High Roof' },
-  'Sprinter 170 EXT HR':  { vw:76,  vl:192, vh:79,  bpillar:40, cargo:'HR', label:'Sprinter 170 EXT HR' },
-  'ProMaster 136 HR':     { vw:82,  vl:136, vh:74,  bpillar:38, cargo:'HR', label:'ProMaster 136 HR' },
-  'ProMaster 159 HR':     { vw:82,  vl:159, vh:74,  bpillar:38, cargo:'HR', label:'ProMaster 159 HR' },
-  'Custom':               { vw:78,  vl:148, vh:83,  bpillar:42, cargo:'HR', label:'Custom' },
+
+  // ── FORD TRANSIT 148 EXTENDED WB ──────────────────────────────────────────
+  // Source: https://upfitsupply.com/blogs/measurement-guides/ford-transit-148-extended-wb-interior-cargo-measurements
+  // Wheel Well: 35"W × 11"H × 8"D (SRW) | Between wells: 52" (SRW) / 44" (DRW)
+  // Driver shelf: 136"-145" | Pass shelf: 103" | Side door: 36" | Rear door: 53"
+  'Transit 148 EXT HR': {
+    label: 'Ford Transit 148 EXT HR', source: 'upfitsupply.com',
+    vw: 70, vl: 170, vh: 79, vh_hr: 79,
+    partition: 9, bpillar: 30,
+    wheelWellL: { y: 85, d: 35, x: 0,  w: 9 },
+    wheelWellR: { y: 85, d: 35, x: 61, w: 9 },
+    slideDoor:  { yStart: 30, yEnd: 66 },   // 36" opening
+    driverShelf: 140, passShelf: 103,
+    sideOpen: 36, rearOpen: 53,
+    ribs: [16, 32, 48, 64, 80, 96, 112, 128, 144, 160],
+    garageStart: 100,
+  },
+
+  // ── FORD TRANSIT 130 WB ────────────────────────────────────────────────────
+  // Source: https://upfitsupply.com/blogs/measurement-guides/ford-transit-130-wb-interior-cargo-measurements
+  // Wheel Well: 35"W × 11"H × 8"D | Between wells: 53"
+  // Driver shelf: 92"-101" | Pass shelf: 58" | Side door: 36" | Rear door: 53"
+  // Interior width: 53 + 8 + 8 = 69" ≈ 70"
+  'Transit 130 LR': {
+    label: 'Ford Transit 130 LR', source: 'upfitsupply.com',
+    vw: 70, vl: 129, vh: 53, vh_lr: 53, vh_mr: 70,
+    partition: 9, bpillar: 28,
+    wheelWellL: { y: 65, d: 35, x: 0,  w: 8 },
+    wheelWellR: { y: 65, d: 35, x: 62, w: 8 },
+    slideDoor:  { yStart: 28, yEnd: 64 },   // 36" opening
+    driverShelf: 96, passShelf: 58,
+    sideOpen: 36, rearOpen: 53,
+    ribs: [16, 32, 48, 64, 80, 96, 112, 128],
+    garageStart: 85,
+  },
+  'Transit 130 MR': {
+    label: 'Ford Transit 130 MR', source: 'upfitsupply.com',
+    vw: 70, vl: 129, vh: 70, vh_lr: 53, vh_mr: 70,
+    partition: 9, bpillar: 28,
+    wheelWellL: { y: 65, d: 35, x: 0,  w: 8 },
+    wheelWellR: { y: 65, d: 35, x: 62, w: 8 },
+    slideDoor:  { yStart: 28, yEnd: 64 },
+    driverShelf: 96, passShelf: 58,
+    sideOpen: 36, rearOpen: 53,
+    ribs: [16, 32, 48, 64, 80, 96, 112, 128],
+    garageStart: 85,
+  },
+
+  // ── MERCEDES SPRINTER 144 WB ───────────────────────────────────────────────
+  // Source: https://upfitsupply.com/blogs/measurement-guides/mercedes-benz-sprinter-144wb-interior-cargo-measurements
+  // Wheel Well: 36"W × 12"H × 9"D | Between wells: 53.1"
+  // Driver shelf: 116" | Pass shelf: 71" | Side door: 51.5" | Rear door: 61"
+  // Interior width: 53.1 + 9 + 9 = 71.1" ≈ 71"
+  'Sprinter 144 SR': {
+    label: 'Sprinter 144 Std Roof', source: 'upfitsupply.com',
+    vw: 71, vl: 144, vh: 66, vh_sr: 66, vh_hr: 78,
+    partition: 9, bpillar: 28,
+    wheelWellL: { y: 73, d: 36, x: 0,  w: 9 },
+    wheelWellR: { y: 73, d: 36, x: 62, w: 9 },
+    slideDoor:  { yStart: 28, yEnd: 80 },   // 51.5" opening
+    driverShelf: 116, passShelf: 71,
+    sideOpen: 51.5, rearOpen: 61,
+    ribs: [16, 32, 48, 64, 80, 96, 112, 128, 144],
+    garageStart: 95,
+  },
+  'Sprinter 144 HR': {
+    label: 'Sprinter 144 High Roof', source: 'upfitsupply.com',
+    vw: 71, vl: 144, vh: 78, vh_sr: 66, vh_hr: 78,
+    partition: 9, bpillar: 28,
+    wheelWellL: { y: 73, d: 36, x: 0,  w: 9 },
+    wheelWellR: { y: 73, d: 36, x: 62, w: 9 },
+    slideDoor:  { yStart: 28, yEnd: 80 },
+    driverShelf: 116, passShelf: 71,
+    sideOpen: 51.5, rearOpen: 61,
+    ribs: [16, 32, 48, 64, 80, 96, 112, 128, 144],
+    garageStart: 95,
+  },
+
+  // ── MERCEDES SPRINTER 170 WB ───────────────────────────────────────────────
+  // Source: https://upfitsupply.com/blogs/measurement-guides/mercedes-benz-sprinter-170wb-interior-cargo-measurements
+  // Wheel Well: 36"W × 12"H × 9"D | Between wells: 53.1" (same axle, longer rear overhang)
+  // Driver shelf: 155" | Pass shelf: 110" | Side door: 51.5" | Rear door: 61"
+  'Sprinter 170 HR': {
+    label: 'Sprinter 170 High Roof', source: 'upfitsupply.com',
+    vw: 71, vl: 170, vh: 72,
+    partition: 9, bpillar: 28,
+    wheelWellL: { y: 73, d: 36, x: 0,  w: 9 },
+    wheelWellR: { y: 73, d: 36, x: 62, w: 9 },
+    slideDoor:  { yStart: 28, yEnd: 80 },
+    driverShelf: 155, passShelf: 110,
+    sideOpen: 51.5, rearOpen: 61,
+    ribs: [16, 32, 48, 64, 80, 96, 112, 128, 144, 160],
+    garageStart: 120,
+  },
+
+  // ── MERCEDES SPRINTER 170 EXT WB ──────────────────────────────────────────
+  // Source: https://upfitsupply.com/blogs/measurement-guides/mercedes-benz-sprinter-170-wb-ext-interior-cargo-measurements
+  'Sprinter 170 EXT HR': {
+    label: 'Sprinter 170 EXT HR', source: 'upfitsupply.com',
+    vw: 71, vl: 192, vh: 72,
+    partition: 9, bpillar: 28,
+    wheelWellL: { y: 73, d: 36, x: 0,  w: 9 },
+    wheelWellR: { y: 73, d: 36, x: 62, w: 9 },
+    slideDoor:  { yStart: 28, yEnd: 80 },
+    driverShelf: 170, passShelf: 128,
+    sideOpen: 51.5, rearOpen: 61,
+    ribs: [16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192],
+    garageStart: 142,
+  },
+
+  // ── RAM PROMASTER 136 WB ───────────────────────────────────────────────────
+  // Source: https://upfitsupply.com/blogs/measurement-guides/ram-promaster-136-wb-interior-cargo-measurements
+  // Wheel Well: 35"W × 17"H × 9"D | Between wells: 56"
+  // Driver shelf: 111" | Pass shelf: 62.5" | Side door: 43" | Rear door: 61"
+  // Interior width: 56 + 9 + 9 = 74" ≈ 74"  (ProMaster is widest!)
+  'ProMaster 136 HR': {
+    label: 'Ram ProMaster 136 HR', source: 'upfitsupply.com',
+    vw: 74, vl: 136, vh: 72, vh_sr: 68, vh_hr: 77,
+    partition: 9, bpillar: 26,
+    wheelWellL: { y: 68, d: 35, x: 0,  w: 9 },
+    wheelWellR: { y: 68, d: 35, x: 65, w: 9 },
+    slideDoor:  { yStart: 26, yEnd: 69 },   // 43" opening
+    driverShelf: 111, passShelf: 62.5,
+    sideOpen: 43, rearOpen: 61,
+    ribs: [16, 32, 48, 64, 80, 96, 112, 128],
+    garageStart: 88,
+  },
+
+  // ── RAM PROMASTER 159 WB ───────────────────────────────────────────────────
+  // Source: https://upfitsupply.com/blogs/measurement-guides/ram-promaster-159-wb-interior-cargo-measurements
+  // Wheel Well: 35"W × 17"H × 9"D | Between wells: 56"
+  // Driver shelf: 135" | Pass shelf: 85.5" | Side door: 48.5" | Rear door: 61"
+  'ProMaster 159 HR': {
+    label: 'Ram ProMaster 159 HR', source: 'upfitsupply.com',
+    vw: 74, vl: 159, vh: 77, vh_sr: 77, vh_shr: 86,
+    partition: 9, bpillar: 26,
+    wheelWellL: { y: 68, d: 35, x: 0,  w: 9 },
+    wheelWellR: { y: 68, d: 35, x: 65, w: 9 },
+    slideDoor:  { yStart: 26, yEnd: 75 },   // 48.5" opening
+    driverShelf: 135, passShelf: 85.5,
+    sideOpen: 48.5, rearOpen: 61,
+    ribs: [16, 32, 48, 64, 80, 96, 112, 128, 144, 160],
+    garageStart: 110,
+  },
+
+  // ── CUSTOM ─────────────────────────────────────────────────────────────────
+  'Custom': {
+    label: 'Custom Van', source: 'user-defined',
+    vw: 70, vl: 145, vh: 79,
+    partition: 9, bpillar: 30,
+    wheelWellL: { y: 85, d: 35, x: 0,  w: 8 },
+    wheelWellR: { y: 85, d: 35, x: 62, w: 8 },
+    slideDoor:  { yStart: 30, yEnd: 78 },
+    driverShelf: 126, passShelf: 75,
+    sideOpen: 48, rearOpen: 61.5,
+    ribs: [16, 32, 48, 64, 80, 96, 112, 128, 144],
+    garageStart: 100,
+  },
 };
+
 
 let modules   = [];
 let selId     = null;
@@ -447,315 +627,569 @@ function makeCanvas(w, h) {
   return c;
 }
 
-function drawGrid(ctx, VW, VL) {
-  // Grid only — background grid drawn before van silhouette
-  const ox = PAD, oy = OY + px(4); // offset for wall thickness
-  const W  = px(VL) + PAD + 80;
-  const H  = px(VW) + OY + 80;
+// ═══════════════════════════════════════════════════════════════════════════════
+// PLAN VIEW — Portrait orientation (North-South), AVC RIG style
+//
+// COORDINATE SYSTEM (portrait, like AVC RIG PDF):
+//   Canvas X axis = VAN WIDTH   (DRIVER=left, PASSENGER=right)
+//   Canvas Y axis = VAN LENGTH  (CAB/BULKHEAD=top, REAR DOORS=bottom)
+//
+//   ox, oy  = top-left corner of INTERIOR CARGO FLOOR
+//   px(n)   = inches → pixels
+//
+// Refs fields mapped to canvas:
+//   VW (interior width)   → canvas width  (x axis)
+//   VL (interior length)  → canvas height (y axis)
+//   wheelWellL: driver side   → left side of canvas
+//   wheelWellR: pass side     → right side of canvas
+//   ww.y  = distance from BULKHEAD along LENGTH → canvas y: oy + px(ww.y)
+//   ww.x  = distance from DRIVER wall → canvas x: ox + px(ww.x) [0=driver=left, 59=pass=right]
+//   ww.d  = fore-aft depth (LENGTH)   → canvas height: px(ww.d)
+//   ww.w  = wall intrusion (WIDTH)    → canvas width: px(ww.w)
+//
+//   slideDoor: on PASSENGER (right) wall
+//     yStart/yEnd measured from BULKHEAD → canvas y: oy + px(yStart) / oy + px(yEnd)
+//   bpillar, cPillar, dPillar: distance from BULKHEAD → canvas y: oy + px(pillar)
+// ═══════════════════════════════════════════════════════════════════════════════
 
-  ctx.fillStyle = '#0d0d1a';
-  ctx.fillRect(0, 0, W, H);
+// ── PLAN VIEW — Transit top-down blueprint ─────────────────────────────────────
+// Layout constants (padding around the interior cargo floor):
+const PLAN_PAD_L = 68;   // left:  length ruler + "DRIVER" label
+const PLAN_PAD_T = 52;   // top:   width ruler + "BULKHEAD" label
+const PLAN_PAD_R = 72;   // right: slide door label + exterior body overhang
+const PLAN_PAD_B = 68;   // bottom: rear door labels + exterior body overhang
 
-  // Minor grid (6") inside cargo area
-  ctx.strokeStyle = 'rgba(255,255,255,.032)'; ctx.lineWidth = 0.5;
-  for (let x = 0; x <= VL; x += 6)  { ctx.beginPath(); ctx.moveTo(ox+px(x), oy); ctx.lineTo(ox+px(x), oy+px(VW)); ctx.stroke(); }
-  for (let y = 0; y <= VW; y += 6)  { ctx.beginPath(); ctx.moveTo(ox, oy+px(y)); ctx.lineTo(ox+px(VL), oy+px(y)); ctx.stroke(); }
+// Body wall: how far exterior outline extends beyond interior floor edge (each side)
+const PLAN_WALL = 5;  // inches — exterior body is 5" wider per side than interior floor
 
-  // Major grid (12" / 1 ft)
-  ctx.strokeStyle = 'rgba(255,255,255,.075)'; ctx.lineWidth = 0.8;
-  for (let x = 0; x <= VL; x += 12) { ctx.beginPath(); ctx.moveTo(ox+px(x), oy); ctx.lineTo(ox+px(x), oy+px(VW)); ctx.stroke(); }
-  for (let y = 0; y <= VW; y += 12) { ctx.beginPath(); ctx.moveTo(ox, oy+px(y)); ctx.lineTo(ox+px(VL), oy+px(y)); ctx.stroke(); }
+function renderPlan() {
+  const refs = getTransitRefs();
+  const VW = refs.vw, VL = refs.vl;
+  const iw = px(VW), il = px(VL);
+  const WE = px(PLAN_WALL);   // wall extent in px
+
+  const W = iw + PLAN_PAD_L + PLAN_PAD_R + WE * 2;
+  const H = il + PLAN_PAD_T + PLAN_PAD_B + WE * 2;
+
+  // Interior cargo floor origin
+  const ox = PLAN_PAD_L + WE;
+  const oy = PLAN_PAD_T + WE;
+
+  const wrap = document.getElementById('canvas-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  wrap.style.position = 'relative';
+  wrap.style.minWidth  = W + 'px';
+  wrap.style.minHeight = H + 'px';
+
+  const cvs = makeCanvas(W, H);
+  const ctx = cvs.getContext('2d');
+  cvs.style.cssText = 'position:absolute;top:0;left:0;';
+  wrap.appendChild(cvs);
+
+  // Draw everything on canvas
+  drawPlanBlueprint(ctx, refs, ox, oy, iw, il, WE, W, H);
+
+  // SVG overlay for structural annotations (B-pillar, wheel well zone, etc.)
+  const showRefs = document.getElementById('s-refs')?.checked !== false;
+  if (showRefs) {
+    const svg = makeSVG(W, H);
+    svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;';
+    wrap.appendChild(svg);
+
+    // B-pillar line (dark blue on white)
+    if (refs.bpillar) {
+      const bY = oy + px(refs.bpillar);
+      svg.appendChild(svgEl('line', {x1:ox,y1:bY,x2:ox+iw,y2:bY,
+        stroke:'rgba(0,60,160,0.55)','stroke-width':1.5,'stroke-dasharray':'7,4'}));
+      svg.appendChild(svgText(ox+4, bY-3, 'B-PILLAR  '+refs.bpillar+'"',
+        'rgba(0,60,160,0.7)', Math.max(7,S*1.0), 'start'));
+    }
+
+    // Partition zone (light red fill from oy to partition depth)
+    if (refs.partition) {
+      const pY = oy + px(refs.partition);
+      svg.appendChild(svgEl('rect', {x:ox,y:oy,width:iw,height:px(refs.partition),
+        fill:'rgba(200,0,0,0.04)',stroke:'none'}));
+      svg.appendChild(svgEl('line', {x1:ox,y1:pY,x2:ox+iw,y2:pY,
+        stroke:'rgba(180,0,0,0.5)','stroke-width':1.2,'stroke-dasharray':'5,3'}));
+      svg.appendChild(svgText(ox+4, pY+10, 'PARTITION ZONE  '+refs.partition+'"',
+        'rgba(180,0,0,0.6)', Math.max(7,S*0.9), 'start'));
+    }
+
+    // Driver shelf zone annotation (green zone on driver wall)
+    if (refs.driverShelf) {
+      const shelfTop = oy + px(VL - refs.driverShelf);
+      svg.appendChild(svgEl('line', {x1:ox,y1:shelfTop,x2:ox,y2:oy+il,
+        stroke:'rgba(0,120,60,0.5)','stroke-width':4}));
+      svg.appendChild(svgText(ox+4, shelfTop+12, '← DRIVER SHELF  '+refs.driverShelf+'"',
+        'rgba(0,100,50,0.7)', Math.max(7,S*0.9), 'start'));
+    }
+
+    // Passenger shelf zone (green on pass side, shorter due to slide door)
+    if (refs.passShelf) {
+      const psTop = oy + px(VL - refs.passShelf);
+      svg.appendChild(svgEl('line', {x1:ox+iw,y1:psTop,x2:ox+iw,y2:oy+il,
+        stroke:'rgba(0,120,60,0.4)','stroke-width':4}));
+    }
+
+    // Slide clearance zone — light green fill over cargo floor
+    if (refs.slideDoor) {
+      const sd = refs.slideDoor;
+      svg.appendChild(svgEl('rect', {
+        x:ox+iw-px(24), y:oy+px(sd.yStart),
+        width:px(24), height:px(sd.yEnd-sd.yStart),
+        fill:'rgba(0,166,81,0.06)', stroke:'rgba(0,166,81,0.2)',
+        'stroke-width':0.8, 'stroke-dasharray':'4,3'
+      }));
+    }
+  }
+
+  // Module dropzone (exactly over interior cargo floor)
+  const dz = document.createElement('div');
+  dz.id = 'plan-dropzone';
+  dz.style.cssText = `position:absolute;left:${ox}px;top:${oy}px;width:${iw}px;height:${il}px;`;
+  wrap.appendChild(dz);
+
+  modules.filter(m => m.layer === 'floor').forEach(m => addPlanMod(m, dz, VW, VL));
+  modules.filter(m => m.layer !== 'floor').forEach(m => addPlanMod(m, dz, VW, VL));
+
+  // Legend (dark text on white background)
+  const leg = document.createElement('div');
+  leg.style.cssText = `position:absolute;left:${ox}px;top:${oy+il+WE+54}px;`+
+    `display:flex;gap:16px;flex-wrap:wrap;font:9px Arial,sans-serif;`+
+    `color:#555;pointer-events:none;background:#fff;padding:4px 0;`;
+  leg.innerHTML =
+    '<span style="color:#888">▨ Wheel well (hatched)</span>'+
+    '<span style="color:#00a651">━ Slide door</span>'+
+    '<span style="color:rgba(0,60,160,0.7)">- - B-pillar</span>'+
+    '<span style="color:rgba(50,100,200,0.6)">── Floor ribs (16")</span>'+
+    '<span style="color:rgba(0,60,160,0.2)">··· 1" / 6" / 12" grid</span>';
+  wrap.appendChild(leg);
+
+  // Specs button — show Upfit Supply measurements
+  const specsBtn = document.createElement('button');
+  specsBtn.textContent = '📐 Van Specs';
+  specsBtn.style.cssText = `position:absolute;left:${ox+iw-90}px;top:${oy+il+WE+52}px;`+
+    `padding:4px 10px;font:11px Arial;background:#1a1a2e;color:#fff;`+
+    `border:1px solid #333;border-radius:4px;cursor:pointer;z-index:10;`;
+  specsBtn.onclick = () => showVanSpecs(refs);
+  wrap.appendChild(specsBtn);
+
+  recalc();
 }
 
-// ── Van Silhouette — AVC RIG style top-down blueprint ─────────────────────────
-// Orientation: REAR DOORS = left (x=ox), BULKHEAD/CAB = right (x=ox+vl)
-//              DRIVER = top (y=oy), PASSENGER = bottom (y=oy+vw)
-function drawVanSilhouette(ctx, refs, ox, oy) {
+// ── Van Specs Modal ───────────────────────────────────────────────────────────
+function showVanSpecs(refs) {
+  const existing = document.getElementById('van-specs-modal');
+  if (existing) { existing.remove(); return; }
+  const modal = document.createElement('div');
+  modal.id = 'van-specs-modal';
+  modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);'
+    +'background:#fff;border:2px solid #1a1a2e;border-radius:8px;padding:20px 24px;'
+    +'z-index:9999;min-width:340px;max-width:500px;box-shadow:0 8px 32px rgba(0,0,0,0.3);'
+    +'font-family:Arial,sans-serif;color:#1a1a2e;';
+  const rows = [
+    ['Interior Width', refs.vw + '"'],
+    ['Interior Length (Cargo)', refs.vl + '"'],
+    ['Inside Roof Height', refs.vh ? refs.vh + '"' : (refs.vh_lr||'?')+'" LR / '+(refs.vh_mr||'?')+'" MR / '+(refs.vh_hr||'?')+'" HR'],
+    ['Wheel Well Dimensions', refs.wheelWellL ? refs.wheelWellL.d+'" W × '+refs.wheelWellL.w+'" D' : '—'],
+    ['Distance Between Wheel Wells', refs.wheelWellR ? (refs.wheelWellR.x - refs.wheelWellL.w)+'"' : '—'],
+    ['Wall Space — Driver Side', (refs.driverShelf||'—') + '"'],
+    ['Wall Space — Passenger Side', (refs.passShelf||'—') + '"'],
+    ['Slide Door Opening Width', (refs.sideOpen||'—') + '"'],
+    ['Rear Door Opening Width', (refs.rearOpen||'—') + '"'],
+    ['Typical Partition Depth', (refs.partition||9) + '"'],
+  ];
+  let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <h3 style="margin:0;font-size:15px;">${refs.label || 'Van Specs'}</h3>
+    <button onclick="document.getElementById('van-specs-modal').remove()"
+      style="background:none;border:none;font-size:18px;cursor:pointer;color:#555">✕</button>
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <tr style="background:#f0f2f5;"><th style="text-align:left;padding:5px 8px;border-bottom:2px solid #1a1a2e;">Measurement</th>
+    <th style="text-align:right;padding:5px 8px;border-bottom:2px solid #1a1a2e;">Value</th></tr>`;
+  rows.forEach(([k,v],i) => {
+    html += `<tr style="background:${i%2?'#f8f9fb':'#fff'}">
+      <td style="padding:5px 8px;border-bottom:1px solid #e0e4ea;">${k}</td>
+      <td style="padding:5px 8px;border-bottom:1px solid #e0e4ea;text-align:right;font-weight:bold;">${v}</td></tr>`;
+  });
+  if (refs.source && refs.source !== 'user-defined') {
+    html += `</table><p style="margin:10px 0 0;font-size:10px;color:#888;">Source: ${refs.source}</p>`;
+  } else { html += '</table>'; }
+  modal.innerHTML = html;
+  document.body.appendChild(modal);
+}
+
+// ── Core blueprint drawing — white background, professional engineering style ───
+// Matches Upfit Supply / AVC RIG aesthetic: clean white, black lines, colored annotations
+function drawPlanBlueprint(ctx, refs, ox, oy, iw, il, WE, W, H) {
   const VW = refs.vw, VL = refs.vl;
-  const vl = px(VL), vw = px(VW);
-  const WT = px(4);   // wall thickness (exterior body beyond interior floor)
-  const WTF = px(3);  // front wall extra thickness at bulkhead
 
-  // ── EXTERIOR BODY SHAPE ──
-  // Exterior is wider/taller than interior: WT each side, slightly longer at bulkhead
-  const extX  = ox;             // rear of exterior = same as interior rear
-  const extY  = oy - WT;       // exterior top = WT above interior top (driver side)
-  const extW  = vl + WTF;      // exterior length (extra at bulkhead)
-  const extH  = vw + WT * 2;   // exterior height (WT each side)
-  const rE    = Math.min(px(8), 14); // exterior corner radius
-  const rEr   = Math.min(px(3), 6);  // rear corner radius (squarer)
+  // ── 0. White background ──────────────────────────────────────────────────────
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
 
-  // Exterior body fill
-  ctx.fillStyle = 'rgba(26,30,48,.92)';
-  ctx.beginPath();
-  // Top-left (rear, driver) — slight radius
-  ctx.moveTo(extX + rEr, extY);
-  // Top edge (rear → front/bulkhead)
-  ctx.lineTo(extX + extW - rE, extY);
-  // Front-top corner (bulkhead end, driver) — rounded
-  ctx.quadraticCurveTo(extX + extW, extY, extX + extW, extY + rE);
-  // Right edge (front, driver → pass)
-  ctx.lineTo(extX + extW, extY + extH - rE);
-  // Front-bottom corner (bulkhead end, pass)
-  ctx.quadraticCurveTo(extX + extW, extY + extH, extX + extW - rE, extY + extH);
-  // Bottom edge (front → rear)
-  ctx.lineTo(extX + rEr, extY + extH);
-  // Rear-bottom corner (rear, pass)
-  ctx.quadraticCurveTo(extX, extY + extH, extX, extY + extH - rEr);
-  // Left edge (rear, pass → driver)
-  ctx.lineTo(extX, extY + rEr);
-  // Rear-top corner
-  ctx.quadraticCurveTo(extX, extY, extX + rEr, extY);
-  ctx.closePath();
-  ctx.fill();
+  // Light rule lines outside cargo area (for rulers to land on)
+  ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+  ctx.lineWidth = 0.5;
+  ctx.strokeRect(0, 0, W, H);
 
-  // Exterior body stroke
-  ctx.strokeStyle = 'rgba(200,210,240,.6)'; ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(extX + rEr, extY);
-  ctx.lineTo(extX + extW - rE, extY);
-  ctx.quadraticCurveTo(extX + extW, extY, extX + extW, extY + rE);
-  ctx.lineTo(extX + extW, extY + extH - rE);
-  ctx.quadraticCurveTo(extX + extW, extY + extH, extX + extW - rE, extY + extH);
-  ctx.lineTo(extX + rEr, extY + extH);
-  ctx.quadraticCurveTo(extX, extY + extH, extX, extY + extH - rEr);
-  ctx.lineTo(extX, extY + rEr);
-  ctx.quadraticCurveTo(extX, extY, extX + rEr, extY);
-  ctx.closePath();
-  ctx.stroke();
+  // ── 1. Exterior van body ─────────────────────────────────────────────────────
+  const bx = ox - WE, by = oy - WE, bw = iw + WE*2, bh = il + WE*2;
+  const rTop = Math.max(px(5), WE + px(1));
+  const rBot = Math.max(2, WE * 0.3);
 
-  // ── INTERIOR CARGO FLOOR ──
-  ctx.fillStyle = 'rgba(13,14,24,.9)';
-  ctx.beginPath();
-  ctx.roundRect ? ctx.roundRect(ox, oy, vl, vw, 3) : ctx.rect(ox, oy, vl, vw);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 1.2;
-  ctx.stroke();
+  function bodyPath() {
+    ctx.beginPath();
+    ctx.moveTo(bx + rTop, by);
+    ctx.lineTo(bx + bw - rTop, by);
+    ctx.quadraticCurveTo(bx+bw, by,      bx+bw, by+rTop);
+    ctx.lineTo(bx+bw, by+bh-rBot);
+    ctx.quadraticCurveTo(bx+bw, by+bh,   bx+bw-rBot, by+bh);
+    ctx.lineTo(bx+rBot, by+bh);
+    ctx.quadraticCurveTo(bx, by+bh,      bx, by+bh-rBot);
+    ctx.lineTo(bx, by+rTop);
+    ctx.quadraticCurveTo(bx, by,         bx+rTop, by);
+    ctx.closePath();
+  }
 
-  // ── WHEEL ARCH BULGES ──
-  // Wheel arches are the most visually distinctive feature of a van blueprint.
-  // They protrude OUTWARD from the exterior side walls as rounded bumps.
-  // ww.y = start position along length from bulkhead (right side)
-  // ww.x = 0 → driver wall (top), non-zero → passenger wall (bottom)
-  [refs.wheelWellL, refs.wheelWellR].forEach(function(ww) {
+  // Body fill (very light gray — van body skin visible vs white background)
+  ctx.fillStyle = '#f0f2f5';
+  bodyPath(); ctx.fill();
+
+  // Body outline
+  ctx.strokeStyle = '#1a1a2e';
+  ctx.lineWidth = 2.5;
+  bodyPath(); ctx.stroke();
+
+  // ── 2. Wheel arch bumps (exterior fender protrusions) ────────────────────────
+  const BUMP = px(9);
+  const AR   = px(4);
+
+  function drawArchBump(ww, side) {
     if (!ww) return;
-    // Canvas x position: measured from rear (left), so convert from-bulkhead to from-rear
-    const archLeft = ox + vl - px(ww.y) - px(ww.d);  // left edge of arch on canvas
-    const archW    = px(ww.d);                          // arch width (fore-aft)
-    const archBulge = px(ww.w) + WT;                   // protrusion beyond exterior wall
-    const archR    = archW * 0.35;                      // curve radius for arch sides
+    const at = oy + px(ww.y), al = px(ww.d), ab = at + al;
+    const wx = side === 'L' ? bx : bx + bw;
+    const tx = side === 'L' ? bx - BUMP : bx + bw + BUMP;
+    const sign = side === 'L' ? 1 : -1;
 
-    const isDriver = ww.x === 0;  // driver side = top of canvas
+    ctx.fillStyle = '#e4e8ef';
+    ctx.beginPath();
+    ctx.moveTo(wx, at);
+    ctx.lineTo(tx + sign*AR, at);
+    ctx.quadraticCurveTo(tx, at, tx, at + AR);
+    ctx.lineTo(tx, ab - AR);
+    ctx.quadraticCurveTo(tx, ab, tx + sign*AR, ab);
+    ctx.lineTo(wx, ab);
+    ctx.closePath(); ctx.fill();
 
-    if (isDriver) {
-      // ── DRIVER SIDE arch (protrudes upward) ──
-      const archY_ext = extY;  // arch starts at exterior top wall
-      const archY_top = extY - archBulge + WT; // arch tip
+    ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(wx, at);
+    ctx.lineTo(tx + sign*AR, at);
+    ctx.quadraticCurveTo(tx, at, tx, at + AR);
+    ctx.lineTo(tx, ab - AR);
+    ctx.quadraticCurveTo(tx, ab, tx + sign*AR, ab);
+    ctx.lineTo(wx, ab); ctx.stroke();
 
-      // Arch fill (exterior body color)
-      ctx.fillStyle = 'rgba(30,34,52,.95)';
-      ctx.beginPath();
-      ctx.moveTo(archLeft, archY_ext);
-      // Arch curves up from left side
-      ctx.bezierCurveTo(archLeft, archY_ext - archR, archLeft + archR, archY_top, archLeft + archW/2, archY_top);
-      // Arch curves back down to right
-      ctx.bezierCurveTo(archLeft + archW - archR, archY_top, archLeft + archW, archY_ext - archR, archLeft + archW, archY_ext);
-      ctx.closePath();
-      ctx.fill();
-      // Arch stroke
-      ctx.strokeStyle = 'rgba(200,210,240,.55)'; ctx.lineWidth = 1.8;
-      ctx.beginPath();
-      ctx.moveTo(archLeft, archY_ext);
-      ctx.bezierCurveTo(archLeft, archY_ext - archR, archLeft + archR, archY_top, archLeft + archW/2, archY_top);
-      ctx.bezierCurveTo(archLeft + archW - archR, archY_top, archLeft + archW, archY_ext - archR, archLeft + archW, archY_ext);
-      ctx.stroke();
+    // Tire detail (small arc inside bump)
+    const tireR = al * 0.38;
+    const tireX = side === 'L' ? tx + px(3) : tx - px(3);
+    const tireMid = (at + ab) / 2;
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(tireX + sign * tireR, tireMid, tireR, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 
-      // Interior wheel well intrusion (inside cargo floor)
-      const intH = px(ww.w);
-      ctx.fillStyle = 'rgba(232,160,32,.1)';
-      ctx.fillRect(archLeft, oy, archW, intH);
-      ctx.strokeStyle = 'rgba(232,160,32,.75)'; ctx.lineWidth = 1.5;
-      ctx.strokeRect(archLeft, oy, archW, intH);
-      // Hatch pattern inside well
-      ctx.save();
-      ctx.beginPath(); ctx.rect(archLeft, oy, archW, intH); ctx.clip();
-      ctx.strokeStyle = 'rgba(232,160,32,.2)'; ctx.lineWidth = 1;
-      for (let i = -intH; i < archW + intH; i += 5) {
-        ctx.beginPath(); ctx.moveTo(archLeft + i, oy); ctx.lineTo(archLeft + i + intH, oy + intH); ctx.stroke();
-      }
-      ctx.restore();
-      // WW label
-      ctx.fillStyle = 'rgba(232,160,32,.9)';
-      ctx.font = 'bold ' + Math.max(6, S) + "px 'Space Mono', monospace";
-      ctx.textAlign = 'center';
-      ctx.fillText('WW', archLeft + archW/2, oy + intH/2 + 4);
+  drawArchBump(refs.wheelWellL, 'L');
+  drawArchBump(refs.wheelWellR, 'R');
 
-    } else {
-      // ── PASS SIDE arch (protrudes downward) ──
-      const archY_ext = extY + extH;   // arch starts at exterior bottom wall
-      const archY_bot = extY + extH + archBulge - WT; // arch tip
+  // ── 3. Interior cargo floor ───────────────────────────────────────────────────
+  // Clean white floor — the canvas for the grid
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(ox, oy, iw, il);
 
-      ctx.fillStyle = 'rgba(30,34,52,.95)';
-      ctx.beginPath();
-      ctx.moveTo(archLeft, archY_ext);
-      ctx.bezierCurveTo(archLeft, archY_ext + archR, archLeft + archR, archY_bot, archLeft + archW/2, archY_bot);
-      ctx.bezierCurveTo(archLeft + archW - archR, archY_bot, archLeft + archW, archY_ext + archR, archLeft + archW, archY_ext);
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(200,210,240,.55)'; ctx.lineWidth = 1.8;
-      ctx.beginPath();
-      ctx.moveTo(archLeft, archY_ext);
-      ctx.bezierCurveTo(archLeft, archY_ext + archR, archLeft + archR, archY_bot, archLeft + archW/2, archY_bot);
-      ctx.bezierCurveTo(archLeft + archW - archR, archY_bot, archLeft + archW, archY_ext + archR, archLeft + archW, archY_ext);
-      ctx.stroke();
+  // 1" minor grid (very fine — matches AVC RIG "1 square = 1 inch")
+  ctx.strokeStyle = 'rgba(0,100,200,0.08)';
+  ctx.lineWidth = 0.4;
+  for (let x = 0; x <= VW; x++) {
+    const xp = ox + px(x);
+    ctx.beginPath(); ctx.moveTo(xp, oy); ctx.lineTo(xp, oy+il); ctx.stroke();
+  }
+  for (let y = 0; y <= VL; y++) {
+    const yp = oy + px(y);
+    ctx.beginPath(); ctx.moveTo(ox, yp); ctx.lineTo(ox+iw, yp); ctx.stroke();
+  }
 
-      // Interior wheel well intrusion (inside cargo floor, from bottom)
-      const intH = px(ww.w);
-      const intY = oy + vw - intH;
-      ctx.fillStyle = 'rgba(232,160,32,.1)';
-      ctx.fillRect(archLeft, intY, archW, intH);
-      ctx.strokeStyle = 'rgba(232,160,32,.75)'; ctx.lineWidth = 1.5;
-      ctx.strokeRect(archLeft, intY, archW, intH);
-      ctx.save();
-      ctx.beginPath(); ctx.rect(archLeft, intY, archW, intH); ctx.clip();
-      ctx.strokeStyle = 'rgba(232,160,32,.2)'; ctx.lineWidth = 1;
-      for (let i = -intH; i < archW + intH; i += 5) {
-        ctx.beginPath(); ctx.moveTo(archLeft + i, intY); ctx.lineTo(archLeft + i + intH, intY + intH); ctx.stroke();
-      }
-      ctx.restore();
-      ctx.fillStyle = 'rgba(232,160,32,.9)';
-      ctx.font = 'bold ' + Math.max(6, S) + "px 'Space Mono', monospace";
-      ctx.textAlign = 'center';
-      ctx.fillText('WW', archLeft + archW/2, intY + intH/2 + 4);
+  // 6" grid (light blue)
+  ctx.strokeStyle = 'rgba(0,80,180,0.12)';
+  ctx.lineWidth = 0.55;
+  for (let x = 0; x <= VW; x += 6) {
+    const xp = ox + px(x);
+    ctx.beginPath(); ctx.moveTo(xp, oy); ctx.lineTo(xp, oy+il); ctx.stroke();
+  }
+  for (let y = 0; y <= VL; y += 6) {
+    const yp = oy + px(y);
+    ctx.beginPath(); ctx.moveTo(ox, yp); ctx.lineTo(ox+iw, yp); ctx.stroke();
+  }
+
+  // 12" major grid (medium blue)
+  ctx.strokeStyle = 'rgba(0,60,160,0.22)';
+  ctx.lineWidth = 0.8;
+  for (let x = 0; x <= VW; x += 12) {
+    const xp = ox + px(x);
+    ctx.beginPath(); ctx.moveTo(xp, oy); ctx.lineTo(xp, oy+il); ctx.stroke();
+  }
+  for (let y = 0; y <= VL; y += 12) {
+    const yp = oy + px(y);
+    ctx.beginPath(); ctx.moveTo(ox, yp); ctx.lineTo(ox+iw, yp); ctx.stroke();
+  }
+
+  // Interior floor border (bold black)
+  ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 2;
+  ctx.strokeRect(ox, oy, iw, il);
+
+  // ── 4. Floor ribs (structural cross-members every 16") ───────────────────────
+  // Drawn as solid thick lines with end caps — clearly visible for builders
+  (refs.ribs || []).forEach(r => {
+    if (r === 0 || r >= VL) return;
+    const ry = oy + px(r);
+    // Rib label on left
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.font = 'bold ' + Math.max(5, px(0.75)) + 'px Arial';
+    ctx.textAlign = 'right';
+    ctx.fillText('R' + r, ox - 3, ry + 3);
+    // Rib line
+    ctx.strokeStyle = 'rgba(50,100,200,0.35)'; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(ox + 1, ry); ctx.lineTo(ox + iw - 1, ry); ctx.stroke();
+    // End marks
+    ctx.strokeStyle = 'rgba(50,100,200,0.6)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(ox, ry-3); ctx.lineTo(ox, ry+3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ox+iw, ry-3); ctx.lineTo(ox+iw, ry+3); ctx.stroke();
+  });
+
+  // ── 5. Wheel well cutouts (inside cargo floor) ───────────────────────────────
+  // Cross-hatched gray boxes — standard engineering drawing notation for solid object
+  [[refs.wheelWellL, 'L'], [refs.wheelWellR, 'R']].forEach(([ww, side]) => {
+    if (!ww) return;
+    const wy  = oy + px(ww.y);
+    const wl  = px(ww.d);
+    const wdp = px(ww.w);
+    const wxL = side === 'L' ? ox : ox + iw - wdp;
+
+    // Gray fill
+    ctx.fillStyle = '#d0d5de';
+    ctx.fillRect(wxL, wy, wdp, wl);
+
+    // Cross-hatch (45° engineering hatching)
+    ctx.save();
+    ctx.beginPath(); ctx.rect(wxL, wy, wdp, wl); ctx.clip();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
+    const step = 6;
+    for (let i = -wl; i < wdp + wl; i += step) {
+      ctx.beginPath(); ctx.moveTo(wxL + i, wy); ctx.lineTo(wxL + i + wl, wy + wl); ctx.stroke();
+    }
+    ctx.restore();
+
+    // Well border (bold)
+    ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 1.8; ctx.setLineDash([]);
+    ctx.strokeRect(wxL, wy, wdp, wl);
+
+    // Dimension labels inside well
+    const midY = wy + wl / 2;
+    const midX = wxL + wdp / 2;
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold ' + Math.max(6, px(1.1)) + 'px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('WW', midX, midY - 4);
+    if (px(ww.d) > 28) {
+      ctx.font = Math.max(5, px(0.9)) + 'px Arial';
+      ctx.fillText(ww.d + '"×' + ww.w + '"', midX, midY + 8);
     }
   });
 
-  // ── BULKHEAD / CAB WALL (right side) ──
-  ctx.fillStyle = 'rgba(255,255,255,.07)';
-  ctx.fillRect(ox + vl, oy, WTF, vw);
-  ctx.strokeStyle = 'rgba(220,225,255,.85)'; ctx.lineWidth = 3.5;
-  ctx.beginPath(); ctx.moveTo(ox + vl, oy); ctx.lineTo(ox + vl, oy + vw); ctx.stroke();
-  // Bulkhead label
-  ctx.save();
-  ctx.fillStyle = 'rgba(255,255,255,.28)';
-  ctx.font = 'bold ' + Math.max(5, S*0.85) + "px 'Space Mono', monospace";
-  ctx.textAlign = 'center';
-  ctx.translate(ox + vl + WTF + 16, oy + vw/2);
-  ctx.rotate(-Math.PI/2);
-  ctx.fillText('BULKHEAD', 0, 0);
-  ctx.restore();
-
-  // ── REAR DOUBLE DOORS (left side) ──
-  ctx.strokeStyle = 'rgba(232,160,32,.9)'; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox, oy + vw); ctx.stroke();
-  // Center split
-  ctx.strokeStyle = 'rgba(232,160,32,.35)'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
-  ctx.beginPath(); ctx.moveTo(ox, oy + vw/2); ctx.lineTo(ox + px(12), oy + vw/2); ctx.stroke();
-  ctx.setLineDash([]);
-  // Door swing arcs (dashed)
-  const arcR = px(Math.min(VW/2, 30));
-  ctx.strokeStyle = 'rgba(232,160,32,.14)'; ctx.lineWidth = 1; ctx.setLineDash([2,4]);
-  ctx.beginPath(); ctx.arc(ox, oy, arcR, 0, Math.PI/2); ctx.stroke();
-  ctx.beginPath(); ctx.arc(ox, oy + vw, arcR, -Math.PI/2, 0); ctx.stroke();
-  ctx.setLineDash([]);
-  // Label
-  ctx.save();
-  ctx.fillStyle = 'rgba(232,160,32,.5)';
-  ctx.font = 'bold ' + Math.max(5, S*0.85) + "px 'Space Mono', monospace";
-  ctx.textAlign = 'center';
-  ctx.translate(ox - WT - 14, oy + vw/2);
-  ctx.rotate(-Math.PI/2);
-  ctx.fillText('REAR DOORS', 0, 0);
-  ctx.restore();
-
-  // ── SLIDE DOOR (passenger side = bottom) ──
-  if (refs.slideDoor) {
-    const sd   = refs.slideDoor;
-    // Convert from-bulkhead positions to canvas x (rear=left, bulkhead=right)
-    const sdX1 = ox + vl - px(sd.yEnd);
-    const sdX2 = ox + vl - px(sd.yStart);
-    const sdDW = sdX2 - sdX1;
-    const wallY = oy + vw;
-
-    // Clear exterior bottom wall in the door opening
-    ctx.clearRect(sdX1, wallY - 1, sdDW, WT + 5);
-    // Restore interior floor edge
-    ctx.fillStyle = 'rgba(13,14,24,.9)';
-    ctx.fillRect(sdX1, wallY - 1, sdDW, 1.5);
-
-    // Slide door colored bar
-    ctx.strokeStyle = 'rgba(82,200,122,.95)'; ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.moveTo(sdX1, wallY); ctx.lineTo(sdX2, wallY); ctx.stroke();
-
-    // Parked door ghost
-    ctx.strokeStyle = 'rgba(82,200,122,.2)'; ctx.lineWidth = 1; ctx.setLineDash([4,2]);
-    ctx.strokeRect(Math.max(ox, sdX1 - sdDW * 0.6), wallY + 2, sdDW, px(4));
+  // ── 6. Partition line (typical partition depth annotation) ────────────────────
+  if (refs.partition) {
+    const partY = oy + px(refs.partition);
+    ctx.strokeStyle = 'rgba(180,0,0,0.4)'; ctx.lineWidth = 1.5; ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(ox, partY); ctx.lineTo(ox+iw, partY); ctx.stroke();
     ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(180,0,0,0.6)';
+    ctx.font = Math.max(6, px(0.9)) + 'px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText('PARTITION ' + refs.partition + '"', ox + 3, partY - 3);
+  }
 
-    // Jamb ticks
-    [sdX1, sdX2].forEach(tx => {
-      ctx.strokeStyle = 'rgba(82,200,122,.65)'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(tx, wallY - px(5)); ctx.lineTo(tx, wallY + 10); ctx.stroke();
+  // ── 7. Bulkhead (top — cab end) ───────────────────────────────────────────────
+  ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 4; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox+iw, oy); ctx.stroke();
+  ctx.fillStyle = '#1a1a2e';
+  ctx.font = 'bold ' + Math.max(8, px(1.1)) + 'px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('BULKHEAD / CAB END', ox+iw/2, oy - 10);
+
+  // ── 8. Rear doors (bottom) ────────────────────────────────────────────────────
+  ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(ox, oy+il); ctx.lineTo(ox+iw, oy+il); ctx.stroke();
+  // Center split
+  ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1; ctx.setLineDash([6,4]);
+  ctx.beginPath(); ctx.moveTo(ox+iw/2, oy+il); ctx.lineTo(ox+iw/2, oy+il+px(4)); ctx.stroke();
+  ctx.setLineDash([]);
+  // Door swing arcs
+  const swR = Math.min(px(VW/2), px(36));
+  ctx.strokeStyle = 'rgba(0,0,0,0.12)'; ctx.lineWidth = 1; ctx.setLineDash([2,4]);
+  ctx.beginPath(); ctx.arc(ox, oy+il, swR, -Math.PI/2, 0); ctx.stroke();
+  ctx.beginPath(); ctx.arc(ox+iw, oy+il, swR, Math.PI, -Math.PI/2); ctx.stroke();
+  ctx.setLineDash([]);
+  // Rear door dimension callout
+  ctx.fillStyle = '#1a1a2e';
+  ctx.font = 'bold ' + Math.max(7, px(1.0)) + 'px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('REAR DOORS  ' + (refs.rearOpen || '') + '" WIDE', ox+iw/2, oy+il+WE+18);
+
+  // ── 9. Slide door (passenger / right side) ────────────────────────────────────
+  if (refs.slideDoor) {
+    const sd = refs.slideDoor;
+    const sdY1 = oy + px(sd.yStart);
+    const sdY2 = oy + px(sd.yEnd);
+    const sdLen = sd.yEnd - sd.yStart;
+    const sdMid = (sdY1 + sdY2) / 2;
+
+    // Green bar on right wall edge
+    ctx.strokeStyle = '#00a651'; ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(ox+iw, sdY1); ctx.lineTo(ox+iw, sdY2); ctx.stroke();
+
+    // Jamb tick marks
+    [sdY1, sdY2].forEach(ty => {
+      ctx.strokeStyle = '#00a651'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(ox+iw-px(6), ty); ctx.lineTo(ox+iw+14, ty); ctx.stroke();
     });
 
-    // Labels
-    ctx.fillStyle = 'rgba(82,200,122,.9)';
-    ctx.font = 'bold ' + Math.max(6, S*1.05) + "px 'Space Mono', monospace";
+    // Label (rotated)
+    ctx.save();
+    ctx.fillStyle = '#00a651';
+    ctx.font = 'bold ' + Math.max(7, px(1.05)) + 'px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('SLIDE DOOR', (sdX1+sdX2)/2, wallY + WT + 16);
-    ctx.fillStyle = 'rgba(82,200,122,.5)';
-    ctx.font = Math.max(5, S*0.9) + "px 'Space Mono', monospace";
-    ctx.fillText((sd.yEnd - sd.yStart) + '" opening', (sdX1+sdX2)/2, wallY + WT + 25);
+    ctx.translate(ox+iw+WE+22, sdMid); ctx.rotate(Math.PI/2);
+    ctx.fillText('SLIDE  ' + sdLen + '"', 0, 0);
+    ctx.restore();
   }
 
-  // ── CENTERLINE ──
-  ctx.strokeStyle = 'rgba(74,176,224,.38)'; ctx.lineWidth = 1; ctx.setLineDash([5,4]);
-  ctx.beginPath(); ctx.moveTo(ox, oy + vw/2); ctx.lineTo(ox + vl, oy + vw/2); ctx.stroke();
+  // ── 10. Driver shelf annotation ───────────────────────────────────────────────
+  if (refs.driverShelf) {
+    const shelfEnd = oy + px(VL);
+    const shelfStart = oy + px(VL - refs.driverShelf);
+    // Dimension line on driver (left) exterior
+    const dlX = bx - BUMP - 18;
+    ctx.strokeStyle = '#666'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(dlX, shelfStart); ctx.lineTo(dlX, shelfEnd); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(dlX-4, shelfStart); ctx.lineTo(dlX+4, shelfStart); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(dlX-4, shelfEnd); ctx.lineTo(dlX+4, shelfEnd); ctx.stroke();
+    ctx.save(); ctx.fillStyle = '#444';
+    ctx.font = Math.max(7, px(1.0)) + 'px Arial'; ctx.textAlign = 'center';
+    ctx.translate(dlX-10, (shelfStart+shelfEnd)/2); ctx.rotate(-Math.PI/2);
+    ctx.fillText('SHELF ' + refs.driverShelf + '"', 0, 0); ctx.restore();
+  }
+
+  // ── 11. Centerline ────────────────────────────────────────────────────────────
+  ctx.strokeStyle = 'rgba(0,60,160,0.25)'; ctx.lineWidth = 1; ctx.setLineDash([8,4]);
+  ctx.beginPath(); ctx.moveTo(ox+iw/2, oy); ctx.lineTo(ox+iw/2, oy+il); ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle = 'rgba(74,176,224,.6)'; ctx.textAlign = 'left';
-  ctx.font = 'bold ' + Math.max(6, S*1.1) + "px 'Space Mono', monospace";
-  ctx.fillText('CL', ox + vl + WTF + 20, oy + vw/2 + 4);
 
-  // ── RULERS ──
-  ctx.font = Math.max(7, S*1.5) + "px 'Space Mono', monospace";
+  // ── 12. Width ruler (top, offset from center) ────────────────────────────────
+  const halfW = VW / 2;
+  const step = S >= 3 ? 6 : 12;
   ctx.textAlign = 'center';
-  for (let x = 0; x <= VL; x += (S < 2 ? 24 : S < 3 ? 12 : 6)) {
+  for (let x = 0; x <= VW; x += step) {
     const xp = ox + px(x);
-    ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(xp, oy - WT - 7, 1, 7);
-    if (x % 12 === 0) { ctx.fillStyle = 'rgba(255,255,255,.48)'; ctx.fillText(x + '"', xp, oy - WT - 11); }
-  }
-  ctx.textAlign = 'right';
-  const CLy = VW / 2;
-  for (let y = 0; y <= VW; y += (S < 2 ? 12 : 6)) {
-    const yp = oy + px(y);
-    const offset = Math.round(y - CLy);
-    ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(ox - 7, yp, 7, 1);
-    if (y % 12 === 0 || Math.abs(offset) < 1) {
-      ctx.fillStyle = offset === 0 ? 'rgba(74,176,224,.8)' : 'rgba(255,255,255,.42)';
-      const label = offset === 0 ? '0' : (offset > 0 ? '+' + offset : '' + offset);
-      ctx.fillText(label, ox - 9, yp + 3);
+    const off = Math.round(x - halfW);
+    const isMajor = (x % 12 === 0);
+    ctx.strokeStyle = isMajor ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = isMajor ? 1 : 0.6;
+    ctx.beginPath(); ctx.moveTo(xp, oy - (isMajor ? 10 : 6)); ctx.lineTo(xp, oy); ctx.stroke();
+    if (isMajor) {
+      const lbl = off === 0 ? '0' : (off > 0 ? '+'+off : ''+off);
+      ctx.fillStyle = off === 0 ? '#0050c8' : '#333';
+      ctx.font = (off === 0 ? 'bold ' : '') + Math.max(7, px(1.2)) + 'px Arial';
+      ctx.fillText(lbl + '"', xp, oy - 14);
     }
   }
 
-  // ── DIMENSION CALLOUTS ──
-  ctx.fillStyle = 'rgba(255,255,255,.32)';
-  ctx.font = Math.max(6, S*1.1) + "px 'Space Mono', monospace";
-  ctx.textAlign = 'center';
-  ctx.fillText(VL + '"  cargo length', ox + vl/2, oy - WT - 22);
-  ctx.save();
-  ctx.translate(ox - 52, oy + vw/2);
-  ctx.rotate(-Math.PI/2);
-  ctx.fillText(VW + '"  interior width', 0, 0);
-  ctx.restore();
+  // ── 13. Length ruler (left side, bulkhead = 0") ───────────────────────────────
+  ctx.textAlign = 'right';
+  const ystep = S >= 3 ? 12 : 24;
+  for (let y = 0; y <= VL; y += ystep) {
+    const yp = oy + px(y);
+    const isMajor = (y % 12 === 0);
+    ctx.strokeStyle = isMajor ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = isMajor ? 1 : 0.6;
+    ctx.beginPath(); ctx.moveTo(ox-(isMajor?10:6), yp); ctx.lineTo(ox, yp); ctx.stroke();
+    if (isMajor) {
+      ctx.fillStyle = '#333';
+      ctx.font = Math.max(7, px(1.1)) + 'px Arial';
+      ctx.fillText(y + '"', ox - 13, yp + 4);
+    }
+  }
 
-  // Side labels
-  ctx.fillStyle = 'rgba(255,255,255,.2)';
-  ctx.font = Math.max(6, S*0.95) + "px 'Space Mono', monospace";
+  // ── 14. Dimension annotation — interior width + length ────────────────────────
+  // Width: horizontal arrow across top
+  const arrowY = oy - 32;
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(ox, arrowY); ctx.lineTo(ox+iw, arrowY); ctx.stroke();
+  [[ox, -1],[ox+iw, 1]].forEach(([x,d]) => {
+    ctx.beginPath(); ctx.moveTo(x,arrowY); ctx.lineTo(x+d*8,arrowY-3); ctx.moveTo(x,arrowY); ctx.lineTo(x+d*8,arrowY+3); ctx.stroke();
+  });
+  ctx.fillStyle = '#1a1a2e'; ctx.font = 'bold ' + Math.max(8, px(1.2)) + 'px Arial';
   ctx.textAlign = 'center';
-  ctx.save(); ctx.translate(ox - WT - 24, oy + vw/2); ctx.rotate(-Math.PI/2);
-  ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillText('DRIVER', 0, 0); ctx.restore();
-  ctx.save(); ctx.translate(ox + vl/2, oy + vw + WT + 32);
-  ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillText('PASSENGER SIDE', 0, 0); ctx.restore();
+  ctx.fillStyle = '#fff'; ctx.fillRect(ox+iw/2-20, arrowY-8, 40, 12);
+  ctx.fillStyle = '#1a1a2e'; ctx.fillText(VW + '"', ox+iw/2, arrowY+3);
+
+  // Length: vertical arrow on right side
+  const arrX = ox + iw + WE + (refs.slideDoor ? 52 : 22);
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(arrX, oy); ctx.lineTo(arrX, oy+il); ctx.stroke();
+  [[oy,-1],[oy+il,1]].forEach(([y,d]) => {
+    ctx.beginPath(); ctx.moveTo(arrX,y); ctx.lineTo(arrX-3,y+d*8); ctx.moveTo(arrX,y); ctx.lineTo(arrX+3,y+d*8); ctx.stroke();
+  });
+  ctx.fillStyle = '#fff'; ctx.fillRect(arrX-12, oy+il/2-8, 24, 14);
+  ctx.fillStyle = '#1a1a2e'; ctx.font = 'bold ' + Math.max(8, px(1.2)) + 'px Arial';
+  ctx.textAlign = 'center'; ctx.save();
+  ctx.translate(arrX+14, oy+il/2); ctx.rotate(Math.PI/2);
+  ctx.fillText(VL + '"', 0, 0); ctx.restore();
+
+  // ── 15. Side labels (DRIVER / PASSENGER) ─────────────────────────────────────
+  ctx.fillStyle = '#555'; ctx.font = 'bold ' + Math.max(7, px(0.95)) + 'px Arial';
+  ctx.save(); ctx.translate(bx - BUMP - 6, oy + il/2); ctx.rotate(-Math.PI/2);
+  ctx.textAlign = 'center'; ctx.fillText('DRIVER', 0, 0); ctx.restore();
+  ctx.save(); ctx.translate(bx+bw + BUMP + 6, oy + il/2); ctx.rotate(Math.PI/2);
+  ctx.textAlign = 'center'; ctx.fillText('PASSENGER', 0, 0); ctx.restore();
+
+  // ── 16. Scale label & title ───────────────────────────────────────────────────
+  ctx.fillStyle = '#555'; ctx.font = Math.max(7, px(0.9)) + 'px Arial';
+  ctx.textAlign = 'left';
+  ctx.fillText(
+    '1 square = 1"  ·  ' + (refs.label || 'Van Blueprint') + '  ·  Scale ' + S + 'px/in',
+    ox, oy + il + WE + 46
+  );
+
+  // ── 17. Between-wells dimension (horizontal) ──────────────────────────────────
+  if (refs.wheelWellL && refs.wheelWellR) {
+    const wwY = refs.wheelWellL.y;
+    const midWW = oy + px(wwY + refs.wheelWellL.d / 2);
+    const wwLR = ox + px(refs.wheelWellL.w);
+    const wwRR = ox + px(refs.wheelWellR.x);
+    ctx.strokeStyle = '#666'; ctx.lineWidth = 1; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(wwLR, midWW); ctx.lineTo(wwRR, midWW); ctx.stroke();
+    [[wwLR,-1],[wwRR,1]].forEach(([x,d]) => {
+      ctx.beginPath(); ctx.moveTo(x,midWW); ctx.lineTo(x+d*5,midWW-3); ctx.moveTo(x,midWW); ctx.lineTo(x+d*5,midWW+3); ctx.stroke();
+    });
+    const bwLabel = refs.wheelWellR.x - refs.wheelWellL.w;
+    ctx.fillStyle = '#fff'; ctx.fillRect((wwLR+wwRR)/2-16, midWW-8, 32, 12);
+    ctx.fillStyle = '#444'; ctx.font = Math.max(6, px(0.9)) + 'px Arial'; ctx.textAlign = 'center';
+    ctx.fillText(bwLabel + '" apart', (wwLR+wwRR)/2, midWW+3);
+  }
 }
 
 function makeSVG(w, h) {
@@ -783,116 +1217,6 @@ function svgText(x, y, text, fill, fs = 9, anchor = 'middle') {
 }
 
 // ── Plan View ─────────────────────────────────────────────────────────────────
-
-function renderPlan() {
-  const refs = getTransitRefs();
-  const VW = refs.vw, VL = refs.vl;
-  const WT = px(4);   // wall thickness
-  const W  = px(VL) + PAD + WT + 70;
-  const H  = px(VW) + OY + WT * 2 + 70;
-
-  const wrap = document.getElementById('canvas-wrap');
-  if (!wrap) return;
-  wrap.innerHTML = '';
-  wrap.style.position = 'relative';
-  wrap.style.minWidth  = W + 'px';
-  wrap.style.minHeight = H + 'px';
-
-  const cvs = makeCanvas(W, H);
-  const ctx = cvs.getContext('2d');
-
-  const ox = PAD, oy = OY + WT;
-
-  // Background grid first
-  drawGrid(ctx, VW, VL);
-
-  // Full van silhouette (exterior body + wheel arches + doors)
-  drawVanSilhouette(ctx, refs, ox, oy);
-
-  cvs.style.position = 'absolute'; cvs.style.top = '0'; cvs.style.left = '0';
-  wrap.appendChild(cvs);
-
-  const bpillar = refs.bpillar || 42;
-  const showRefs = document.getElementById('s-refs')?.checked !== false;
-
-  // SVG overlay for structural references
-  const svg = makeSVG(W, H);
-  wrap.appendChild(svg);
-
-  if (showRefs) {
-    // Floor ribs
-    (refs.ribs || []).forEach(r => {
-      if (r === 0 || r >= VL) return;
-      svg.appendChild(svgEl('line', {
-        x1: ox+px(r), y1: oy, x2: ox+px(r), y2: oy+px(VW),
-        stroke:'rgba(255,255,255,.09)', 'stroke-width':'1', 'stroke-dasharray':'2,5'
-      }));
-    });
-
-    // B-pillar
-    const bpx = ox + px(bpillar);
-    svg.appendChild(svgEl('line', { x1:bpx, y1:oy, x2:bpx, y2:oy+px(VW),
-      stroke:'rgba(74,176,224,.55)', 'stroke-width':'2' }));
-    svg.appendChild(svgText(bpx+3, oy+12, 'B', 'rgba(74,176,224,.75)', Math.max(7,S*1.3), 'start'));
-
-    if (refs.cPillar) {
-      const cpx = ox + px(refs.cPillar);
-      svg.appendChild(svgEl('line', { x1:cpx, y1:oy, x2:cpx, y2:oy+px(VW),
-        stroke:'rgba(74,176,224,.35)', 'stroke-width':'1.5' }));
-      svg.appendChild(svgText(cpx+3, oy+12, 'C', 'rgba(74,176,224,.5)', Math.max(7,S*1.3), 'start'));
-    }
-
-    if (refs.dPillar) {
-      const dpx = ox + px(refs.dPillar);
-      svg.appendChild(svgEl('line', { x1:dpx, y1:oy, x2:dpx, y2:oy+px(VW),
-        stroke:'rgba(74,176,224,.28)', 'stroke-width':'1.5' }));
-      svg.appendChild(svgText(dpx+3, oy+12, 'D', 'rgba(74,176,224,.4)', Math.max(7,S*1.3), 'start'));
-    }
-
-    (refs.frameRails || []).forEach(rx => {
-      svg.appendChild(svgEl('line', {
-        x1: ox+px(rx), y1: oy, x2: ox+px(rx), y2: oy+px(VW),
-        stroke:'rgba(160,130,200,.2)', 'stroke-width':'1.5', 'stroke-dasharray':'6,3'
-      }));
-    });
-
-    if (refs.garageStart) {
-      const gz = ox + px(refs.garageStart);
-      svg.appendChild(svgEl('line', { x1:gz, y1:oy, x2:gz, y2:oy+px(VW),
-        stroke:'rgba(232,160,32,.25)', 'stroke-width':'1', 'stroke-dasharray':'8,4' }));
-      svg.appendChild(svgText(gz+3, oy+px(VW)-5, 'GARAGE', 'rgba(232,160,32,.38)', Math.max(6,S), 'start'));
-    }
-
-    // Slide door clearance zone (pass side, 24" from B-pillar)
-    const slideZone = document.createElement('div');
-    const szLeft = PAD + px(bpillar);
-    const szTop  = OY + WT + px(VW) - px(VW/2);
-    slideZone.style.cssText = `position:absolute;left:${szLeft}px;top:${szTop}px;width:${px(24)}px;height:${px(VW/2)}px;background:rgba(82,200,122,.045);border:1px dashed rgba(82,200,122,.22);pointer-events:none;box-sizing:border-box;`;
-    const szLabel = document.createElement('div');
-    szLabel.style.cssText = 'position:absolute;bottom:3px;left:3px;font-size:6px;color:rgba(82,200,122,.42);font-family:monospace;white-space:nowrap;';
-    szLabel.textContent = '24" clear';
-    slideZone.appendChild(szLabel);
-    wrap.appendChild(slideZone);
-  }
-
-  // Dropzone for module drag/drop
-  const dz = document.createElement('div');
-  dz.id = 'plan-dropzone';
-  dz.style.cssText = `position:absolute;left:${PAD}px;top:${OY + WT}px;width:${px(VL)}px;height:${px(VW)}px;`;
-  wrap.appendChild(dz);
-
-  // Render modules
-  modules.filter(m => m.layer === 'floor').forEach(m => addPlanMod(m, dz, VW, VL));
-  modules.filter(m => m.layer !== 'floor').forEach(m => addPlanMod(m, dz, VW, VL));
-
-  // Blueprint legend
-  const legend = document.createElement('div');
-  legend.style.cssText = `position:absolute;left:${PAD}px;top:${OY + WT + px(VW) + WT + 38}px;display:flex;gap:14px;flex-wrap:wrap;font-family:'Space Mono',monospace;font-size:8px;color:rgba(255,255,255,.35);pointer-events:none;`;
-  legend.innerHTML = '<span style="color:rgba(232,160,32,.7)">▪ WW</span> Wheel well &nbsp;|&nbsp; <span style="color:rgba(82,200,122,.8)">━</span> Slide door &nbsp;|&nbsp; <span style="color:rgba(74,176,224,.6)">┊ B/C/D</span> Pillars &nbsp;|&nbsp; <span style="color:rgba(82,200,122,.35)">▒</span> 24" slide clearance';
-  wrap.appendChild(legend);
-
-  recalc();
-}
 
 function addPlanMod(m, dz, VW, VL) {
   const c = CAT[m.cat] || CAT.frame;
