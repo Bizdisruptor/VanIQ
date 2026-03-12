@@ -673,6 +673,53 @@ const PLAN_PAD_B = 68;   // bottom: rear door labels + exterior body overhang
 // Body wall: how far exterior outline extends beyond interior floor edge (each side)
 const PLAN_WALL = 5;  // inches — exterior body is 5" wider per side than interior floor
 
+// ── Legend Bar — fixed strip below view tabs, always visible ─────────────────
+function buildLegendBar(refs) {
+  let bar = document.getElementById('legend-bar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'legend-bar';
+    bar.style.cssText = [
+      'display:flex',
+      'align-items:center',
+      'gap:18px',
+      'flex-wrap:wrap',
+      'padding:5px 14px',
+      'background:#1a1a2e',
+      'border-bottom:1px solid #333',
+      'font:10px "Space Mono",monospace',
+      'color:#aaa',
+      'z-index:20',
+      'flex-shrink:0',
+    ].join(';');
+
+    // Insert after the view-tabs row (.topbar-row2) inside .topbar
+    const tabRow = document.querySelector('.topbar-row2');
+    if (tabRow && tabRow.nextSibling) {
+      tabRow.parentElement.insertBefore(bar, tabRow.nextSibling);
+    } else if (tabRow) {
+      tabRow.parentElement.appendChild(bar);
+    } else {
+      // Fallback: insert before canvas-wrap
+      const wrap = document.getElementById('canvas-wrap');
+      wrap && wrap.parentElement.insertBefore(bar, wrap);
+    }
+  }
+
+  bar.innerHTML = [
+    `<span style="color:#fff;font-weight:bold;margin-right:4px">${(refs && refs.label) || 'Transit 148 HR'}</span>`,
+    `<span style="color:#444">|</span>`,
+    `<span style="color:#bec5d0">▨ Wheel well</span>`,
+    `<span style="color:#00a651">━ Slide door</span>`,
+    `<span style="color:rgba(200,60,60,0.9)">─ ─ Partition</span>`,
+    `<span style="color:rgba(70,120,220,0.9)">── Floor ribs (16")</span>`,
+    `<span style="color:rgba(80,120,200,0.5)">··· 1"/12" grid</span>`,
+    `<span style="color:#4a8fd5">H1/H2/H3 height zones</span>`,
+    `<span style="color:#444">|</span>`,
+    `<button onclick="if(typeof showVanSpecs==='function')showVanSpecs(getTransitRefs())" style="background:#2a3050;color:#e0e4f0;border:1px solid #445;border-radius:3px;padding:2px 8px;font:10px 'Space Mono',monospace;cursor:pointer;">📐 Van Specs</button>`,
+  ].join('');
+}
+
 function renderPlan() {
   const refs = getTransitRefs();
   const VW = refs.vw, VL = refs.vl;
@@ -769,27 +816,8 @@ function renderPlan() {
   modules.filter(m => m.layer === 'floor').forEach(m => addPlanMod(m, dz, VW, VL));
   modules.filter(m => m.layer !== 'floor').forEach(m => addPlanMod(m, dz, VW, VL));
 
-  // Legend (dark text on white background)
-  const leg = document.createElement('div');
-  leg.style.cssText = `position:absolute;left:${ox}px;top:${oy+il+WE+54}px;`+
-    `display:flex;gap:16px;flex-wrap:wrap;font:9px Arial,sans-serif;`+
-    `color:#555;pointer-events:none;background:#fff;padding:4px 0;`;
-  leg.innerHTML =
-    '<span style="color:#888">▨ Wheel well (hatched)</span>'+
-    '<span style="color:#00a651">━ Slide door</span>'+
-    '<span style="color:rgba(0,60,160,0.7)">- - B-pillar</span>'+
-    '<span style="color:rgba(50,100,200,0.6)">── Floor ribs (16")</span>'+
-    '<span style="color:rgba(0,60,160,0.2)">··· 1" / 6" / 12" grid</span>';
-  wrap.appendChild(leg);
-
-  // Specs button — show Upfit Supply measurements
-  const specsBtn = document.createElement('button');
-  specsBtn.textContent = '📐 Van Specs';
-  specsBtn.style.cssText = `position:absolute;left:${ox+iw-90}px;top:${oy+il+WE+52}px;`+
-    `padding:4px 10px;font:11px Arial;background:#1a1a2e;color:#fff;`+
-    `border:1px solid #333;border-radius:4px;cursor:pointer;z-index:10;`;
-  specsBtn.onclick = () => showVanSpecs(refs);
-  wrap.appendChild(specsBtn);
+  // Legend bar is now a fixed HTML element below the view tabs — see buildLegendBar()
+  buildLegendBar(refs);
 
   recalc();
 }
