@@ -1,296 +1,283 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>VanIQ — Van Build Planner</title>
-  <meta name="description" content="Plan your van conversion with precision. VanIQ is the professional van build layout tool."/>
-  <link rel="stylesheet" href="css/style.css"/>
-  <!-- Supabase -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <!-- Stripe -->
-  <script src="https://js.stripe.com/v3/"></script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>VanIQ — Van Build Planner</title>
+<meta name="description" content="Plan your van conversion with precision. VanIQ is the professional van build layout tool."/>
+<link rel="stylesheet" href="css/style.css"/>
+<!-- Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<!-- Stripe -->
+<script src="https://js.stripe.com/v3/"></script>
 </head>
 <body>
 <div class="app">
+  <div class="free-banner" id="free-banner" style="display:none">
+    🚐 You're in <strong>Free mode</strong> — your work won't be saved when you close the tab.
+    <a onclick="showUpgradeModal('save')">Upgrade to save your build →</a>
+  </div>
 
-<div class="free-banner" id="free-banner" style="display:none">
-  🚐 You're in <strong>Free mode</strong> — your work won't be saved when you close the tab.
-  <a onclick="showUpgradeModal('save')">Upgrade to save your build →</a>
-</div>
-
-<!-- TOPBAR -->
-<div class="topbar">
-  <div class="topbar-row1">
-    <div class="logo">Van<span style="color:#fff;opacity:1;font-weight:900">IQ</span> <span style="font-size:.55rem;color:rgba(232,160,32,.4);font-family:'Space Mono',monospace;letter-spacing:.06em">v2.0</span></div>
-    <div class="project-wrap">
-      <span class="project-label">Project</span>
-      <select class="project-select" id="project-select" onchange="switchProject(this.value)"></select>
-      <button class="abtn" onclick="openProjectModal()" title="Manage projects">⊕</button>
-    </div>
-    <div class="topbar-tags">
-      <div class="ttag" id="tb-van">Transit 148 LWB</div>
-      <div class="ttag live" id="tb-usable">—</div>
-      <div class="ttag live" id="tb-slide">—</div>
-      <div class="ttag live" id="tb-cost">—</div>
-      <div class="ttag live" id="tb-errors" style="display:none;border-color:var(--error);color:var(--error)">—</div>
-    </div>
-    <div class="action-bar">
-      <button class="abtn" id="btn-undo" onclick="undo()" title="Ctrl+Z" disabled>↩</button>
-      <button class="abtn green" onclick="saveLayout()" title="Ctrl+S">💾</button>
-      <button class="abtn blue" onclick="shareLayout()" title="Share link">🔗</button>
-      <button class="abtn" style="background:rgba(82,200,122,.12);border-color:rgba(82,200,122,.6);color:#52c87a;font-size:.6rem;font-weight:700" onclick="exportBuild()" title="Export .json backup">⬇ Export</button>
-      <button class="abtn" style="background:rgba(74,176,224,.12);border-color:rgba(74,176,224,.6);color:#4ab0e0;font-size:.6rem;font-weight:700" onclick="importBuild()" title="Import .json">⬆ Import</button>
-      <button class="abtn" onclick="importCSV()" title="Import items from CSV (Excel, Sheets, Notion)">📥 CSV</button>
-      <button class="abtn" onclick="downloadCSVTemplate()" title="Download blank CSV template">📋 Template</button>
-      <button class="abtn guide" onclick="openGuide()" title="User Guide">📖 Guide</button>
-      <div class="res-wrap" id="res-wrap">
-        <button class="res-btn" id="res-btn" onclick="toggleResMenu()" title="Resources & Docs">
-          ⚙ Resources <span class="caret">▼</span>
-        </button>
-        <div class="res-menu" id="res-menu">
-          <div class="res-gh-config" id="res-gh-config">
-            <div style="font-family:'Space Mono',monospace;font-size:.44rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent3);margin-bottom:3px">GitHub Resource Loader</div>
-            <input class="res-gh-inp" id="res-gh-url" placeholder="user/repo or full API URL" title="e.g. davidcerf/vaniq-docs or full GitHub API URL"/>
-            <button class="res-gh-btn" onclick="loadGithubResources()">⟳ Load Resources</button>
-          </div>
-          <div id="res-dynamic-section"></div>
-          <hr class="res-divider">
-          <div class="res-section">Local Build Docs</div>
-          <a class="res-item" href="javascript:void(0)" onclick="showToast('Coming soon: Rack + Solar Spec doc','info');toggleResMenu()">
-            <span class="ri">🏗</span>
-            <span><div>Rack + Solar Spec</div><div class="rd">Melipron · Renogy 250W · EcoFlow</div></span>
-          </a>
-          <a class="res-item" href="javascript:void(0)" onclick="showToast('Coming soon: Engineering Blueprint','info');toggleResMenu()">
-            <span class="ri">📐</span>
-            <span><div>Engineering Blueprint</div><div class="rd">4-view drawing · VIQ-ROOF-001</div></span>
-          </a>
-          <a class="res-item" href="javascript:void(0)" onclick="showToast('Coming soon: Garage + Water Diagram','info');toggleResMenu()">
-            <span class="ri">🚿</span>
-            <span><div>Garage + Water Diagram</div><div class="rd">E-bike slide · IsoTemp · fresh tank</div></span>
-          </a>
-          <hr class="res-divider">
-          <div class="res-section">Reference</div>
-          <a class="res-item" href="javascript:void(0)" onclick="showToast('Coming soon: User Guide','info');toggleResMenu()">
-            <span class="ri">📖</span><span><div>User Guide</div><div class="rd">Full app documentation</div></span>
-          </a>
-          <a class="res-item" href="javascript:void(0)" onclick="showToast('Coming soon: Roof Layout Options','info');toggleResMenu()">
-            <span class="ri">☀️</span><span><div>Roof Layout Options</div><div class="rd">Solar placement · rack zones</div></span>
-          </a>
-          <a class="res-item" onclick="openResFileDialog()" style="cursor:pointer">
-            <span class="ri">📂</span><span><div>Open Local File…</div><div class="rd">Load any local .html resource</div></span>
-          </a>
-        </div>
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-row1">
+      <div class="logo">Van<span style="color:#fff;opacity:1;font-weight:900">IQ</span>
+        <span style="font-size:.55rem;color:rgba(232,160,32,.4);font-family:'Space Mono',monospace;letter-spacing:.06em">v2.0</span>
       </div>
-    
-      <div class="user-menu-wrap" id="user-menu-wrap">
-        <div class="user-avatar" id="user-avatar" onclick="toggleUserDropdown()" title="Account"></div>
-        <div class="user-dropdown" id="user-dropdown">
-          <div class="user-dropdown-header">
-            <div class="user-dropdown-name" id="ud-name">—</div>
-            <div class="user-dropdown-email" id="ud-email">—</div>
-            <div class="user-dropdown-plan" id="ud-plan">Free</div>
-          </div>
-          <a class="user-dropdown-item" onclick="showUpgradeModal('UPGRADE_REQUIRED');toggleUserDropdown()">⚡ Upgrade Plan</a>
-          <a class="user-dropdown-item" onclick="signOut();toggleUserDropdown()">Sign Out</a>
-        </div>
+      <div class="project-wrap">
+        <span class="project-label">Project</span>
+        <select class="project-select" id="project-select" onchange="switchProject(this.value)"></select>
+        <button class="abtn" onclick="openProjectModal()" title="Manage projects">⊕</button>
       </div>
-      <button class="abtn" id="signin-btn" onclick="showAuthModal()" style="font-size:.65rem;font-weight:700;background:rgba(10,132,255,.2);border-color:rgba(10,132,255,.6);color:#4ab0ff">Sign In</button>
-
-  </div>
-  </div>
-  <div class="topbar-row2">
-    <button class="vtab active" onclick="setView('plan')" id="tab-plan">⊞ Plan</button>
-    <button class="vtab" onclick="setView('driver')" id="tab-driver">◧ Driver Elev</button>
-    <button class="vtab" onclick="setView('pass')" id="tab-pass">◨ Pass Elev</button>
-    <button class="vtab" onclick="setView('cross')" id="tab-cross">⊕ Section</button>
-    <button class="vtab" onclick="setView('roof')" id="tab-roof">⬡ Roof</button>
-    <button class="vtab" onclick="setView('systems')" id="tab-systems">⚡ Systems</button>
-    <div style="margin-left:auto;display:flex;align-items:center;gap:6px;padding-right:6px;border-left:1px solid var(--panelborder);padding-left:10px">
-      <span style="font-family:'Space Mono',monospace;font-size:.46rem;color:var(--pmuted);letter-spacing:.1em;text-transform:uppercase">Scale</span>
-      <select id="s-scale" onchange="setScale(this.value)" style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.68rem;background:var(--panel);border:1px solid #3a3a55;color:#b0b0cc;padding:2px 6px;border-radius:2px;cursor:pointer;letter-spacing:.06em">
-        <option value="3">3 px/in</option>
-        <option value="3.5">3.5 px/in</option>
-        <option value="4" selected>4 px/in</option>
-        <option value="5">5 px/in</option>
-        <option value="6">6 px/in</option>
-      </select>
+      <div class="topbar-tags">
+        <div class="ttag" id="tb-van">Transit 148 LWB</div>
+        <div class="ttag live" id="tb-usable">—</div>
+        <div class="ttag live" id="tb-slide">—</div>
+        <div class="ttag live" id="tb-cost">—</div>
+        <div class="ttag live" id="tb-errors" style="display:none;border-color:var(--error);color:var(--error)">—</div>
+      </div>
+      <div class="action-bar">
+        <button class="abtn" id="btn-undo" onclick="undo()" title="Ctrl+Z" disabled>↩</button>
+        <button class="abtn green" onclick="saveLayout()" title="Ctrl+S">💾</button>
+        <button class="abtn blue" onclick="shareLayout()" title="Share link">🔗</button>
+        <button class="abtn" style="background:rgba(82,200,122,.12);border-color:rgba(82,200,122,.6);color:#52c87a;font-size:.6rem;font-weight:700" onclick="exportBuild()" title="Export .json backup">⬇ Export</button>
+        <button class="abtn" style="background:rgba(74,176,224,.12);border-color:rgba(74,176,224,.6);color:#4ab0e0;font-size:.6rem;font-weight:700" onclick="importBuild()" title="Import .json">⬆ Import</button>
+        <button class="abtn" onclick="importCSV()" title="Import items from CSV (Excel, Sheets, Notion)">📥 CSV</button>
+        <button class="abtn" onclick="downloadCSVTemplate()" title="Download blank CSV template">📋 Template</button>
+        <button class="abtn guide" onclick="openGuide()" title="User Guide">📖 Guide</button>
+        <div class="res-wrap" id="res-wrap">
+          <button class="res-btn" id="res-btn" onclick="toggleResMenu()" title="Resources &amp; Docs">
+            ⚙ Resources <span class="caret">▼</span>
+          </button>
+          <div class="res-menu" id="res-menu">
+            <div class="res-gh-config" id="res-gh-config">
+              <div style="font-family:'Space Mono',monospace;font-size:.44rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent3);margin-bottom:3px">GitHub Resource Loader</div>
+              <input class="res-gh-inp" id="res-gh-url" placeholder="user/repo or full API URL" title="e.g. davidcerf/vaniq-docs or full GitHub API URL"/>
+              <button class="res-gh-btn" onclick="loadGithubResources()">⟳ Load Resources</button>
+            </div>
+            <div id="res-dynamic-section"></div>
+            <hr class="res-divider">
+            <div class="res-section">Local Build Docs</div>
+            <a class="res-item" href="javascript:void(0)" onclick="openDocViewer('/docs/rack-solar.html','🏗 Rack + Solar Spec');toggleResMenu()">
+              <span class="ri">🏗</span>
+              <span><div>Rack + Solar Spec</div><div class="rd">Melipron · Renogy 250W · EcoFlow</div></span>
+            </a>
+            <a class="res-item" href="javascript:void(0)" onclick="openDocViewer('/docs/blueprint.html','📐 Engineering Blueprint');toggleResMenu()">
+              <span class="ri">📐</span>
+              <span><div>Engineering Blueprint</div><div class="rd">4-view drawing · VIQ-ROOF-001</div></span>
+            </a>
+            <a class="res-item" href="javascript:void(0)" onclick="openDocViewer('/docs/garage-water.html','🚿 Garage + Water Diagram');toggleResMenu()">
+              <span class="ri">🚿</span>
+              <span><div>Garage + Water Diagram</div><div class="rd">E-bike slide · IsoTemp · fresh tank</div></span>
+            </a>
+            <hr class="res-divider">
+            <div class="res-section">Reference</div>
+            <a class="res-item" href="javascript:void(0)" onclick="openGuide();toggleResMenu()">
+              <span class="ri">📖</span><span><div>User Guide</div><div class="rd">Full app documentation</div></span>
+            </a>
+            <a class="res-item" href="javascript:void(0)" onclick="openDocViewer('/docs/roof-options.html','☀️ Roof Layout Options');toggleResMenu()">
+              <span class="ri">☀️</span><span><div>Roof Layout Options</div><div class="rd">Solar placement · rack zones</div></span>
+            </a>
+            <a class="res-item" onclick="document.getElementById('local-res-input').click()" style="cursor:pointer">
+              <span class="ri">📂</span><span><div>Open Local File…</div><div class="rd">Load any local .html resource</div></span>
+            </a>
+          </div>
+        </div>
+        <div class="user-menu-wrap" id="user-menu-wrap">
+          <div class="user-avatar" id="user-avatar" onclick="toggleUserDropdown()" title="Account"></div>
+          <div class="user-dropdown" id="user-dropdown">
+            <div class="user-dropdown-header">
+              <div class="user-dropdown-name" id="ud-name">—</div>
+              <div class="user-dropdown-email" id="ud-email">—</div>
+              <div class="user-dropdown-plan" id="ud-plan">Free</div>
+            </div>
+            <a class="user-dropdown-item" onclick="showUpgradeModal('UPGRADE_REQUIRED');toggleUserDropdown()">⚡ Upgrade Plan</a>
+            <a class="user-dropdown-item" onclick="signOut();toggleUserDropdown()">Sign Out</a>
+          </div>
+        </div>
+        <button class="abtn" id="signin-btn" onclick="showAuthModal()" style="font-size:.65rem;font-weight:700;background:rgba(10,132,255,.2);border-color:rgba(10,132,255,.6);color:#4ab0ff">Sign In</button>
+      </div>
     </div>
-  </div>
-</div>
-
-<div class="body">
-<!-- ── CANVAS — LEFT ── -->
-<div id="canvas-wrap">
-  <div id="view-root"></div>
-</div>
-
-<!-- ── OVERLAY BAR — sits between canvas and panel (hidden in systems) ── -->
-<div class="sys-overlay-bar" id="sys-overlay-bar" style="display:none;flex-direction:column;width:80px;border-left:1px solid var(--panelborder);border-bottom:none;padding:6px 4px">
-  <button class="sys-tog" id="syt-12v"  data-sys="12v"     style="color:#e8a020;border-color:#e8a020;writing-mode:vertical-rl;padding:6px 3px;font-size:.52rem"  onclick="toggleSysOverlay('12v')">⚡ 12V DC</button>
-  <button class="sys-tog" id="syt-solar" data-sys="solar"  style="color:#f5c842;border-color:#f5c842;writing-mode:vertical-rl;padding:6px 3px;font-size:.52rem"  onclick="toggleSysOverlay('solar')">☀ Solar</button>
-  <button class="sys-tog" id="syt-120v" data-sys="120v"    style="color:#d85050;border-color:#d85050;writing-mode:vertical-rl;padding:6px 3px;font-size:.52rem"  onclick="toggleSysOverlay('120v')">🔌 120V</button>
-  <button class="sys-tog" id="syt-fresh" data-sys="fresh"  style="color:#4ab0e0;border-color:#4ab0e0;writing-mode:vertical-rl;padding:6px 3px;font-size:.52rem"  onclick="toggleSysOverlay('fresh')">💧 Fresh</button>
-  <button class="sys-tog" id="syt-grey"  data-sys="grey"   style="color:#607090;border-color:#607090;writing-mode:vertical-rl;padding:6px 3px;font-size:.52rem"  onclick="toggleSysOverlay('grey')">🪣 Grey</button>
-  <button class="sys-tog" id="syt-heating" data-sys="heating" style="color:#c07830;border-color:#c07830;writing-mode:vertical-rl;padding:6px 3px;font-size:.52rem" onclick="toggleSysOverlay('heating')">🌡 Heat</button>
-</div>
-
-<!-- ── RIGHT PANEL ── -->
-<div class="lpanel" id="lpanel">
-  <button class="lp-collapse-btn" id="lp-collapse-btn" onclick="togglePanel()" title="Collapse panel">▶ <span class="lp-collapse-label">Hide</span></button>
-  <div class="lp-tabs">
-    <div class="lptab active" onclick="lTab('dims')" id="lptab-dims">Dims</div>
-    <div class="lptab" onclick="lTab('mods')" id="lptab-mods">Modules</div>
-    <div class="lptab" onclick="lTab('inv')" id="lptab-inv">Assets</div>
-  </div>
-
-  <!-- DIMS -->
-  <div class="lp-panel active" id="lp-dims">
-    <div class="sec">Van Shell</div>
-    <div class="setting-row"><label>Length (in)</label><input type="number" id="s-vanL" value="147" onchange="recalc()"></div>
-    <div class="setting-row"><label>Width (in)</label><input type="number" id="s-vanW" value="58" onchange="recalc()"></div>
-    <div class="setting-row"><label>Height (in)</label><input type="number" id="s-vanH" value="82" onchange="recalc()"></div>
-    <div class="sec">Insulation Preset</div>
-    <div style="padding:4px 10px 8px">
-      <select id="s-insul-preset" onchange="applyInsulPreset(this.value)" style="width:100%;background:var(--panel2);color:var(--ptext);border:1px solid rgba(255,255,255,.12);border-radius:4px;padding:5px 8px;font-size:.62rem;font-family:'Space Mono',monospace;outline:none">
-        <option value="custom">— Custom / Manual —</option>
-        <option value="bare">Bare Metal (no insulation)</option>
-        <option value="minimal">Minimal · Thinsulate only</option>
-        <option value="standard" selected>Standard · Foam + panels</option>
-        <option value="full">Full Build · XPS + furring + panels</option>
-        <option value="premium">Premium · Polyiso + sound deadener</option>
-      </select>
-    </div>
-    <div id="insul-summary" style="margin:0 10px 8px;padding:6px 8px;background:rgba(74,176,224,.06);border:1px solid rgba(74,176,224,.18);border-radius:4px;font-size:.55rem;line-height:1.7;color:var(--ptext)">
-      <span id="insul-desc">Standard: 1.5" XPS foam + ½" ply + ¼" panel ea. wall</span><br>
-      <span style="color:rgba(232,160,32,.9)" id="insul-rval">R-value: Wall R-7.5 · Floor R-7.5 · Ceil R-5</span>
-    </div>
-    <div class="sec">Build Stack</div>
-    <div class="setting-row"><label>Wall ea. side</label><input type="number" id="s-wall" value="2.5" step="0.25" onchange="clearInsulPreset();recalc()"></div>
-    <div class="setting-row"><label>Floor thickness</label><input type="number" id="s-floor" value="2.5" step="0.25" onchange="clearInsulPreset();recalc()"></div>
-    <div class="setting-row"><label>Ceiling thickness</label><input type="number" id="s-ceil" value="2" step="0.25" onchange="clearInsulPreset();recalc()"></div>
-    <div class="setting-row"><label>Frame rail width</label><input type="number" id="s-frameRail" value="3" step="0.5" onchange="recalc()"></div>
-    <div class="sec">Options</div>
-    <div class="setting-row"><label>Flares installed</label><input type="checkbox" id="s-flare" onchange="recalc()"></div>
-    <div class="setting-row"><label>Flare gain ea.</label><input type="number" id="s-flareW" value="4.5" step="0.5" onchange="recalc()"></div>
-    <div class="setting-row"><label>Show struct. refs</label><input type="checkbox" id="s-refs" checked onchange="showRefs=this.checked;renderCurrentView()"></div>
-    <div class="sec">Garage Frame</div>
-    <div class="setting-row" title="Depth of garage platform from rear wall">
-      <label>Frame depth (in)</label><input type="number" id="s-frameD" value="60" onchange="recalc()">
-    </div>
-    <div class="setting-row" title="Garage zone boundary from front bulkhead">
-      <label>Garage zone starts (in)</label>
-      <input type="number" id="s-garageY" value="84" step="1" onchange="recalc()">
-    </div>
-    <div class="setting-row" title="T-slot extrusion setback">
-      <label>Wall mount gap (in)</label>
-      <input type="number" id="s-wallGap" value="1.5" step="0.25" min="0" onchange="recalc()">
-    </div>
-    <div class="dim-result" id="dim-result">—</div>
-    <div class="sec">Section</div>
-    <div class="setting-row"><label>Section at (in)</label><input type="number" id="s-crossY" value="117" onchange="setCrossY(this.value)"></div>
-    <div class="sec">Build Systems</div>
-    <div class="sys-check-row"><input type="checkbox" id="sys-has-12v" checked onchange="sysChanged()"><span class="sys-check-dot" style="background:#e8a020"></span><label class="sys-check-label">12V DC Power</label></div>
-    <div class="sys-check-row"><input type="checkbox" id="sys-has-solar" onchange="sysChanged()"><span class="sys-check-dot" style="background:#f5c842"></span><label class="sys-check-label">Solar</label></div>
-    <div class="sys-check-row"><input type="checkbox" id="sys-has-120v" onchange="sysChanged()"><span class="sys-check-dot" style="background:#d85050"></span><label class="sys-check-label">120V AC / Shore Power</label></div>
-    <div class="sys-check-row"><input type="checkbox" id="sys-has-fresh" checked onchange="sysChanged()"><span class="sys-check-dot" style="background:#4ab0e0"></span><label class="sys-check-label">Fresh Water</label></div>
-    <div class="sys-check-row"><input type="checkbox" id="sys-has-grey" onchange="sysChanged()"><span class="sys-check-dot" style="background:#607090"></span><label class="sys-check-label">Grey Water</label></div>
-    <div class="sys-check-row"><input type="checkbox" id="sys-has-heating" onchange="sysChanged()"><span class="sys-check-dot" style="background:#c07830"></span><label class="sys-check-label">Heating</label></div>
-    <div class="sec">Design Constraints</div>
-    <div class="cst-toggle-row">
-      <span class="cst-toggle-lbl">⚠ Constraint Checks</span>
-      <label class="cst-toggle"><input type="checkbox" id="cst-enabled" onchange="runConstraints()" checked><span class="cst-slider"></span></label>
-    </div>
-    <div id="cst-settings">
-      <div class="cst-row"><label>Min aisle width (in)</label><input type="number" id="cst-aisle" value="20" step="1" onchange="runConstraints()"></div>
-      <div class="cst-row"><label>Min slider door clear (in)</label><input type="number" id="cst-slider" value="24" step="1" onchange="runConstraints()"></div>
-      <div class="cst-row"><label>Min rear door clear (in)</label><input type="number" id="cst-door" value="6" step="1" onchange="runConstraints()"></div>
-      <div class="cst-row"><label>Max module height (in)</label><input type="number" id="cst-maxh" value="72" step="1" onchange="runConstraints()"></div>
-      <div class="cst-row"><label>Check module overlap</label><input type="checkbox" id="cst-overlap" checked onchange="runConstraints()"></div>
-    </div>
-    <div class="cst-warn-panel" id="cst-warn-panel"></div>
-  </div>
-
-  <!-- MODULES -->
-  <div class="lp-panel" id="lp-mods">
-    <div class="sec">Build Modules</div>
-    <div id="mod-list"></div>
-    <button class="add-btn" onclick="openAdd()">＋ Add Module</button>
-    <button class="add-btn" style="border-color:rgba(74,176,224,.4);color:rgba(74,176,224,.8)" onclick="openLibrary()">📦 Module Library</button>
-  </div>
-
-  <!-- INVENTORY -->
-  <div class="lp-panel" id="lp-inv">
-    <div class="sec">Assets</div>
-    <div id="inv-list"></div>
-    <div class="inv-total" id="inv-total">—</div>
-    <div style="padding:5px 7px;border-top:1px solid var(--panelborder)">
-      <button class="add-btn" style="margin:0;border-color:rgba(82,200,122,.4);color:rgba(82,200,122,.8)" onclick="exportCSV()">⬇ Export BOM (.csv)</button>
-    </div>
-    <div class="inv-form">
-      <input class="ii" id="ii-name" placeholder="Item name"/>
-      <input class="ii" id="ii-group" placeholder="Group (e.g. Electrical, Galley…)" list="grp-suggestions"/>
-      <datalist id="grp-suggestions"></datalist>
-      <div class="irow">
-        <input class="ii" id="ii-cost" placeholder="$" style="width:70px"/>
-        <select class="ii" id="ii-status" style="flex:1">
-          <option value="tobuy">📋 To Buy</option>
-          <option value="ordered">✅ Ordered</option>
-          <option value="done">🔧 Installed</option>
+    <div class="topbar-row2">
+      <button class="vtab active" onclick="setView('plan')" id="tab-plan">⊞ Plan</button>
+      <button class="vtab" onclick="setView('driver')" id="tab-driver">◧ Driver Elev</button>
+      <button class="vtab" onclick="setView('pass')" id="tab-pass">◨ Pass Elev</button>
+      <button class="vtab" onclick="setView('cross')" id="tab-cross">⊕ Section</button>
+      <button class="vtab" onclick="setView('roof')" id="tab-roof">⬡ Roof</button>
+      <button class="vtab" onclick="setView('systems')" id="tab-systems">⚡ Systems</button>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:6px;padding-right:6px;border-left:1px solid var(--panelborder);padding-left:10px">
+        <span style="font-family:'Space Mono',monospace;font-size:.46rem;color:var(--pmuted);letter-spacing:.1em;text-transform:uppercase">Scale</span>
+        <select id="s-scale" onchange="setScale(this.value)" style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.68rem;background:var(--panel);border:1px solid #3a3a55;color:#b0b0cc;padding:2px 6px;border-radius:2px;cursor:pointer;letter-spacing:.06em">
+          <option value="3">3 px/in</option>
+          <option value="3.5">3.5 px/in</option>
+          <option value="4" selected>4 px/in</option>
+          <option value="5">5 px/in</option>
+          <option value="6">6 px/in</option>
         </select>
       </div>
-      <button class="isub" onclick="addInv()">＋ Add</button>
     </div>
   </div>
-</div>
-</div>
 
-<!-- INFOBAR -->
-<div class="infobar">
-  <div>Modules: <span id="ib-n">0</span></div>
-  <div>Section: <span id="ib-cross">—</span></div>
-  <div>Aisle: <span id="ib-aisle">—</span></div>
-  <div>Slide max: <span id="ib-slide">—</span></div>
-  <div id="ib-err-count" style="color:var(--error);display:none">Violations: <span id="ib-err-n">0</span></div>
-  <div class="ib-right" id="ib-sel">Click to select · Double-click to edit · E = edit · Del = delete · 1–6 = views</div>
-</div>
+  <div class="body">
+    <!-- ── CANVAS — LEFT ── -->
+    <div id="canvas-wrap">
+      <div id="view-root"></div>
+    </div>
+
+    <!-- ── OVERLAY BAR ── -->
+    <div class="sys-overlay-bar" id="sys-overlay-bar" style="display:none;flex-direction:column;width:80px;border-left:1px solid var(--panelborder);border-bottom:none;padding:6px 4px">
+      <button class="sys-tog" id="syt-12v" data-sys="12v" style="color:#e8a020;border-color:#e8a020;writing-mode:vertical-rl;padding:6px 3px;font-size:.52rem" onclick="toggleSysOverlay('12v')">⚡ 12V DC</button>
+      <button class="sys-tog" id="syt-solar" data-sys="solar" style="color:#f5c842;border-color:#f5c842;writing-mode:vertical-rl;padding:6px 3px;font-size:.52rem" onclick="toggleSysOverlay('solar')">☀ Solar</button>
+      <button class="sys-tog" id="syt-120v" data-sys="120v" style="color:#d85050;border-color:#d85050;writing-mode:vertical-rl;padding:6px 3px;font-size:.52rem" onclick="toggleSysOverlay('120v')">🔌 120V</button>
+      <button class="sys-tog" id="syt-fresh" data-sys="fresh" style="color:#4ab0e0;border-color:#4ab0e0;writing-mode:vertical-rl;padding:6px 3px;font-size:.52rem" onclick="toggleSysOverlay('fresh')">💧 Fresh</button>
+      <button class="sys-tog" id="syt-grey" data-sys="grey" style="color:#607090;border-color:#607090;writing-mode:vertical-rl;padding:6px 3px;font-size:.52rem" onclick="toggleSysOverlay('grey')">🪣 Grey</button>
+      <button class="sys-tog" id="syt-heating" data-sys="heating" style="color:#c07830;border-color:#c07830;writing-mode:vertical-rl;padding:6px 3px;font-size:.52rem" onclick="toggleSysOverlay('heating')">🌡 Heat</button>
+    </div>
+
+    <!-- ── RIGHT PANEL ── -->
+    <div class="lpanel" id="lpanel">
+      <button class="lp-collapse-btn" id="lp-collapse-btn" onclick="togglePanel()" title="Collapse panel">▶ <span class="lp-collapse-label">Hide</span></button>
+      <div class="lp-tabs">
+        <div class="lptab active" onclick="lTab('dims')" id="lptab-dims">Dims</div>
+        <div class="lptab" onclick="lTab('mods')" id="lptab-mods">Modules</div>
+        <div class="lptab" onclick="lTab('inv')" id="lptab-inv">Assets</div>
+      </div>
+
+      <!-- DIMS -->
+      <div class="lp-panel active" id="lp-dims">
+        <div class="sec">Van Shell</div>
+        <div class="setting-row"><label>Length (in)</label><input type="number" id="s-vanL" value="147" onchange="recalc()"></div>
+        <div class="setting-row"><label>Width (in)</label><input type="number" id="s-vanW" value="58" onchange="recalc()"></div>
+        <div class="setting-row"><label>Height (in)</label><input type="number" id="s-vanH" value="82" onchange="recalc()"></div>
+        <div class="sec">Insulation Preset</div>
+        <div style="padding:4px 10px 8px">
+          <select id="s-insul-preset" onchange="applyInsulPreset(this.value)" style="width:100%;background:var(--panel2);color:var(--ptext);border:1px solid rgba(255,255,255,.12);border-radius:4px;padding:5px 8px;font-size:.62rem;font-family:'Space Mono',monospace;outline:none">
+            <option value="custom">— Custom / Manual —</option>
+            <option value="bare">Bare Metal (no insulation)</option>
+            <option value="minimal">Minimal · Thinsulate only</option>
+            <option value="standard" selected>Standard · Foam + panels</option>
+            <option value="full">Full Build · XPS + furring + panels</option>
+            <option value="premium">Premium · Polyiso + sound deadener</option>
+          </select>
+        </div>
+        <div id="insul-summary" style="margin:0 10px 8px;padding:6px 8px;background:rgba(74,176,224,.06);border:1px solid rgba(74,176,224,.18);border-radius:4px;font-size:.55rem;line-height:1.7;color:var(--ptext)">
+          <span id="insul-desc">Standard: 1.5" XPS foam + ½" ply + ¼" panel ea. wall</span><br>
+          <span style="color:rgba(232,160,32,.9)" id="insul-rval">R-value: Wall R-7.5 · Floor R-7.5 · Ceil R-5</span>
+        </div>
+        <div class="sec">Build Stack</div>
+        <div class="setting-row"><label>Wall ea. side</label><input type="number" id="s-wall" value="2.5" step="0.25" onchange="clearInsulPreset();recalc()"></div>
+        <div class="setting-row"><label>Floor thickness</label><input type="number" id="s-floor" value="2.5" step="0.25" onchange="clearInsulPreset();recalc()"></div>
+        <div class="setting-row"><label>Ceiling thickness</label><input type="number" id="s-ceil" value="2" step="0.25" onchange="clearInsulPreset();recalc()"></div>
+        <div class="setting-row"><label>Frame rail width</label><input type="number" id="s-frameRail" value="3" step="0.5" onchange="recalc()"></div>
+        <div class="sec">Options</div>
+        <div class="setting-row"><label>Flares installed</label><input type="checkbox" id="s-flare" onchange="recalc()"></div>
+        <div class="setting-row"><label>Flare gain ea.</label><input type="number" id="s-flareW" value="4.5" step="0.5" onchange="recalc()"></div>
+        <div class="setting-row"><label>Show struct. refs</label><input type="checkbox" id="s-refs" checked onchange="showRefs=this.checked;renderCurrentView()"></div>
+        <div class="sec">Garage Frame</div>
+        <div class="setting-row" title="Depth of garage platform from rear wall">
+          <label>Frame depth (in)</label><input type="number" id="s-frameD" value="60" onchange="recalc()">
+        </div>
+        <div class="setting-row" title="Garage zone boundary from front bulkhead">
+          <label>Garage zone starts (in)</label>
+          <input type="number" id="s-garageY" value="84" step="1" onchange="recalc()">
+        </div>
+        <div class="setting-row" title="T-slot extrusion setback">
+          <label>Wall mount gap (in)</label>
+          <input type="number" id="s-wallGap" value="1.5" step="0.25" min="0" onchange="recalc()">
+        </div>
+        <div class="dim-result" id="dim-result">—</div>
+        <div class="sec">Section</div>
+        <div class="setting-row"><label>Section at (in)</label><input type="number" id="s-crossY" value="117" onchange="setCrossY(this.value)"></div>
+        <div class="sec">Build Systems</div>
+        <div class="sys-check-row"><input type="checkbox" id="sys-has-12v" checked onchange="sysChanged()"><span class="sys-check-dot" style="background:#e8a020"></span><label class="sys-check-label">12V DC Power</label></div>
+        <div class="sys-check-row"><input type="checkbox" id="sys-has-solar" onchange="sysChanged()"><span class="sys-check-dot" style="background:#f5c842"></span><label class="sys-check-label">Solar</label></div>
+        <div class="sys-check-row"><input type="checkbox" id="sys-has-120v" onchange="sysChanged()"><span class="sys-check-dot" style="background:#d85050"></span><label class="sys-check-label">120V AC / Shore Power</label></div>
+        <div class="sys-check-row"><input type="checkbox" id="sys-has-fresh" checked onchange="sysChanged()"><span class="sys-check-dot" style="background:#4ab0e0"></span><label class="sys-check-label">Fresh Water</label></div>
+        <div class="sys-check-row"><input type="checkbox" id="sys-has-grey" onchange="sysChanged()"><span class="sys-check-dot" style="background:#607090"></span><label class="sys-check-label">Grey Water</label></div>
+        <div class="sys-check-row"><input type="checkbox" id="sys-has-heating" onchange="sysChanged()"><span class="sys-check-dot" style="background:#c07830"></span><label class="sys-check-label">Heating</label></div>
+        <div class="sec">Design Constraints</div>
+        <div class="cst-toggle-row">
+          <span class="cst-toggle-lbl">⚠ Constraint Checks</span>
+          <label class="cst-toggle"><input type="checkbox" id="cst-enabled" onchange="runConstraints()" checked><span class="cst-slider"></span></label>
+        </div>
+        <div id="cst-settings">
+          <div class="cst-row"><label>Min aisle width (in)</label><input type="number" id="cst-aisle" value="20" step="1" onchange="runConstraints()"></div>
+          <div class="cst-row"><label>Min slider door clear (in)</label><input type="number" id="cst-slider" value="24" step="1" onchange="runConstraints()"></div>
+          <div class="cst-row"><label>Min rear door clear (in)</label><input type="number" id="cst-door" value="6" step="1" onchange="runConstraints()"></div>
+          <div class="cst-row"><label>Max module height (in)</label><input type="number" id="cst-maxh" value="72" step="1" onchange="runConstraints()"></div>
+          <div class="cst-row"><label>Check module overlap</label><input type="checkbox" id="cst-overlap" checked onchange="runConstraints()"></div>
+        </div>
+        <div class="cst-warn-panel" id="cst-warn-panel"></div>
+      </div>
+
+      <!-- MODULES -->
+      <div class="lp-panel" id="lp-mods">
+        <div class="sec">Build Modules</div>
+        <div id="mod-list"></div>
+        <button class="add-btn" onclick="openAdd()">＋ Add Module</button>
+        <button class="add-btn" style="border-color:rgba(74,176,224,.4);color:rgba(74,176,224,.8)" onclick="openLibrary()">📦 Module Library</button>
+      </div>
+
+      <!-- INVENTORY -->
+      <div class="lp-panel" id="lp-inv">
+        <div class="sec">Assets</div>
+        <div id="inv-list"></div>
+        <div class="inv-total" id="inv-total">—</div>
+        <div style="padding:5px 7px;border-top:1px solid var(--panelborder)">
+          <button class="add-btn" style="margin:0;border-color:rgba(82,200,122,.4);color:rgba(82,200,122,.8)" onclick="exportCSV()">⬇ Export BOM (.csv)</button>
+        </div>
+        <div class="inv-form">
+          <input class="ii" id="ii-name" placeholder="Item name"/>
+          <input class="ii" id="ii-group" placeholder="Group (e.g. Electrical, Galley…)" list="grp-suggestions"/>
+          <datalist id="grp-suggestions"></datalist>
+          <div class="irow">
+            <input class="ii" id="ii-cost" placeholder="$" style="width:70px"/>
+            <select class="ii" id="ii-status" style="flex:1">
+              <option value="tobuy">📋 To Buy</option>
+              <option value="ordered">✅ Ordered</option>
+              <option value="done">🔧 Installed</option>
+            </select>
+          </div>
+          <button class="isub" onclick="addInv()">＋ Add</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INFOBAR -->
+  <div class="infobar">
+    <div>Modules: <span id="ib-n">0</span></div>
+    <div>Section: <span id="ib-cross">—</span></div>
+    <div>Aisle: <span id="ib-aisle">—</span></div>
+    <div>Slide max: <span id="ib-slide">—</span></div>
+    <div id="ib-err-count" style="color:var(--error);display:none">Violations: <span id="ib-err-n">0</span></div>
+    <div class="ib-right" id="ib-sel">Click to select · Double-click to edit · E = edit · Del = delete · 1–6 = views</div>
+  </div>
 </div>
 
 <!-- FLOATING ANCHOR HUD -->
 <div class="anchor-hud" id="anchor-hud">
   <div class="anchor-hud-header" id="anchor-hud-header">
-    <span class="anchor-hud-title" id="anchor-hud-title">Position & Lock</span>
+    <span class="anchor-hud-title" id="anchor-hud-title">Position &amp; Lock</span>
     <span style="font-size:.46rem;color:var(--pmuted);font-family:'Space Mono',monospace" id="anchor-hud-hint">🔒 = locked</span>
     <button class="anchor-hud-close" onclick="hideAnchorHud()" title="Close">✕</button>
   </div>
   <div class="anchor-hud-body">
     <div class="anchor-grid">
       <div class="anchor-field">
-        <label>
-          <span id="anc-front-lock" class="anchor-lock" onclick="toggleAnchorPoint('front')" title="Lock front edge">🔓</span>
-          Front edge (from bulkhead)
-        </label>
+        <label><span id="anc-front-lock" class="anchor-lock" onclick="toggleAnchorPoint('front')" title="Lock front edge">🔓</span> Front edge (from bulkhead)</label>
         <input type="number" id="anc-front" step="0.5" onchange="anchorSet('front',this.value)">
       </div>
       <div class="anchor-field">
-        <label>
-          <span id="anc-rear-lock" class="anchor-lock" onclick="toggleAnchorPoint('rear')" title="Lock rear edge">🔓</span>
-          Rear edge (from bulkhead)
-        </label>
+        <label><span id="anc-rear-lock" class="anchor-lock" onclick="toggleAnchorPoint('rear')" title="Lock rear edge">🔓</span> Rear edge (from bulkhead)</label>
         <input type="number" id="anc-rear" step="0.5" onchange="anchorSet('rear',this.value)">
       </div>
       <div class="anchor-field">
-        <label>
-          <span id="anc-left-lock" class="anchor-lock" onclick="toggleAnchorPoint('driver')" title="Lock driver edge">🔓</span>
-          Driver side (from CL)
-        </label>
+        <label><span id="anc-left-lock" class="anchor-lock" onclick="toggleAnchorPoint('driver')" title="Lock driver edge">🔓</span> Driver side (from CL)</label>
         <input type="number" id="anc-left" step="0.5" onchange="anchorSet('left',this.value)">
       </div>
       <div class="anchor-field">
-        <label>
-          <span id="anc-right-lock" class="anchor-lock" onclick="toggleAnchorPoint('pass')" title="Lock pass edge">🔓</span>
-          Pass side (from CL)
-        </label>
+        <label><span id="anc-right-lock" class="anchor-lock" onclick="toggleAnchorPoint('pass')" title="Lock pass edge">🔓</span> Pass side (from CL)</label>
         <input type="number" id="anc-right" step="0.5" onchange="anchorSet('right',this.value)">
       </div>
       <div class="anchor-cl-row">
@@ -303,132 +290,130 @@
   </div>
 </div>
 
-<!-- MODAL -->
+<!-- MODULE EDIT MODAL -->
 <div class="moverlay" id="moverlay" onclick="closeModalOut(event)">
-<div class="modal">
-  <h2 id="modal-title">Module</h2>
-  <input type="hidden" id="edit-id"/>
-  <div class="field"><label>Name</label><input type="text" id="mod-name"/></div>
-  <div class="frow">
-    <div class="field"><label id="lbl-w">Width (in)</label><input type="number" id="mod-w" min="2"/></div>
-    <div class="field"><label id="lbl-d">Depth (in)</label><input type="number" id="mod-d" min="2"/></div>
-    <div class="field"><label>Height (in)</label><input type="number" id="mod-h" min="2"/></div>
-  </div>
-  <div class="frow">
-    <div class="field"><label>Floor Z (in)</label><input type="number" id="mod-z" min="0"/></div>
-    <div class="field"><label>Category</label>
-      <select id="mod-cat">
-        <option value="utility">Utility (orange)</option>
-        <option value="living">Living (green)</option>
-        <option value="power">Power (blue)</option>
-        <option value="overhead">Overhead (purple)</option>
-        <option value="frame">Frame (grey)</option>
-      </select>
+  <div class="modal">
+    <h2 id="modal-title">Module</h2>
+    <input type="hidden" id="edit-id"/>
+    <div class="field"><label>Name</label><input type="text" id="mod-name"/></div>
+    <div class="frow">
+      <div class="field"><label id="lbl-w">Width (in)</label><input type="number" id="mod-w" min="2"/></div>
+      <div class="field"><label id="lbl-d">Depth (in)</label><input type="number" id="mod-d" min="2"/></div>
+      <div class="field"><label>Height (in)</label><input type="number" id="mod-h" min="2"/></div>
     </div>
-  </div>
-  <div class="frow">
-    <div class="field"><label>Side</label>
-      <select id="mod-side">
-        <option value="driver">Driver</option>
-        <option value="pass">Passenger</option>
-        <option value="both">Full Width</option>
-      </select>
-    </div>
-    <div class="field"><label>Layer</label>
-      <select id="mod-layer" onchange="updateDimLabels()">
-        <option value="floor">Floor</option>
-        <option value="overhead">Overhead</option>
-        <option value="roof">Roof</option>
-      </select>
-    </div>
-  </div>
-
-  <!-- ANCHOR SECTION IN MODAL -->
-  <div class="anchor-modal-section">
-    <div class="anchor-modal-title">
-      📌 Anchor / Lock Position
-      <label style="display:flex;align-items:center;gap:5px;font-size:.62rem;font-weight:400;color:var(--pmuted);cursor:pointer">
-        <input type="checkbox" id="anchor-enabled" style="accent-color:var(--pacc);width:13px;height:13px" onchange="toggleAnchorFields()">
-        Enable anchor
-      </label>
-    </div>
-    <div id="anchor-modal-fields" style="display:none">
-      <div style="font-size:.58rem;color:var(--pmuted);margin-bottom:6px;line-height:1.4">Select which edges/points to lock. Locked edges cannot be moved by drag — only by editing the value directly.</div>
-      <div class="anchor-point-grid">
-        <div class="anchor-pt" id="apt-front" onclick="toggleAnchorPt('front')">▲ Front</div>
-        <div class="anchor-pt" id="apt-center-x" onclick="toggleAnchorPt('center-x')">● Ctr X</div>
-        <div class="anchor-pt" id="apt-rear" onclick="toggleAnchorPt('rear')">▼ Rear</div>
-        <div class="anchor-pt" id="apt-driver" onclick="toggleAnchorPt('driver')">◀ Driver</div>
-        <div class="anchor-pt" id="apt-center-y" onclick="toggleAnchorPt('center-y')">● Ctr Y</div>
-        <div class="anchor-pt" id="apt-pass" onclick="toggleAnchorPt('pass')">▶ Pass</div>
+    <div class="frow">
+      <div class="field"><label>Floor Z (in)</label><input type="number" id="mod-z" min="0"/></div>
+      <div class="field"><label>Category</label>
+        <select id="mod-cat">
+          <option value="utility">Utility (orange)</option>
+          <option value="living">Living (green)</option>
+          <option value="power">Power (blue)</option>
+          <option value="overhead">Overhead (purple)</option>
+          <option value="frame">Frame (grey)</option>
+        </select>
       </div>
-      <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px">
-        <div class="field" style="margin:0">
-          <label>Locked Front (in)</label>
-          <input type="number" id="anchor-y" placeholder="from bulkhead" style="font-family:'Space Mono',monospace;font-size:.62rem"/>
+    </div>
+    <div class="frow">
+      <div class="field"><label>Side</label>
+        <select id="mod-side">
+          <option value="driver">Driver</option>
+          <option value="pass">Passenger</option>
+          <option value="both">Full Width</option>
+        </select>
+      </div>
+      <div class="field"><label>Layer</label>
+        <select id="mod-layer" onchange="updateDimLabels()">
+          <option value="floor">Floor</option>
+          <option value="overhead">Overhead</option>
+          <option value="roof">Roof</option>
+        </select>
+      </div>
+    </div>
+    <!-- ANCHOR SECTION IN MODAL -->
+    <div class="anchor-modal-section">
+      <div class="anchor-modal-title">
+        📌 Anchor / Lock Position
+        <label style="display:flex;align-items:center;gap:5px;font-size:.62rem;font-weight:400;color:var(--pmuted);cursor:pointer">
+          <input type="checkbox" id="anchor-enabled" style="accent-color:var(--pacc);width:13px;height:13px" onchange="toggleAnchorFields()">
+          Enable anchor
+        </label>
+      </div>
+      <div id="anchor-modal-fields" style="display:none">
+        <div style="font-size:.58rem;color:var(--pmuted);margin-bottom:6px;line-height:1.4">Select which edges/points to lock. Locked edges cannot be moved by drag — only by editing the value directly.</div>
+        <div class="anchor-point-grid">
+          <div class="anchor-pt" id="apt-front" onclick="toggleAnchorPt('front')">▲ Front</div>
+          <div class="anchor-pt" id="apt-center-x" onclick="toggleAnchorPt('center-x')">● Ctr X</div>
+          <div class="anchor-pt" id="apt-rear" onclick="toggleAnchorPt('rear')">▼ Rear</div>
+          <div class="anchor-pt" id="apt-driver" onclick="toggleAnchorPt('driver')">◀ Driver</div>
+          <div class="anchor-pt" id="apt-center-y" onclick="toggleAnchorPt('center-y')">● Ctr Y</div>
+          <div class="anchor-pt" id="apt-pass" onclick="toggleAnchorPt('pass')">▶ Pass</div>
         </div>
-        <div class="field" style="margin:0">
-          <label>Locked Driver X (in)</label>
-          <input type="number" id="anchor-x" placeholder="from driver wall" style="font-family:'Space Mono',monospace;font-size:.62rem"/>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="field">
-    <label>Sub-components (shown on canvas)</label>
-    <div class="ctags-edit" id="edit-tags"></div>
-    <div class="tag-add-row">
-      <input class="tag-inp" id="tag-inp" placeholder="sink, pump, fridge…" onkeydown="tagKD(event)"/>
-      <button class="tag-add-btn" onclick="addTag()">＋</button>
-    </div>
-  </div>
-  <div class="field"><label>Notes</label><textarea id="mod-notes"></textarea></div>
-  <div class="field" style="border:1px solid rgba(192,120,48,.25);border-radius:3px;padding:8px;background:rgba(192,120,48,.04)">
-    <label style="color:#c07830;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:6px;display:block">🌡 Contains Heater Unit</label>
-    <div style="display:flex;align-items:center;gap:8px">
-      <input type="checkbox" id="edit-has-heater" style="accent-color:#c07830;width:14px;height:14px">
-      <label style="font-size:.63rem;color:var(--pmuted)">Heater unit is mounted inside this module</label>
-    </div>
-  </div>
-  <div class="field" style="border:1px solid rgba(74,176,224,.2);border-radius:3px;padding:8px;background:rgba(74,176,224,.03)">
-    <label style="color:#4ab0e0;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:6px;display:block">⟳ Deployable / Fold-out</label>
-    <div class="frow" style="margin-bottom:6px;align-items:center">
-      <div class="field" style="flex:0 0 auto;flex-direction:row;align-items:center;gap:6px">
-        <input type="checkbox" id="edit-deploy-on" style="accent-color:#4ab0e0;width:14px;height:14px" onchange="toggleDeployFields()">
-        <label style="font-size:.65rem;color:var(--pmuted)">Enable deploy state</label>
-      </div>
-    </div>
-    <div id="deploy-fields" style="display:none">
-      <div class="frow">
-        <div class="field"><label>Extra Width (in)</label><input type="number" id="edit-deploy-w" min="0" value="0"/></div>
-        <div class="field"><label>Extra Depth (in)</label><input type="number" id="edit-deploy-d" min="0" value="0"/></div>
-      </div>
-      <div class="frow">
-        <div class="field"><label>Extends toward</label>
-          <select id="edit-deploy-dir">
-            <option value="right">Passenger side →</option>
-            <option value="left">Driver side ←</option>
-            <option value="front">Front ↑</option>
-            <option value="rear">Rear ↓</option>
-          </select>
-        </div>
-        <div class="field" style="justify-content:flex-end;padding-top:18px">
-          <label style="font-size:.6rem;color:#4ab0e0;cursor:pointer;display:flex;align-items:center;gap:5px">
-            <input type="checkbox" id="edit-deploy-active" style="accent-color:#4ab0e0;width:13px;height:13px">
-            Currently deployed
-          </label>
+        <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px">
+          <div class="field" style="margin:0">
+            <label>Locked Front (in)</label>
+            <input type="number" id="anchor-y" placeholder="from bulkhead" style="font-family:'Space Mono',monospace;font-size:.62rem"/>
+          </div>
+          <div class="field" style="margin:0">
+            <label>Locked Driver X (in)</label>
+            <input type="number" id="anchor-x" placeholder="from driver wall" style="font-family:'Space Mono',monospace;font-size:.62rem"/>
+          </div>
         </div>
       </div>
     </div>
+    <div class="field">
+      <label>Sub-components (shown on canvas)</label>
+      <div class="ctags-edit" id="edit-tags"></div>
+      <div class="tag-add-row">
+        <input class="tag-inp" id="tag-inp" placeholder="sink, pump, fridge…" onkeydown="tagKD(event)"/>
+        <button class="tag-add-btn" onclick="addTag()">＋</button>
+      </div>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="mod-notes"></textarea></div>
+    <div class="field" style="border:1px solid rgba(192,120,48,.25);border-radius:3px;padding:8px;background:rgba(192,120,48,.04)">
+      <label style="color:#c07830;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:6px;display:block">🌡 Contains Heater Unit</label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="edit-has-heater" style="accent-color:#c07830;width:14px;height:14px">
+        <label style="font-size:.63rem;color:var(--pmuted)">Heater unit is mounted inside this module</label>
+      </div>
+    </div>
+    <div class="field" style="border:1px solid rgba(74,176,224,.2);border-radius:3px;padding:8px;background:rgba(74,176,224,.03)">
+      <label style="color:#4ab0e0;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:6px;display:block">⟳ Deployable / Fold-out</label>
+      <div class="frow" style="margin-bottom:6px;align-items:center">
+        <div class="field" style="flex:0 0 auto;flex-direction:row;align-items:center;gap:6px">
+          <input type="checkbox" id="edit-deploy-on" style="accent-color:#4ab0e0;width:14px;height:14px" onchange="toggleDeployFields()">
+          <label style="font-size:.65rem;color:var(--pmuted)">Enable deploy state</label>
+        </div>
+      </div>
+      <div id="deploy-fields" style="display:none">
+        <div class="frow">
+          <div class="field"><label>Extra Width (in)</label><input type="number" id="edit-deploy-w" min="0" value="0"/></div>
+          <div class="field"><label>Extra Depth (in)</label><input type="number" id="edit-deploy-d" min="0" value="0"/></div>
+        </div>
+        <div class="frow">
+          <div class="field"><label>Extends toward</label>
+            <select id="edit-deploy-dir">
+              <option value="right">Passenger side →</option>
+              <option value="left">Driver side ←</option>
+              <option value="front">Front ↑</option>
+              <option value="rear">Rear ↓</option>
+            </select>
+          </div>
+          <div class="field" style="justify-content:flex-end;padding-top:18px">
+            <label style="font-size:.6rem;color:#4ab0e0;cursor:pointer;display:flex;align-items:center;gap:5px">
+              <input type="checkbox" id="edit-deploy-active" style="accent-color:#4ab0e0;width:13px;height:13px">
+              Currently deployed
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mactions">
+      <button class="mdelete" id="modal-del-btn" onclick="deleteEditMod()" style="display:none">Delete</button>
+      <button class="mcancel" id="modal-dup-btn" onclick="dupFromModal()" style="display:none">⧉ Dupe</button>
+      <button class="mcancel" onclick="closeEdit()">Cancel</button>
+      <button class="msave" onclick="saveMod()">Save</button>
+    </div>
   </div>
-  <div class="mactions">
-    <button class="mdelete" id="modal-del-btn" onclick="deleteEditMod()" style="display:none">Delete</button>
-    <button class="mcancel" id="modal-dup-btn" onclick="dupFromModal()" style="display:none">⧉ Dupe</button>
-    <button class="mcancel" onclick="closeEdit()">Cancel</button>
-    <button class="msave" onclick="saveMod()">Save</button>
-  </div>
-</div>
 </div>
 
 <div class="sztip" id="sztip"></div>
@@ -436,63 +421,64 @@
 
 <!-- PROJECT MODAL -->
 <div class="moverlay" id="proj-overlay" onclick="closeProjModalOut(event)">
-<div class="modal proj-modal">
-  <h2>Projects</h2>
-  <div class="proj-list" id="proj-list"></div>
-  <div style="margin-top:10px;border-top:1px solid var(--panelborder);padding-top:10px">
-    <div class="field"><label>New project name</label>
-      <input type="text" id="proj-new-name" placeholder="My Sprinter build…" onkeydown="if(event.key==='Enter')createProject()"/>
-    </div>
-    <div style="display:flex;gap:6px;margin-top:6px">
-      <div class="field" style="flex:1;margin:0"><label>Van model</label>
-        <select id="proj-new-van">
-          <optgroup label="Ford Transit">
-            <option value="Transit 130 LR">Transit 130 Low Roof</option>
-            <option value="Transit 130 MR">Transit 130 Med Roof</option>
-            <option value="Transit 148 HR">Transit 148 High Roof</option>
-            <option value="Transit 148 EXT HR">Transit 148 EXT High Roof</option>
-          </optgroup>
-          <optgroup label="Mercedes Sprinter">
-            <option value="Sprinter 144 SR">Sprinter 144 Std Roof</option>
-            <option value="Sprinter 144 HR">Sprinter 144 High Roof</option>
-            <option value="Sprinter 170 HR">Sprinter 170 High Roof</option>
-            <option value="Sprinter 170 EXT HR">Sprinter 170 EXT High Roof</option>
-          </optgroup>
-          <optgroup label="Ram ProMaster">
-            <option value="ProMaster 136 HR">ProMaster 136 High Roof</option>
-            <option value="ProMaster 159 HR">ProMaster 159 High Roof</option>
-            <option value="ProMaster 159 SHR">ProMaster 159 Super High Roof</option>
-            <option value="ProMaster 159 EXT HR">ProMaster 159 EXT High Roof</option>
-            <option value="ProMaster 159 EXT SHR">ProMaster 159 EXT Super High Roof</option>
-          </optgroup>
-          <option value="Custom">Custom</option>
-        </select>
+  <div class="modal proj-modal">
+    <h2>Projects</h2>
+    <div class="proj-list" id="proj-list"></div>
+    <div style="margin-top:10px;border-top:1px solid var(--panelborder);padding-top:10px">
+      <div class="field"><label>New project name</label>
+        <input type="text" id="proj-new-name" placeholder="My Sprinter build…" onkeydown="if(event.key==='Enter')createProject()"/>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <div class="field" style="flex:1;margin:0"><label>Van model</label>
+          <select id="proj-new-van">
+            <optgroup label="Ford Transit">
+              <option value="Transit 130 LR">Transit 130 Low Roof</option>
+              <option value="Transit 130 MR">Transit 130 Med Roof</option>
+              <option value="Transit 148 HR">Transit 148 High Roof</option>
+              <option value="Transit 148 EXT HR">Transit 148 EXT High Roof</option>
+            </optgroup>
+            <optgroup label="Mercedes Sprinter">
+              <option value="Sprinter 144 SR">Sprinter 144 Std Roof</option>
+              <option value="Sprinter 144 HR">Sprinter 144 High Roof</option>
+              <option value="Sprinter 170 HR">Sprinter 170 High Roof</option>
+              <option value="Sprinter 170 EXT HR">Sprinter 170 EXT High Roof</option>
+            </optgroup>
+            <optgroup label="Ram ProMaster">
+              <option value="ProMaster 136 HR">ProMaster 136 High Roof</option>
+              <option value="ProMaster 159 HR">ProMaster 159 High Roof</option>
+              <option value="ProMaster 159 SHR">ProMaster 159 Super High Roof</option>
+              <option value="ProMaster 159 EXT HR">ProMaster 159 EXT High Roof</option>
+              <option value="ProMaster 159 EXT SHR">ProMaster 159 EXT Super High Roof</option>
+            </optgroup>
+            <option value="Custom">Custom</option>
+          </select>
+        </div>
+      </div>
+      <div class="mactions" style="margin-top:10px">
+        <button class="mcancel" onclick="closeProjModal()">Close</button>
+        <button class="msave" onclick="createProject()">＋ Create Project</button>
       </div>
     </div>
-    <div class="mactions" style="margin-top:10px">
-      <button class="mcancel" onclick="closeProjModal()">Close</button>
-      <button class="msave" onclick="createProject()">＋ Create Project</button>
-    </div>
   </div>
-</div>
 </div>
 
 <!-- LIBRARY MODAL -->
 <div class="moverlay" id="lib-overlay" onclick="if(event.target===this)closeLibrary()">
-<div class="modal" style="width:460px;max-height:85vh">
-  <h2 style="margin-bottom:10px">📦 Module Library</h2>
-  <p style="font-size:.72rem;color:#9090b0;margin-bottom:12px">Click any module to add it to your plan.</p>
-  <div id="lib-list" style="display:flex;flex-direction:column;gap:3px;overflow-y:auto;max-height:55vh"></div>
-  <div class="mactions" style="margin-top:12px">
-    <button class="mcancel" onclick="closeLibrary()">Close</button>
+  <div class="modal" style="width:460px;max-height:85vh">
+    <h2 style="margin-bottom:10px">📦 Module Library</h2>
+    <p style="font-size:.72rem;color:#9090b0;margin-bottom:12px">Click any module to add it to your plan.</p>
+    <div id="lib-list" style="display:flex;flex-direction:column;gap:3px;overflow-y:auto;max-height:55vh"></div>
+    <div class="mactions" style="margin-top:12px">
+      <button class="mcancel" onclick="closeLibrary()">Close</button>
+    </div>
   </div>
 </div>
-</div>
 
+<!-- Local file input for resource viewer -->
 <input type="file" id="local-res-input" accept=".html" style="display:none" onchange="openLocalResource(event)"/>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!--  SCRIPTS — load order matters                                          -->
+<!-- SCRIPTS -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <script src="js/config.js"></script>
 <script src="js/auth.js"></script>
