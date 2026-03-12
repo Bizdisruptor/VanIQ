@@ -1,0 +1,101 @@
+{
+  "id": "transit_148_hr",
+  "label": "Ford Transit 148 High Roof",
+  "manufacturer": "Ford",
+  "years": [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024],
+  "source": {
+    "name": "Upfit Supply + AVC Rig",
+    "notes": "Seed data for production blueprint pack. Anchor positions must be refined against normalized SVG assets."
+  },
+  "dimensions": {
+    "partition_depth": 9,
+    "inside_roof_height": 79,
+    "driver_wall_usable_length": 126,
+    "passenger_wall_usable_length": 75,
+    "side_door_opening_width": 48,
+    "rear_door_opening_width": 61.5,
+    "wheel_well_width": 35,
+    "wheel_well_height": 11,
+    "wheel_well_depth": 7.5,
+    "distance_between_wheel_wells": 54
+  },
+  "views": {
+    "plan": {
+      "asset": "/blueprints/transit_148_hr/plan.svg",
+      "orientation": "portrait",
+      "canvas": { "width": 800, "height": 1200 },
+      "interior_box": { "x": 120, "y": 210, "width": 420, "height": 860 },
+      "centerline_x": 330,
+      "bulkhead_line_y": 210,
+      "rear_door_line_y": 1070,
+      "wheel_wells": [
+        { "side": "driver", "x": 120, "y": 700, "width": 23, "height": 105 },
+        { "side": "passenger", "x": 517, "y": 700, "width": 23, "height": 105 }
+      ],
+      "pillars": [
+        { "name": "B", "y": 340 },
+        { "name": "C", "y": 535 },
+        { "name": "D", "y": 875 }
+      ],
+      "ribs": [
+        { "name": "R1", "y": 250 },
+        { "name": "R2", "y": 330 },
+        { "name": "R3", "y": 410 },
+        { "name": "R4", "y": 490 },
+        { "name": "R5", "y": 570 },
+        { "name": "R6", "y": 650 },
+        { "name": "R7", "y": 730 },
+        { "name": "R8", "y": 810 },
+        { "name": "R9", "y": 890 },
+        { "name": "R10", "y": 970 }
+      ],
+      "slide_door": {
+        "side": "passenger",
+        "y_start": 355,
+        "y_end": 645
+      },
+      "legend": [
+        { "key": "WW", "label": "Wheel Well" },
+        { "key": "R1-R10", "label": "Floor Ribs" },
+        { "key": "B/C/D", "label": "Pillars" },
+        { "key": "SD", "label": "Sliding Door Opening" },
+        { "key": "RD", "label": "Rear Door Opening" },
+        { "key": "CL", "label": "Centerline" }
+      ]
+    },
+    "roof": {
+      "asset": "/blueprints/transit_148_hr/roof.svg",
+      "orientation": "portrait",
+      "canvas": { "width": 800, "height": 1200 },
+      "centerline_x": 330,
+      "crossmembers": [
+        { "name": "H1", "y": 280 },
+        { "name": "H2", "y": 430 },
+        { "name": "H3", "y": 600 },
+        { "name": "H4", "y": 780 }
+      ],
+      "safe_mount_corridors": [
+        { "x": 155, "y": 255, "width": 350, "height": 570 }
+      ],
+      "legend": [
+        { "key": "H1-H4", "label": "Roof Crossmember References" },
+        { "key": "CL", "label": "Centerline" },
+        { "key": "SMZ", "label": "Safe Mount Zone" }
+      ]
+    },
+    "driver_elev": {
+      "asset": "/blueprints/transit_148_hr/driver_elev.svg",
+      "usable_length": 126
+    },
+    "passenger_elev": {
+      "asset": "/blueprints/transit_148_hr/passenger_elev.svg",
+      "usable_length": 75
+    },
+    "rear_elev": {
+      "asset": "/blueprints/transit_148_hr/rear_elev.svg"
+    },
+    "front_elev": {
+      "asset": "/blueprints/transit_148_hr/front_elev.svg"
+    }
+  }
+}

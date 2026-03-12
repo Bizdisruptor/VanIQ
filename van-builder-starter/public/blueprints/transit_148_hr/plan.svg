@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1200" width="800" height="1200">
+  <rect width="800" height="1200" fill="#fff"/>
+  <g stroke="#dbeafe" stroke-width="1">
+    <path d="M120 210H540V1070H120Z" fill="none"/>
+    <g>
+      <path d="M120 250H540"/><path d="M120 330H540"/><path d="M120 410H540"/><path d="M120 490H540"/>
+      <path d="M120 570H540"/><path d="M120 650H540"/><path d="M120 730H540"/><path d="M120 810H540"/>
+      <path d="M120 890H540"/><path d="M120 970H540"/>
+    </g>
+  </g>
+  <path d="M105 140 Q105 100 145 100 H515 Q555 100 555 140 V1085 Q555 1110 530 1110 H130 Q105 1110 105 1085 Z" fill="none" stroke="#111827" stroke-width="3"/>
+  <rect x="120" y="210" width="420" height="860" fill="none" stroke="#475569" stroke-width="2"/>
+  <line x1="330" y1="210" x2="330" y2="1070" stroke="#94a3b8" stroke-dasharray="8 8"/>
+  <rect x="120" y="700" width="23" height="105" fill="#e5e7eb" stroke="#374151"/>
+  <rect x="517" y="700" width="23" height="105" fill="#e5e7eb" stroke="#374151"/>
+  <line x1="540" y1="355" x2="540" y2="645" stroke="#16a34a" stroke-width="6"/>
+  <text x="330" y="55" text-anchor="middle" font-family="Arial" font-size="24" fill="#111827">Transit 148 HR — Plan</text>
+  <text x="330" y="95" text-anchor="middle" font-family="Arial" font-size="14" fill="#475569">Placeholder blueprint asset</text>
+</svg>
