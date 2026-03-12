@@ -1,3 +1,8 @@
+// VANIQ_SESSION_CONTEXT
+// Repo: https://raw.githubusercontent.com/Bizdisruptor/VanIQ/refs/heads/main/
+// Files: app.js, js/app.js, js/auth.js, js/billing.js, js/config.js, js/db.js
+// Van dims: Transit 148 HR vw:78 vl:148 vh:83 | Sprinter 144 HR vw:76 vl:144 vh:79
+// Active issues: track here each session
 // js/app.js — VanIQ Main Application
 // Assembled from v2 rebuild + complete function set
 
