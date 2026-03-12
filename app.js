@@ -824,8 +824,17 @@ function makeDraggable(el, m, dz, VW, VL) {
 function makeResizable(el, m, dz, VW, VL) {
   const handle = document.createElement('div');
   handle.className = 'resize-handle';
-  handle.style.cssText = 'position:absolute;bottom:0;right:0;width:10px;height:10px;cursor:se-resize;';
+  handle.style.cssText = `
+    position:absolute;bottom:0;right:0;width:14px;height:14px;cursor:se-resize;
+    background:linear-gradient(135deg, transparent 40%, rgba(255,255,255,.5) 40%, rgba(255,255,255,.5) 60%, transparent 60%),
+               linear-gradient(135deg, transparent 60%, rgba(255,255,255,.5) 60%);
+    border-radius:0 0 2px 0;
+    opacity:0;transition:opacity .15s;
+    z-index:10;
+  `;
   el.appendChild(handle);
+  el.addEventListener('mouseenter', () => handle.style.opacity = '1');
+  el.addEventListener('mouseleave', () => handle.style.opacity = '0');
 
   handle.addEventListener('mousedown', e => {
     e.preventDefault(); e.stopPropagation();
@@ -919,7 +928,6 @@ function selMod(id) {
 
   const m = modules.find(x => x.id === id);
   if (m) {
-    showAnchorHud(m);
     highlightModCard(id);
   }
 }
@@ -1249,9 +1257,9 @@ function toggleAnchorPt(pt, btn) {
 
 // ── Elevation / Cross / Roof / Systems Views ──────────────────────────────────
 
-function renderElev(side = "driver") {
+function renderElev(side = 'driver') {
   const refs = getTransitRefs();
-  const VL = refs.vl, VH = refs.vh;
+  const VL = refs.vl, VH = refs.vh, VW = refs.vw;
   const W = px(VL) + PAD + 20;
   const H = px(VH) + OY + 30;
   const wrap = document.getElementById('canvas-wrap');
@@ -1264,26 +1272,67 @@ function renderElev(side = "driver") {
   ctx.fillStyle = '#12121a'; ctx.fillRect(0,0,W,H);
 
   const ox = PAD, oy = OY;
+
+  // Grid
   ctx.strokeStyle = 'rgba(255,255,255,.07)'; ctx.lineWidth = 0.5;
   for (let x = 0; x <= VL; x += 12) { ctx.beginPath(); ctx.moveTo(ox+px(x),oy); ctx.lineTo(ox+px(x),oy+px(VH)); ctx.stroke(); }
   for (let y = 0; y <= VH; y += 12) { ctx.beginPath(); ctx.moveTo(ox,oy+px(y)); ctx.lineTo(ox+px(VL),oy+px(y)); ctx.stroke(); }
 
+  // Van shell outline
   ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 1.5;
   ctx.strokeRect(ox, oy, px(VL), px(VH));
 
+  // Floor line
+  ctx.strokeStyle = 'rgba(232,160,32,.3)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(ox, oy + px(VH)); ctx.lineTo(ox + px(VL), oy + px(VH)); ctx.stroke();
+
+  // Side label
+  ctx.fillStyle = 'rgba(255,255,255,.25)';
+  ctx.font = '500 ' + Math.max(9, S*1.8) + 'px Barlow Condensed, sans-serif';
+  ctx.fillText(side === 'driver' ? '◀ DRIVER SIDE (looking inward →)' : '◀ PASSENGER SIDE (looking inward →)', ox + 6, oy - 6);
+
+  // Draw ruler marks
+  ctx.fillStyle = 'rgba(255,255,255,.2)';
+  ctx.font = (Math.max(7, S*1.2)) + 'px Space Mono, monospace';
+  for (let x = 0; x <= VL; x += 24) {
+    ctx.fillText(x + '"', ox + px(x) + 2, oy - 4);
+  }
+
   const svg = makeSVG(W, H);
-  modules.forEach(m => {
-    if (!m.h) return;
+
+  // Filter modules for this side:
+  // driver side: show modules with side='driver' or side='both'
+  // pass side: show modules with side='pass' or side='both'
+  // Also show floor-layer modules
+  const visibleMods = modules.filter(m => {
+    if (!m.h) return false;
+    if (side === 'driver') return m.side === 'driver' || m.side === 'both' || !m.side;
+    if (side === 'pass')   return m.side === 'pass'   || m.side === 'both' || !m.side;
+    return true;
+  });
+
+  visibleMods.forEach(m => {
+    const mh = m.h || 24;
+    const mz = m.z || 0;
+    // x position = front-to-back position (m.x = distance from front)
+    const rx = ox + px(m.x);
+    // y position = from floor up, z is floor offset
+    const ry = oy + px(VH) - px(mh + mz);
+    const rw = Math.max(4, px(m.w));
+    const rh = Math.max(4, px(mh));
+
     const r = svgEl('rect', {
-      x: ox + px(m.x), y: oy + px(VH - m.h),
-      width: px(m.w), height: px(m.h),
+      x: rx, y: ry, width: rw, height: rh,
       fill: (CAT[m.cat]||CAT.frame).bg,
       stroke: (CAT[m.cat]||CAT.frame).border,
       'stroke-width': 1.5, rx: 2
     });
     svg.appendChild(r);
-    const t = svgText(ox + px(m.x) + px(m.w)/2, oy + px(VH - m.h) + 12, m.name, (CAT[m.cat]||CAT.frame).text, Math.max(7,S*1.4));
-    svg.appendChild(t);
+
+    if (rw > 20 && rh > 12) {
+      const t = svgText(rx + rw/2, ry + rh/2 + 4, m.name, (CAT[m.cat]||CAT.frame).text, Math.max(7, S*1.4));
+      svg.appendChild(t);
+    }
   });
 
   cvs.style.cssText = 'position:absolute;top:0;left:0;';
@@ -1338,7 +1387,86 @@ function renderCross() {
 }
 
 function renderRoof() {
-  renderPlan(); // TODO: filter to roof layer items only
+  const refs = getTransitRefs();
+  const VL = refs.vl, VW = refs.vw;
+  const W = px(VL) + PAD + 20;
+  const H = px(VW) + OY + 30;
+  const wrap = document.getElementById('canvas-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  wrap.style.minWidth = W + 'px'; wrap.style.minHeight = H + 'px';
+
+  const cvs = makeCanvas(W, H);
+  const ctx = cvs.getContext('2d');
+  ctx.fillStyle = '#0e0e1a'; ctx.fillRect(0,0,W,H);
+
+  const ox = PAD, oy = OY;
+
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,.06)'; ctx.lineWidth = 0.5;
+  for (let x = 0; x <= VL; x += 12) { ctx.beginPath(); ctx.moveTo(ox+px(x),oy); ctx.lineTo(ox+px(x),oy+px(VW)); ctx.stroke(); }
+  for (let y = 0; y <= VW; y += 12) { ctx.beginPath(); ctx.moveTo(ox,oy+px(y)); ctx.lineTo(ox+px(VL),oy+px(y)); ctx.stroke(); }
+
+  // Van roof outline
+  ctx.strokeStyle = 'rgba(255,255,255,.3)'; ctx.lineWidth = 2;
+  ctx.strokeRect(ox, oy, px(VL), px(VW));
+
+  // Centerline
+  ctx.strokeStyle = 'rgba(74,176,224,.25)'; ctx.lineWidth = 1;
+  ctx.setLineDash([6,4]);
+  ctx.beginPath(); ctx.moveTo(ox, oy + px(VW/2)); ctx.lineTo(ox + px(VL), oy + px(VW/2)); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Label
+  ctx.fillStyle = 'rgba(255,255,255,.25)';
+  ctx.font = '500 ' + Math.max(9, S*1.8) + 'px Barlow Condensed, sans-serif';
+  ctx.fillText('⬡ ROOF PLAN (looking down)', ox + 6, oy - 6);
+
+  // Ruler
+  ctx.fillStyle = 'rgba(255,255,255,.2)';
+  ctx.font = Math.max(7, S*1.2) + 'px Space Mono, monospace';
+  for (let x = 0; x <= VL; x += 24) {
+    ctx.fillText(x + '"', ox + px(x) + 2, oy - 4);
+  }
+
+  const svg = makeSVG(W, H);
+
+  // Show only roof-layer modules
+  const roofMods = modules.filter(m => m.layer === 'roof');
+  roofMods.forEach(m => {
+    const rw = Math.max(4, px(m.w));
+    const rd = Math.max(4, px(m.d || m.w));
+    const rx = ox + px(m.x);
+    const ry = oy + px(m.y);
+    const r = svgEl('rect', {
+      x: rx, y: ry, width: rw, height: rd,
+      fill: (CAT[m.cat]||CAT.frame).bg,
+      stroke: (CAT[m.cat]||CAT.frame).border,
+      'stroke-width': 1.5, rx: 2
+    });
+    svg.appendChild(r);
+    if (rw > 20) {
+      const t = svgText(rx + rw/2, ry + rd/2 + 4, m.name, (CAT[m.cat]||CAT.frame).text, Math.max(7, S*1.4));
+      svg.appendChild(t);
+    }
+  });
+
+  if (roofMods.length === 0) {
+    const msg = svgEl('text', {
+      x: ox + px(VL/2), y: oy + px(VW/2),
+      fill: 'rgba(255,255,255,.2)',
+      'text-anchor': 'middle',
+      'font-size': '11',
+      'font-family': 'Space Mono, monospace'
+    });
+    msg.textContent = 'No roof modules yet — add a module with Layer = Roof';
+    svg.appendChild(msg);
+  }
+
+  cvs.style.cssText = 'position:absolute;top:0;left:0;';
+  wrap.appendChild(cvs);
+  svg.style.cssText = 'position:absolute;top:0;left:0;';
+  wrap.appendChild(svg);
 }
 
 function renderSystems() {
@@ -1998,8 +2126,12 @@ async function init() {
 
   setView('plan');
   renderModList();
-  autoFitScale();
   syncDimInputs();
+  // Defer autoFitScale so canvas-wrap has real clientWidth after layout paints
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    autoFitScale();
+    renderCurrentView();
+  }));
 
   if (!canSave()) {
     setTimeout(() => {
