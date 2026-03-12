@@ -683,11 +683,12 @@ function renderPlan() {
   // Width: interior + padding + exterior overhang
   const W = iw + PLAN_PAD_L + PLAN_PAD_R + WE * 2;
   // Height: top padding + cab section + gap + exterior top + cargo + exterior bottom + bottom padding
-  const H = PLAN_PAD_T + cabH + 8 + WE + il + WE + PLAN_PAD_B + 110; // +110 for legend
+  const CAB_GAP = 8;  // px gap between cab section and cargo floor top
+  const H = PLAN_PAD_T + cabH + CAB_GAP + WE + il + WE + PLAN_PAD_B + 110; // +110 for legend
 
   // Interior cargo floor origin — oy is further down to make room for cab
   const ox = PLAN_PAD_L + WE;
-  const oy = PLAN_PAD_T + cabH + 8 + WE;  // cargo floor top
+  const oy = PLAN_PAD_T + cabH + CAB_GAP + WE;  // cargo floor top
 
   const wrap = document.getElementById('canvas-wrap');
   if (!wrap) return;
@@ -1017,304 +1018,433 @@ function drawLegend(ctx, lx, ly, lw, refs, showHeights) {
 // White background, looks like a real van, H-zones, seats, hatched wheel wells
 function drawPlanBlueprint(ctx, refs, ox, oy, iw, il, WE, W, H) {
   /*
-   * TOP-DOWN PLAN VIEW — Transit 148 HR
-   * TOP    = CAB / FRONT of van (cab has seats, mirrors, windshield)
-   * BOTTOM = REAR DOORS
-   * LEFT   = DRIVER side (USA)
-   * RIGHT  = PASSENGER side
+   * TOP-DOWN PLAN VIEW — Transit 148 HR (portrait orientation)
    *
-   * ox, oy  = top-left of INTERIOR CARGO FLOOR
-   * Cab section drawn ABOVE oy (between canvas top and oy)
-   * Bulkhead line at (oy - GAP) separates cab from cargo
+   * ORIENTATION:
+   *   TOP    = front of van (hood, windshield, grille)
+   *   BOTTOM = rear doors
+   *   LEFT   = driver side (USA)
+   *   RIGHT  = passenger side
+   *
+   * KEY Y COORDINATES:
+   *   by  = top of exterior body (hood/grille)
+   *   cabBot = bottom of cab hood section = top of windshield band
+   *   oy  = top of interior cargo floor (= bulkhead position)
+   *   oy+il = rear door line
+   *
+   * SEATS: Transit front seats sit BEHIND (south of) the bulkhead
+   *        in the cargo coordinate system. In a top-down plan view
+   *        they appear just below the bulkhead line, inside the cargo zone.
+   *        Typical offset from bulkhead: ~0" to 6" (seats straddle bulkhead).
+   *        We draw them at oy+0 to oy+px(14) = just inside cargo floor.
    */
   var VW = refs.vw, VL = refs.vl;
-  var BUMP = Math.max(8, px(8));
-  var bx   = ox - WE;
-  var bw   = iw + WE * 2;
-  var GAP  = px(6);
-  var cabH = px(refs.cabDepth || 24);
-  var by   = oy - WE - GAP - cabH;
-  var bh   = cabH + GAP + WE + il + WE;
-  var rF   = WE + px(9);
-  var rR   = WE + px(2);
-  var fLG  = Math.max(10, px(1.35));
-  var fMD  = Math.max(9,  px(1.05));
-  var fSM  = Math.max(7,  px(0.88));
-  var fXS  = Math.max(6,  px(0.72));
+  var bx  = ox - WE;
+  var bw  = iw + WE * 2;
+  var GAP = 8;  // px gap between hood and cargo floor top — must match renderPlan
+  var cabH = px(CAB_H_IN);  // height of hood/grille section above bulkhead
 
-  function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();}
+  // Hood section: from by (top of van) down to bulkhead at oy
+  var by  = oy - WE - GAP - cabH;   // top of exterior body
+  var bh  = cabH + GAP + WE + il + WE; // full body height hood-to-rear
 
-  // 0. White BG
-  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+  var rF = WE + px(9);  // front corner radius (rounder)
+  var rR = WE + px(2);  // rear corner radius (tighter)
+  var BUMP = Math.max(8, px(8)); // fender protrusion width
 
-  // 1. Full van exterior body
-  ctx.beginPath();
-  ctx.moveTo(bx+rF,by); ctx.lineTo(bx+bw-rF,by);
-  ctx.arcTo(bx+bw,by,bx+bw,by+rF,rF); ctx.lineTo(bx+bw,by+bh-rR);
-  ctx.arcTo(bx+bw,by+bh,bx+bw-rR,by+bh,rR); ctx.lineTo(bx+rR,by+bh);
-  ctx.arcTo(bx,by+bh,bx,by+bh-rR,rR); ctx.lineTo(bx,by+rF);
-  ctx.arcTo(bx,by,bx+rF,by,rF); ctx.closePath();
-  ctx.fillStyle='#e2e6f0'; ctx.fill();
-  ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=2.5; ctx.stroke();
+  var fLG = Math.max(10, px(1.35));
+  var fMD = Math.max(9,  px(1.05));
+  var fSM = Math.max(7,  px(0.88));
+  var fXS = Math.max(6,  px(0.72));
 
-  // 2. Cab section fill
-  var cabTop=by, cabBot=by+cabH;
-  ctx.save(); rr(bx+1,cabTop+1,bw-2,cabH-2,rF-1); ctx.clip();
-  ctx.fillStyle='#cdd3e2'; ctx.fill(); ctx.restore();
-
-  // Hood grille line
-  ctx.strokeStyle='#aab2c4'; ctx.lineWidth=1.2;
-  ctx.beginPath(); ctx.moveTo(bx+rF,cabTop+px(2)); ctx.lineTo(bx+bw-rF,cabTop+px(2)); ctx.stroke();
-
-  // Windshield arc
-  ctx.strokeStyle='#8898b5'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(bx+px(5),cabTop+px(5));
-  ctx.quadraticCurveTo(bx+bw/2,cabTop+px(10),bx+bw-px(5),cabTop+px(5)); ctx.stroke();
-
-  // Side mirrors (outside body at top of cab)
-  var mW=px(5),mH=px(9),mY=cabTop+px(6);
-  rr(bx-mW,mY,mW,mH,2); ctx.fillStyle='#bcc5d5'; ctx.fill(); ctx.strokeStyle='#7a8090'; ctx.lineWidth=1; ctx.stroke();
-  rr(bx+bw,mY,mW,mH,2); ctx.fillStyle='#bcc5d5'; ctx.fill(); ctx.stroke();
-
-  // Steering wheel (driver = LEFT side USA)
-  var swX=bx+bw*0.24, swY=cabTop+cabH*0.54, swR=Math.max(5,px(3.5));
-  ctx.strokeStyle='#3a3f52'; ctx.lineWidth=2.2;
-  ctx.beginPath(); ctx.arc(swX,swY,swR,0,Math.PI*2); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(swX-swR,swY); ctx.lineTo(swX+swR,swY); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(swX,swY-swR); ctx.lineTo(swX,swY+swR); ctx.stroke();
-  ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(swX,swY+swR); ctx.lineTo(swX,cabBot-2); ctx.stroke();
-
-  // Front seats — top-down silhouettes
-  function seat(cx,cy,sw_,sd_,lbl){
-    var sw=px(sw_),sd=px(sd_),sx=cx-sw/2,sy=cy-sd/2;
-    rr(sx,sy,sw,sd,3); ctx.fillStyle='#b8c2d5'; ctx.fill(); ctx.strokeStyle='#7a8499'; ctx.lineWidth=1; ctx.stroke();
-    rr(sx,sy,sw,sd*0.38,3); ctx.fillStyle='#a0afc7'; ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.arc(cx,sy+sd*0.15,sw*0.22,0,Math.PI*2); ctx.fillStyle='#8e9ab5'; ctx.fill(); ctx.stroke();
-    ctx.fillStyle='#4a5060'; ctx.font=fXS+'px Arial'; ctx.textAlign='center';
-    ctx.fillText(lbl,cx,sy+sd+10);
+  function rr(x,y,w,h,r) {
+    ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+    ctx.arcTo(x+w,y,x+w,y+r,r); ctx.lineTo(x+w,y+h-r);
+    ctx.arcTo(x+w,y+h,x+w-r,y+h,r); ctx.lineTo(x+r,y+h);
+    ctx.arcTo(x,y+h,x,y+h-r,r); ctx.lineTo(x,y+r);
+    ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
   }
-  var sY=cabTop+cabH*0.52;
-  seat(bx+bw*0.23,sY,16,14,'DRV');
-  seat(bx+bw*0.77,sY,16,14,'PASS');
 
-  // 3. Bulkhead line
-  ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=5; ctx.setLineDash([]);
-  ctx.beginPath(); ctx.moveTo(bx,cabBot); ctx.lineTo(bx+bw,cabBot); ctx.stroke();
-  ctx.fillStyle='#1a1a2e'; ctx.font='bold '+fMD+'px Arial'; ctx.textAlign='center';
-  ctx.fillText('BULKHEAD  —  0"', bx+bw/2, oy-4);
+  // ── 0. White background ──────────────────────────────────────────────────
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
 
-  // 4. Interior cargo floor
-  ctx.fillStyle='#fff'; ctx.fillRect(ox,oy,iw,il);
+  // ── 1. Full van exterior body (top to bottom) ────────────────────────────
+  ctx.beginPath();
+  ctx.moveTo(bx+rF, by); ctx.lineTo(bx+bw-rF, by);
+  ctx.arcTo(bx+bw,by, bx+bw,by+rF, rF);
+  ctx.lineTo(bx+bw, by+bh-rR);
+  ctx.arcTo(bx+bw,by+bh, bx+bw-rR,by+bh, rR);
+  ctx.lineTo(bx+rR, by+bh);
+  ctx.arcTo(bx,by+bh, bx,by+bh-rR, rR);
+  ctx.lineTo(bx, by+rF);
+  ctx.arcTo(bx,by, bx+rF,by, rF);
+  ctx.closePath();
+  ctx.fillStyle = '#e2e6f0';
+  ctx.fill();
+  ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 2.5; ctx.stroke();
 
-  // 5. Grid
-  ctx.strokeStyle='rgba(0,80,200,0.055)'; ctx.lineWidth=0.3;
-  for(var x=0;x<=VW;x++){var xp=ox+px(x);ctx.beginPath();ctx.moveTo(xp,oy);ctx.lineTo(xp,oy+il);ctx.stroke();}
-  for(var y=0;y<=VL;y++){var yp2=oy+px(y);ctx.beginPath();ctx.moveTo(ox,yp2);ctx.lineTo(ox+iw,yp2);ctx.stroke();}
-  ctx.strokeStyle='rgba(0,50,160,0.18)'; ctx.lineWidth=0.75;
-  for(var x=0;x<=VW;x+=12){var xp=ox+px(x);ctx.beginPath();ctx.moveTo(xp,oy);ctx.lineTo(xp,oy+il);ctx.stroke();}
-  for(var y=0;y<=VL;y+=12){var yp2=oy+px(y);ctx.beginPath();ctx.moveTo(ox,yp2);ctx.lineTo(ox+iw,yp2);ctx.stroke();}
-  ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=2; ctx.setLineDash([]); ctx.strokeRect(ox,oy,iw,il);
+  // ── 2. HOOD / CAB EXTERIOR (above bulkhead) ──────────────────────────────
+  //    This section shows only what's visible looking DOWN at the hood:
+  //    grille, windshield band, A-pillars, side mirrors
+  //    NO seats here — seats are inside the van behind the bulkhead
 
-  // 6. Ribs R1, R2 ...
-  (refs.ribs||[]).forEach(function(r,i){
-    if(r<=0||r>=VL)return;
-    var ry=oy+px(r);
-    ctx.strokeStyle='rgba(50,90,200,0.28)'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(ox+3,ry); ctx.lineTo(ox+iw-3,ry); ctx.stroke();
-    ctx.strokeStyle='rgba(50,90,200,0.55)'; ctx.lineWidth=3;
-    ctx.beginPath(); ctx.moveTo(ox,ry-4); ctx.lineTo(ox,ry+4); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(ox+iw,ry-4); ctx.lineTo(ox+iw,ry+4); ctx.stroke();
-    ctx.fillStyle='rgba(30,70,180,0.72)'; ctx.font='bold '+fSM+'px Arial'; ctx.textAlign='left';
-    ctx.fillText('R'+(i+1),ox+iw+5,ry+4);
-    ctx.fillStyle='rgba(30,70,180,0.48)'; ctx.font=fXS+'px Arial'; ctx.textAlign='right';
-    ctx.fillText(r+'"',ox-5,ry+4);
+  var hoodTop = by;
+  var hoodBot = oy - GAP;  // bottom of hood = where bulkhead wall starts
+
+  // Hood fill
+  ctx.save();
+  rr(bx+1, hoodTop+1, bw-2, hoodBot-hoodTop-1, rF-1);
+  ctx.clip();
+  ctx.fillStyle = '#cdd3e2';
+  ctx.fill();
+  ctx.restore();
+
+  // Grille band at very top (bumper/grille)
+  var grilleH = Math.max(px(5), 12);
+  ctx.fillStyle = '#a8b4c8';
+  ctx.fillRect(bx+px(4), hoodTop+px(1), bw-px(8), grilleH);
+  // Grille horizontal slats
+  ctx.strokeStyle = '#7a8699'; ctx.lineWidth = 1;
+  for (var g=1; g<3; g++) {
+    var gy = hoodTop + px(1) + g * (grilleH/3);
+    ctx.beginPath(); ctx.moveTo(bx+px(4), gy); ctx.lineTo(bx+bw-px(4), gy); ctx.stroke();
+  }
+  // Headlight boxes
+  var hlW = px(10), hlH = px(6);
+  [[bx+px(4), hoodTop+px(1)], [bx+bw-px(14), hoodTop+px(1)]].forEach(function(p) {
+    ctx.fillStyle = '#d4e0f0'; ctx.fillRect(p[0], p[1], hlW, hlH);
+    ctx.strokeStyle = '#8899bb'; ctx.lineWidth = 0.8; ctx.strokeRect(p[0], p[1], hlW, hlH);
   });
 
-  // 7. Fender bumps
-  function fender(ww,side){
-    if(!ww)return;
-    var wy1=oy+px(ww.y),wy2=wy1+px(ww.d),wallX=side==='L'?bx:bx+bw,bumpX=side==='L'?bx-BUMP:bx+bw+BUMP,cv=Math.max(4,BUMP*0.4),sg=side==='L'?1:-1;
+  // Windshield band — a thick horizontal band across the hood near bulkhead
+  var wsTop = hoodBot - px(10);
+  var wsH   = px(8);
+  ctx.fillStyle = 'rgba(180,200,230,0.55)';
+  ctx.fillRect(bx+px(3), wsTop, bw-px(6), wsH);
+  ctx.strokeStyle = '#99aac0'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(bx+px(3), wsTop); ctx.lineTo(bx+bw-px(3), wsTop); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(bx+px(3), wsTop+wsH); ctx.lineTo(bx+bw-px(3), wsTop+wsH); ctx.stroke();
+
+  // A-pillars (vertical bars at windshield sides)
+  ctx.fillStyle = '#8a9ab5';
+  ctx.fillRect(bx+px(2), wsTop, px(4), wsH);
+  ctx.fillRect(bx+bw-px(6), wsTop, px(4), wsH);
+
+  // Side mirrors (protrude outside body, near A-pillars)
+  var mW = px(5), mH = px(10);
+  var mY = wsTop - px(2);
+  rr(bx-mW, mY, mW, mH, 2);
+  ctx.fillStyle = '#b8c4d8'; ctx.fill();
+  ctx.strokeStyle = '#6a7a90'; ctx.lineWidth = 1; ctx.stroke();
+  rr(bx+bw, mY, mW, mH, 2);
+  ctx.fillStyle = '#b8c4d8'; ctx.fill(); ctx.stroke();
+
+  // ── 3. BULKHEAD LINE ─────────────────────────────────────────────────────
+  ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 5; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(bx, oy); ctx.lineTo(bx+bw, oy); ctx.stroke();
+  ctx.fillStyle = '#1a1a2e'; ctx.font = 'bold ' + fMD + 'px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('BULKHEAD  —  0"', bx+bw/2, oy - 6);
+
+  // ── 4. INTERIOR CARGO FLOOR ──────────────────────────────────────────────
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(ox, oy, iw, il);
+
+  // ── 5. FRONT SEATS — just inside cargo floor, behind bulkhead ────────────
+  //    Transit 148 HR: seats sit 0-18" behind the bulkhead
+  //    Left = driver (USA), Right = passenger
+  //    Top-down view: cushion rectangle + backrest strip at top + headrest circle
+
+  var seatDepth_in = 16;  // seat fore-aft depth in inches
+  var seatWidth_in = 18;  // seat lateral width in inches
+  var seatOffset   = px(2); // gap from bulkhead line to front of seat back
+
+  function drawSeat(cx, topY, lbl) {
+    var sw = px(seatWidth_in), sd = px(seatDepth_in);
+    var sx = cx - sw/2;
+    var sy = topY;
+    // Main cushion
+    rr(sx, sy, sw, sd, 4);
+    ctx.fillStyle = '#b8c2d5'; ctx.fill();
+    ctx.strokeStyle = '#6a7a95'; ctx.lineWidth = 1.2; ctx.stroke();
+    // Backrest (top 35% of seat — closest to bulkhead)
+    rr(sx, sy, sw, sd*0.35, 4);
+    ctx.fillStyle = '#9aaac0'; ctx.fill();
+    ctx.strokeStyle = '#6a7a95'; ctx.lineWidth = 1; ctx.stroke();
+    // Headrest (circle at top center of backrest)
+    var hR = sw * 0.2;
+    ctx.beginPath(); ctx.arc(cx, sy + sd*0.14, hR, 0, Math.PI*2);
+    ctx.fillStyle = '#8898b2'; ctx.fill();
+    ctx.strokeStyle = '#6a7a95'; ctx.lineWidth = 1; ctx.stroke();
+    // Label below seat
+    ctx.fillStyle = '#445060'; ctx.font = fXS + 'px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(lbl, cx, sy + sd + px(1.5));
+  }
+
+  var seatTopY = oy + seatOffset;
+  var drvCX = bx + bw * 0.24;   // driver center X (left/USA)
+  var pasCX = bx + bw * 0.76;   // passenger center X (right)
+  drawSeat(drvCX, seatTopY, 'DRV');
+  drawSeat(pasCX, seatTopY, 'PASS');
+
+  // Steering wheel (driver, overlaps seat/dash area)
+  var swX = drvCX;
+  var swY = oy + seatOffset + px(seatDepth_in * 0.15);
+  var swR = Math.max(5, px(3.5));
+  ctx.strokeStyle = '#2a2f42'; ctx.lineWidth = 2.2;
+  ctx.beginPath(); ctx.arc(swX, swY, swR, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(swX-swR, swY); ctx.lineTo(swX+swR, swY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(swX, swY-swR); ctx.lineTo(swX, swY+swR); ctx.stroke();
+
+  // ── 6. GRID ──────────────────────────────────────────────────────────────
+  ctx.strokeStyle = 'rgba(0,80,200,0.05)'; ctx.lineWidth = 0.3;
+  for (var gx=0; gx<=VW; gx++) {
+    var xp=ox+px(gx); ctx.beginPath(); ctx.moveTo(xp,oy); ctx.lineTo(xp,oy+il); ctx.stroke();
+  }
+  for (var gy=0; gy<=VL; gy++) {
+    var yp=oy+px(gy); ctx.beginPath(); ctx.moveTo(ox,yp); ctx.lineTo(ox+iw,yp); ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(0,50,160,0.16)'; ctx.lineWidth = 0.7;
+  for (var gx=0; gx<=VW; gx+=12) {
+    var xp=ox+px(gx); ctx.beginPath(); ctx.moveTo(xp,oy); ctx.lineTo(xp,oy+il); ctx.stroke();
+  }
+  for (var gy=0; gy<=VL; gy+=12) {
+    var yp=oy+px(gy); ctx.beginPath(); ctx.moveTo(ox,yp); ctx.lineTo(ox+iw,yp); ctx.stroke();
+  }
+  ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 2; ctx.setLineDash([]);
+  ctx.strokeRect(ox, oy, iw, il);
+
+  // ── 7. FLOOR RIBS ────────────────────────────────────────────────────────
+  (refs.ribs || []).forEach(function(r, i) {
+    if (r <= 0 || r >= VL) return;
+    var ry = oy + px(r);
+    ctx.strokeStyle = 'rgba(50,90,200,0.25)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(ox+3,ry); ctx.lineTo(ox+iw-3,ry); ctx.stroke();
+    ctx.strokeStyle = 'rgba(50,90,200,0.5)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(ox,ry-4); ctx.lineTo(ox,ry+4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ox+iw,ry-4); ctx.lineTo(ox+iw,ry+4); ctx.stroke();
+    ctx.fillStyle = 'rgba(30,70,180,0.7)'; ctx.font = 'bold '+fSM+'px Arial';
+    ctx.textAlign = 'left'; ctx.fillText('R'+(i+1), ox+iw+5, ry+4);
+    ctx.fillStyle = 'rgba(30,70,180,0.45)'; ctx.font = fXS+'px Arial';
+    ctx.textAlign = 'right'; ctx.fillText(r+'"', ox-5, ry+4);
+  });
+
+  // ── 8. FENDER BUMPS ──────────────────────────────────────────────────────
+  function fender(ww, side) {
+    if (!ww) return;
+    var wy1=oy+px(ww.y), wy2=wy1+px(ww.d);
+    var wallX = side==='L' ? bx : bx+bw;
+    var bumpX = side==='L' ? bx-BUMP : bx+bw+BUMP;
+    var cv=Math.max(4,BUMP*0.4), sg=side==='L'?1:-1;
     ctx.fillStyle='#c8ced8';
-    ctx.beginPath(); ctx.moveTo(wallX,wy1); ctx.lineTo(bumpX+sg*cv,wy1); ctx.arcTo(bumpX,wy1,bumpX,wy1+cv,cv); ctx.lineTo(bumpX,wy2-cv); ctx.arcTo(bumpX,wy2,bumpX+sg*cv,wy2,cv); ctx.lineTo(wallX,wy2); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(wallX,wy1); ctx.lineTo(bumpX+sg*cv,wy1);
+    ctx.arcTo(bumpX,wy1,bumpX,wy1+cv,cv); ctx.lineTo(bumpX,wy2-cv);
+    ctx.arcTo(bumpX,wy2,bumpX+sg*cv,wy2,cv); ctx.lineTo(wallX,wy2);
+    ctx.closePath(); ctx.fill();
     ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=2; ctx.stroke();
-    var tR=px(ww.d)*0.38,tX=bumpX+sg*tR*0.78,tY=(wy1+wy2)/2;
-    ctx.strokeStyle='rgba(0,0,0,0.14)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(tX,tY,tR,0,Math.PI*2); ctx.stroke();
-    ctx.strokeStyle='rgba(0,0,0,0.08)'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(tX,tY,tR*0.58,0,Math.PI*2); ctx.stroke();
+    var tR=px(ww.d)*0.38, tX=bumpX+sg*tR*0.78, tY=(wy1+wy2)/2;
+    ctx.strokeStyle='rgba(0,0,0,0.12)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(tX,tY,tR,0,Math.PI*2); ctx.stroke();
+    ctx.strokeStyle='rgba(0,0,0,0.07)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(tX,tY,tR*0.55,0,Math.PI*2); ctx.stroke();
   }
   var wwL=refs.wwL||refs.wheelWellL, wwR=refs.wwR||refs.wheelWellR;
   fender(wwL,'L'); fender(wwR,'R');
 
-  // 8. Wheel wells
-  function well(ww,side){
-    if(!ww)return;
-    var wy=oy+px(ww.y),wl=px(ww.d),wd=px(ww.w),wx=side==='L'?ox:ox+iw-wd;
+  // ── 9. WHEEL WELLS ───────────────────────────────────────────────────────
+  function well(ww, side) {
+    if (!ww) return;
+    var wy=oy+px(ww.y), wl=px(ww.d), wd=px(ww.w);
+    var wx = side==='L' ? ox : ox+iw-wd;
     ctx.fillStyle='#bec5d0'; ctx.fillRect(wx,wy,wd,wl);
     ctx.save(); ctx.beginPath(); ctx.rect(wx,wy,wd,wl); ctx.clip();
-    ctx.strokeStyle='rgba(0,0,0,0.18)'; ctx.lineWidth=0.9;
-    for(var i=-wl;i<wd+wl;i+=5){ctx.beginPath();ctx.moveTo(wx+i,wy);ctx.lineTo(wx+i+wl,wy+wl);ctx.stroke();}
+    ctx.strokeStyle='rgba(0,0,0,0.16)'; ctx.lineWidth=0.9;
+    for (var i=-wl; i<wd+wl; i+=5) {
+      ctx.beginPath(); ctx.moveTo(wx+i,wy); ctx.lineTo(wx+i+wl,wy+wl); ctx.stroke();
+    }
     ctx.restore();
-    ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=1.8; ctx.setLineDash([]); ctx.strokeRect(wx,wy,wd,wl);
-    var mX=wx+wd/2,mY=wy+wl/2;
+    ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=1.8; ctx.strokeRect(wx,wy,wd,wl);
     ctx.fillStyle='#111'; ctx.font='bold '+fSM+'px Arial'; ctx.textAlign='center';
-    ctx.fillText('WW',mX,mY-2); ctx.font=fXS+'px Arial'; ctx.fillText(ww.d+'"x'+ww.w+'"',mX,mY+11);
+    ctx.fillText('WW', wx+wd/2, wy+wl/2-2);
+    ctx.font=fXS+'px Arial'; ctx.fillText(ww.d+'"x'+ww.w+'"', wx+wd/2, wy+wl/2+10);
   }
   well(wwL,'L'); well(wwR,'R');
 
-  if(wwL&&wwR){
-    var mWY=oy+px(wwL.y+wwL.d/2),bwL=ox+px(wwL.w),bwR=ox+px(VW-wwR.w);
+  if (wwL && wwR) {
+    var mWY=oy+px(wwL.y+wwL.d/2), bwL=ox+px(wwL.w), bwR=ox+px(VW-wwR.w);
     ctx.strokeStyle='#777'; ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(bwL,mWY);ctx.lineTo(bwR,mWY);ctx.stroke();
-    [[bwL,-1],[bwR,1]].forEach(function(p){ctx.beginPath();ctx.moveTo(p[0],mWY);ctx.lineTo(p[0]+p[1]*5,mWY-3);ctx.stroke();ctx.beginPath();ctx.moveTo(p[0],mWY);ctx.lineTo(p[0]+p[1]*5,mWY+3);ctx.stroke();});
+    ctx.beginPath(); ctx.moveTo(bwL,mWY); ctx.lineTo(bwR,mWY); ctx.stroke();
+    [[bwL,-1],[bwR,1]].forEach(function(p){
+      ctx.beginPath(); ctx.moveTo(p[0],mWY); ctx.lineTo(p[0]+p[1]*5,mWY-3); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(p[0],mWY); ctx.lineTo(p[0]+p[1]*5,mWY+3); ctx.stroke();
+    });
     ctx.fillStyle='#fff'; ctx.fillRect((bwL+bwR)/2-26,mWY-8,52,14);
     ctx.fillStyle='#444'; ctx.font=fSM+'px Arial'; ctx.textAlign='center';
-    ctx.fillText((refs.btwn||'')+'\" between wells',(bwL+bwR)/2,mWY+4);
+    ctx.fillText((refs.btwn||'')+'" between wells', (bwL+bwR)/2, mWY+4);
   }
 
-  // 9. Partition
-  if(refs.partition){
-    var pY=oy+px(refs.partition);
-    ctx.strokeStyle='rgba(180,0,0,0.52)'; ctx.lineWidth=1.3; ctx.setLineDash([5,3]);
-    ctx.beginPath();ctx.moveTo(ox,pY);ctx.lineTo(ox+iw,pY);ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle='rgba(180,0,0,0.65)'; ctx.font='bold '+fSM+'px Arial'; ctx.textAlign='left';
-    ctx.fillText('PARTITION  '+refs.partition+'"  (unusable zone)',ox+4,pY-4);
+  // ── 10. PARTITION ────────────────────────────────────────────────────────
+  if (refs.partition) {
+    var pY = oy + px(refs.partition);
+    ctx.strokeStyle='rgba(180,0,0,0.5)'; ctx.lineWidth=1.3; ctx.setLineDash([5,3]);
+    ctx.beginPath(); ctx.moveTo(ox,pY); ctx.lineTo(ox+iw,pY); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(180,0,0,0.65)'; ctx.font='bold '+fSM+'px Arial';
+    ctx.textAlign='left'; ctx.fillText('PARTITION  '+refs.partition+'"', ox+4, pY-4);
   }
 
-  // 10. Shelf zones (green wall bars)
-  if(refs.driverShelf){
+  // ── 11. SHELF ZONES ──────────────────────────────────────────────────────
+  if (refs.driverShelf) {
     var dsT=oy+px(VL-refs.driverShelf);
     ctx.strokeStyle='rgba(0,130,55,0.7)'; ctx.lineWidth=5; ctx.setLineDash([]);
-    ctx.beginPath();ctx.moveTo(ox+3,dsT);ctx.lineTo(ox+3,oy+il);ctx.stroke();
-    [dsT,oy+il-2].forEach(function(y){ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(ox,y);ctx.lineTo(ox+9,y);ctx.stroke();});
+    ctx.beginPath(); ctx.moveTo(ox+3,dsT); ctx.lineTo(ox+3,oy+il); ctx.stroke();
+    [dsT,oy+il-2].forEach(function(y){
+      ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(ox,y); ctx.lineTo(ox+9,y); ctx.stroke();
+    });
   }
-  if(refs.passShelf){
+  if (refs.passShelf) {
     var psT=oy+px(VL-refs.passShelf);
     ctx.strokeStyle='rgba(0,130,55,0.45)'; ctx.lineWidth=5; ctx.setLineDash([]);
-    ctx.beginPath();ctx.moveTo(ox+iw-3,psT);ctx.lineTo(ox+iw-3,oy+il);ctx.stroke();
-    [psT,oy+il-2].forEach(function(y){ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(ox+iw,y);ctx.lineTo(ox+iw-9,y);ctx.stroke();});
+    ctx.beginPath(); ctx.moveTo(ox+iw-3,psT); ctx.lineTo(ox+iw-3,oy+il); ctx.stroke();
+    [psT,oy+il-2].forEach(function(y){
+      ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(ox+iw,y); ctx.lineTo(ox+iw-9,y); ctx.stroke();
+    });
   }
 
-  // 11. Rear doors
+  // ── 12. REAR DOORS ───────────────────────────────────────────────────────
   ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=4; ctx.setLineDash([]);
-  ctx.beginPath();ctx.moveTo(ox,oy+il);ctx.lineTo(ox+iw,oy+il);ctx.stroke();
-  ctx.lineWidth=1.5; ctx.beginPath();ctx.moveTo(ox+iw/2,oy+il);ctx.lineTo(ox+iw/2,oy+il+px(8));ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox,oy+il); ctx.lineTo(ox+iw,oy+il); ctx.stroke();
+  ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(ox+iw/2,oy+il); ctx.lineTo(ox+iw/2,oy+il+px(8)); ctx.stroke();
   var swingR=Math.min(iw/2-4,px(28));
-  ctx.strokeStyle='rgba(0,0,0,0.09)'; ctx.lineWidth=1; ctx.setLineDash([2,4]);
-  ctx.beginPath();ctx.arc(ox,oy+il,swingR,-Math.PI/2,0);ctx.stroke();
-  ctx.beginPath();ctx.arc(ox+iw,oy+il,swingR,Math.PI,-Math.PI/2);ctx.stroke();
+  ctx.strokeStyle='rgba(0,0,0,0.08)'; ctx.lineWidth=1; ctx.setLineDash([2,4]);
+  ctx.beginPath(); ctx.arc(ox,oy+il,swingR,-Math.PI/2,0); ctx.stroke();
+  ctx.beginPath(); ctx.arc(ox+iw,oy+il,swingR,Math.PI,-Math.PI/2); ctx.stroke();
   ctx.setLineDash([]);
   ctx.fillStyle='#1a1a2e'; ctx.font='bold '+fMD+'px Arial'; ctx.textAlign='center';
-  ctx.fillText('REAR DOORS  '+(refs.rearOpen||'')+'\"',ox+iw/2,oy+il+WE+22);
+  ctx.fillText('REAR DOORS  '+(refs.rearOpen||'')+'"', ox+iw/2, oy+il+WE+22);
 
-  // 12. Slide door
+  // ── 13. SLIDE DOOR ───────────────────────────────────────────────────────
   var sd=refs.slideDoor;
-  if(sd){
-    var sdY1=oy+px(sd.y1!==undefined?sd.y1:sd.yStart),sdY2=oy+px(sd.y2!==undefined?sd.y2:sd.yEnd),sdLen=(sd.y2!==undefined?sd.y2:sd.yEnd)-(sd.y1!==undefined?sd.y1:sd.yStart),sdMid=(sdY1+sdY2)/2;
+  if (sd) {
+    var sdY1=oy+px(sd.y1!==undefined?sd.y1:sd.yStart);
+    var sdY2=oy+px(sd.y2!==undefined?sd.y2:sd.yEnd);
+    var sdLen=(sd.y2!==undefined?sd.y2:sd.yEnd)-(sd.y1!==undefined?sd.y1:sd.yStart);
+    var sdMid=(sdY1+sdY2)/2;
     ctx.strokeStyle='#00a651'; ctx.lineWidth=8;
-    ctx.beginPath();ctx.moveTo(ox+iw,sdY1);ctx.lineTo(ox+iw,sdY2);ctx.stroke();
-    [sdY1,sdY2].forEach(function(ty){ctx.strokeStyle='#00a651';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(ox+iw-px(6),ty);ctx.lineTo(ox+iw+18,ty);ctx.stroke();});
-    ctx.save(); ctx.fillStyle='#00a651'; ctx.font='bold '+fMD+'px Arial'; ctx.textAlign='center';
-    ctx.translate(ox+iw+WE+28,sdMid); ctx.rotate(Math.PI/2);
-    ctx.fillText('SLIDE DOOR  '+sdLen+'"',0,0); ctx.restore();
+    ctx.beginPath(); ctx.moveTo(ox+iw,sdY1); ctx.lineTo(ox+iw,sdY2); ctx.stroke();
+    [sdY1,sdY2].forEach(function(ty){
+      ctx.strokeStyle='#00a651'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(ox+iw-px(6),ty); ctx.lineTo(ox+iw+18,ty); ctx.stroke();
+    });
+    ctx.save(); ctx.fillStyle='#00a651'; ctx.font='bold '+fMD+'px Arial';
+    ctx.textAlign='center'; ctx.translate(ox+iw+WE+28,sdMid);
+    ctx.rotate(Math.PI/2); ctx.fillText('SLIDE DOOR  '+sdLen+'"',0,0); ctx.restore();
   }
 
-  // 13. Width ruler (above cargo floor)
+  // ── 14. WIDTH RULER ──────────────────────────────────────────────────────
   var half=VW/2, rulerY=oy-20;
-  ctx.textAlign='center';
-  for(var rx=0;rx<=VW;rx+=6){
-    var xp=ox+px(rx),off=Math.round(rx-half),maj=(rx%12===0);
-    ctx.strokeStyle=maj?'rgba(0,0,0,0.5)':'rgba(0,0,0,0.2)'; ctx.lineWidth=maj?1.2:0.6;
-    ctx.beginPath();ctx.moveTo(xp,rulerY-(maj?11:6));ctx.lineTo(xp,rulerY);ctx.stroke();
-    if(maj){ctx.fillStyle=off===0?'#0050c8':'#333'; ctx.font=(off===0?'bold ':'')+fSM+'px Arial'; ctx.fillText((off===0?'0':(off>0?'+'+off:''+off))+'"',xp,rulerY-15);}
+  for (var rx=0; rx<=VW; rx+=6) {
+    var xp=ox+px(rx), off=Math.round(rx-half), maj=(rx%12===0);
+    ctx.strokeStyle=maj?'rgba(0,0,0,0.5)':'rgba(0,0,0,0.2)';
+    ctx.lineWidth=maj?1.2:0.6;
+    ctx.beginPath(); ctx.moveTo(xp,rulerY-(maj?10:5)); ctx.lineTo(xp,rulerY); ctx.stroke();
+    if (maj) {
+      ctx.fillStyle=off===0?'#0050c8':'#333';
+      ctx.font=(off===0?'bold ':'')+fSM+'px Arial'; ctx.textAlign='center';
+      ctx.fillText((off===0?'0':(off>0?'+'+off:''+off))+'"', xp, rulerY-13);
+    }
   }
   ctx.fillStyle='#444'; ctx.font='bold '+fMD+'px Arial'; ctx.textAlign='center';
-  ctx.fillText('INTERIOR WIDTH  '+VW+'"   (0 = centerline)',ox+iw/2,rulerY-28);
+  ctx.fillText('INTERIOR WIDTH  '+VW+'"', ox+iw/2, rulerY-26);
 
-  // 14. Length ruler (left side)
-  ctx.textAlign='right';
-  for(var lr=0;lr<=VL;lr+=24){
+  // ── 15. LENGTH RULER ─────────────────────────────────────────────────────
+  for (var lr=0; lr<=VL; lr+=24) {
     var yp=oy+px(lr);
     ctx.strokeStyle='rgba(0,0,0,0.42)'; ctx.lineWidth=1.2;
-    ctx.beginPath();ctx.moveTo(ox-12,yp);ctx.lineTo(ox,yp);ctx.stroke();
-    ctx.fillStyle='#333'; ctx.font=fSM+'px Arial'; ctx.fillText(lr+'"',ox-15,yp+4);
+    ctx.beginPath(); ctx.moveTo(ox-12,yp); ctx.lineTo(ox,yp); ctx.stroke();
+    ctx.fillStyle='#333'; ctx.font=fSM+'px Arial'; ctx.textAlign='right';
+    ctx.fillText(lr+'"', ox-15, yp+4);
   }
   ctx.save(); ctx.fillStyle='#444'; ctx.font='bold '+fMD+'px Arial';
-  ctx.translate(ox-52,oy+il/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center';
-  ctx.fillText('LENGTH  '+VL+'"   (0 = bulkhead)',0,0); ctx.restore();
+  ctx.translate(ox-48,oy+il/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center';
+  ctx.fillText('LENGTH  '+VL+'"  (from bulkhead)',0,0); ctx.restore();
 
-  // 15. Side labels
+  // ── 16. SIDE LABELS ──────────────────────────────────────────────────────
   ctx.save(); ctx.fillStyle='#444'; ctx.font='bold '+fMD+'px Arial';
-  ctx.translate(bx-BUMP-9,oy+il/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center';
+  ctx.translate(bx-BUMP-10,oy+il/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center';
   ctx.fillText('DRIVER SIDE',0,0); ctx.restore();
   ctx.save(); ctx.fillStyle='#444'; ctx.font='bold '+fMD+'px Arial';
-  ctx.translate(bx+bw+BUMP+9,oy+il/2); ctx.rotate(Math.PI/2); ctx.textAlign='center';
+  ctx.translate(bx+bw+BUMP+10,oy+il/2); ctx.rotate(Math.PI/2); ctx.textAlign='center';
   ctx.fillText('PASSENGER SIDE',0,0); ctx.restore();
 
-  // 16. Height zones (right-side callouts only, no floor fill)
-  if(refs.heights&&refs.heights.length>0){
-    var hZX=ox+iw+WE+(sd?56:20)+8;
+  // ── 17. HEIGHT ZONES (right side, no floor fill) ─────────────────────────
+  if (refs.heights && refs.heights.length > 0) {
+    var hZX = ox+iw+WE+(sd?58:22)+8;
     ctx.fillStyle='#222'; ctx.font='bold '+fLG+'px Arial'; ctx.textAlign='left';
-    ctx.fillText('HEIGHT ZONES',hZX,oy-16);
+    ctx.fillText('HEIGHT ZONES', hZX, oy-16);
     ctx.fillStyle='#888'; ctx.font='italic '+fXS+'px Arial';
-    ctx.fillText('floor to ceiling (inches)',hZX,oy-2);
+    ctx.fillText('floor to ceiling (inches)', hZX, oy-3);
     refs.heights.forEach(function(hz){
-      var hPx=px(hz.h),lY=oy+hPx,color=hz.color||'#333',bxW=138,bxH=16;
+      var hPx=px(hz.h), lY=oy+hPx, color=hz.color||'#333';
       ctx.strokeStyle=color+'88'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
-      ctx.beginPath();ctx.moveTo(ox+iw+10,oy);ctx.lineTo(ox+iw+10,lY);ctx.stroke(); ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(ox+iw+10,oy); ctx.lineTo(ox+iw+10,lY); ctx.stroke();
+      ctx.setLineDash([]);
       ctx.strokeStyle=color; ctx.lineWidth=2;
-      ctx.beginPath();ctx.moveTo(ox+iw,lY);ctx.lineTo(hZX-6,lY);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(ox+iw,lY);ctx.lineTo(ox+iw-8,lY-3);ctx.moveTo(ox+iw,lY);ctx.lineTo(ox+iw-8,lY+3);ctx.stroke();
-      ctx.fillStyle='#fff'; ctx.fillRect(hZX-2,lY-bxH/2,bxW,bxH);
-      ctx.strokeStyle=color; ctx.lineWidth=1.2; ctx.strokeRect(hZX-2,lY-bxH/2,bxW,bxH);
+      ctx.beginPath(); ctx.moveTo(ox+iw,lY); ctx.lineTo(hZX-6,lY); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(ox+iw,lY); ctx.lineTo(ox+iw-7,lY-3);
+      ctx.moveTo(ox+iw,lY); ctx.lineTo(ox+iw-7,lY+3);
+      ctx.stroke();
+      ctx.fillStyle='#fff'; ctx.fillRect(hZX-2,lY-8,142,16);
+      ctx.strokeStyle=color; ctx.lineWidth=1.2; ctx.strokeRect(hZX-2,lY-8,142,16);
       ctx.fillStyle=color; ctx.font='bold '+fSM+'px Arial'; ctx.textAlign='left';
-      ctx.fillText(hz.label+'  '+hz.h+'"',hZX+3,lY+5);
+      ctx.fillText(hz.label+'  '+hz.h+'"', hZX+3, lY+5);
     });
-    var lhPx=px(refs.heights[refs.heights.length-1].h);
-    ctx.fillStyle='#888'; ctx.font='italic '+fXS+'px Arial'; ctx.textAlign='left';
-    ctx.fillText('use to size roof racks,',hZX,oy+lhPx+16);
-    ctx.fillText('fans & cabinet heights',hZX,oy+lhPx+28);
   }
 
-  // 17. Dimension arrows
-  var arWY=oy-50;
+  // ── 18. DIMENSION ARROWS ─────────────────────────────────────────────────
+  var arWY = oy - 48;
   ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=1.2;
-  ctx.beginPath();ctx.moveTo(ox,arWY);ctx.lineTo(ox+iw,arWY);ctx.stroke();
-  [[ox,-1],[ox+iw,1]].forEach(function(p){ctx.beginPath();ctx.moveTo(p[0],arWY);ctx.lineTo(p[0]+p[1]*7,arWY-3);ctx.stroke();ctx.beginPath();ctx.moveTo(p[0],arWY);ctx.lineTo(p[0]+p[1]*7,arWY+3);ctx.stroke();});
+  ctx.beginPath(); ctx.moveTo(ox,arWY); ctx.lineTo(ox+iw,arWY); ctx.stroke();
+  [[ox,-1],[ox+iw,1]].forEach(function(p){
+    ctx.beginPath(); ctx.moveTo(p[0],arWY); ctx.lineTo(p[0]+p[1]*7,arWY-3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(p[0],arWY); ctx.lineTo(p[0]+p[1]*7,arWY+3); ctx.stroke();
+  });
   ctx.fillStyle='#fff'; ctx.fillRect(ox+iw/2-22,arWY-8,44,13);
-  ctx.fillStyle='#1a1a2e'; ctx.font='bold '+fMD+'px Arial'; ctx.textAlign='center'; ctx.fillText(VW+'"',ox+iw/2,arWY+3);
+  ctx.fillStyle='#1a1a2e'; ctx.font='bold '+fMD+'px Arial'; ctx.textAlign='center';
+  ctx.fillText(VW+'"', ox+iw/2, arWY+3);
 
-  var hzX2=ox+iw+WE+(sd?56:20)+8+148;
-  ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=1.2;
-  ctx.beginPath();ctx.moveTo(hzX2,oy);ctx.lineTo(hzX2,oy+il);ctx.stroke();
-  [[oy,-1],[oy+il,1]].forEach(function(p){ctx.beginPath();ctx.moveTo(hzX2,p[0]);ctx.lineTo(hzX2-3,p[0]+p[1]*7);ctx.stroke();ctx.beginPath();ctx.moveTo(hzX2,p[0]);ctx.lineTo(hzX2+3,p[0]+p[1]*7);ctx.stroke();});
-  ctx.fillStyle='#fff'; ctx.fillRect(hzX2-12,oy+il/2-8,24,14);
-  ctx.fillStyle='#1a1a2e'; ctx.save(); ctx.translate(hzX2+14,oy+il/2); ctx.rotate(Math.PI/2);
-  ctx.font='bold '+fMD+'px Arial'; ctx.textAlign='center'; ctx.fillText(VL+'"',0,0); ctx.restore();
-
-  // 18. Legend box
-  var legY=oy+il+WE+50, legW=iw;
-  ctx.fillStyle='#f4f5f8'; ctx.fillRect(ox,legY,legW,80);
-  ctx.strokeStyle='#ccc'; ctx.lineWidth=1; ctx.strokeRect(ox,legY,legW,80);
+  // ── 19. LEGEND ───────────────────────────────────────────────────────────
+  var legY = oy+il+WE+50;
+  ctx.fillStyle='#f4f5f8'; ctx.fillRect(ox,legY,iw,78);
+  ctx.strokeStyle='#ccc'; ctx.lineWidth=1; ctx.strokeRect(ox,legY,iw,78);
   ctx.fillStyle='#222'; ctx.font='bold '+fMD+'px Arial'; ctx.textAlign='left';
-  ctx.fillText('LEGEND',ox+8,legY+16);
-  [['▨ WW','Wheel well — raised floor, no full-height storage'],
+  ctx.fillText('LEGEND', ox+8, legY+16);
+  [['▨ WW','Wheel well — raised floor'],
    ['━ Green','Usable wall shelf/cabinet length'],
-   ['─ ─ Red','Partition zone — unusable, connects to cab'],
-   ['R1…R9','Floor ribs every 16" — structural bolt points'],
-   ['H1/H2/H3','Height zones: plan racks, fans, cabinets'],
+   ['─ ─ Red','Partition zone (unusable, behind cab)'],
+   ['R1…','Floor ribs every 16" — bolt points'],
+   ['H1/H2/H3','Height zones: fans, racks, cabinets'],
    ['Blue grid','1" minor · 12" major']
   ].forEach(function(lg,i){
-    var col=i<3?ox+8:ox+legW/2+4, row=legY+28+(i%3)*16;
+    var col=i<3?ox+8:ox+iw/2+4, row=legY+28+(i%3)*16;
     ctx.fillStyle='#333'; ctx.font='bold '+fSM+'px Arial'; ctx.textAlign='left';
     ctx.fillText(lg[0],col,row);
-    ctx.fillStyle='#666'; ctx.font=fXS+'px Arial'; ctx.fillText(lg[1],col+55,row);
+    ctx.fillStyle='#666'; ctx.font=fXS+'px Arial';
+    ctx.fillText(lg[1],col+54,row);
   });
 
-  // 19. Title
+  // ── 20. TITLE ────────────────────────────────────────────────────────────
   ctx.fillStyle='#1a1a2e'; ctx.font='bold '+fLG+'px Arial'; ctx.textAlign='center';
-  ctx.fillText((refs.label||'Van Blueprint')+' — Base Plan View',ox+iw/2,legY+96);
+  ctx.fillText((refs.label||'Van Blueprint')+' — Base Plan View', ox+iw/2, legY+95);
   ctx.fillStyle='#aaa'; ctx.font=fXS+'px Arial';
-  ctx.fillText('View 1 of 8  |  1 sq = 1"  |  Scale '+S+'px/in  |  Data: upfitsupply.com',ox+iw/2,legY+110);
+  ctx.fillText('1 sq = 1"  ·  Scale '+S+'px/in  ·  Data: upfitsupply.com', ox+iw/2, legY+108);
 }
+
 
 
 
