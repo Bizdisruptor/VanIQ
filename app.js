@@ -1,3 +1,8 @@
+// VANIQ_SESSION_CONTEXT
+// Repo: https://raw.githubusercontent.com/Bizdisruptor/VanIQ/refs/heads/main/
+// Files: app.js, js/app.js, js/auth.js, js/billing.js, js/config.js, js/db.js
+// Van dims: Transit 148 HR vw:78 vl:148 vh:83 | Sprinter 144 HR vw:76 vl:144 vh:79
+// Active issues: track here each session
 // js/app.js — VanIQ Main Application
 // Assembled from v2 rebuild + complete function set
 
@@ -18,7 +23,19 @@ const CAT = {
 const VAN_MODELS = {
   'Transit 130 LR':       { vw:78,  vl:130, vh:55,  bpillar:38, cargo:'LR', label:'Transit 130 Low Roof' },
   'Transit 130 MR':       { vw:78,  vl:130, vh:72,  bpillar:38, cargo:'MR', label:'Transit 130 Med Roof' },
-  'Transit 148 HR':       { vw:78,  vl:148, vh:83,  bpillar:42, cargo:'HR', label:'Transit 148 High Roof' },
+  'Transit 148 HR': { vw:70, vl:145, vh:83, bpillar:42, cargo:'HR', label:'Transit 148 High Roof',
+    // Structural references — PDF-accurate (Kargomaster + AVC Rig Transit 148 LWB)
+    // vl:145 = interior cargo length (Kargomaster PDF); vw:70 = insulated wall-to-wall width
+    // Coord convention: y=position along LENGTH from bulkhead, x=position along WIDTH from driver wall
+    ribs:      [0, 16, 32, 48, 64, 80, 96, 112, 128, 144],        // floor ribs
+    wheelWellL: { y:67, d:30, x:0,  w:11 },   // driver well: 30"L × 11"W, starts 67" from bulkhead
+    wheelWellR: { y:67, d:30, x:59, w:11 },   // pass well: same, x=vw-w=70-11=59
+    frameRails: [3, 67],                        // frame rail x positions from driver wall
+    garageStart: 85,                            // garage zone starts from rear (rear doors end)
+    slideDoor:  { yStart:42, yEnd:90 },         // slide door 42"–90" from bulkhead (48" opening)
+    cPillar:   108,                             // C-pillar position
+    dPillar:   132,                             // D-pillar position
+  },
   'Transit 148 EXT HR':   { vw:78,  vl:170, vh:83,  bpillar:42, cargo:'HR', label:'Transit 148 EXT HR' },
   'Sprinter 144 SR':      { vw:76,  vl:144, vh:67,  bpillar:40, cargo:'SR', label:'Sprinter 144 Std Roof' },
   'Sprinter 144 HR':      { vw:76,  vl:144, vh:79,  bpillar:40, cargo:'HR', label:'Sprinter 144 High Roof' },
@@ -204,7 +221,7 @@ function projectSnapshot() {
 }
 
 async function loadProjectById(id) {
-  if (!canSave()) return; // free users can't load
+  if (!canSave()) return;
   const proj = await dbGetProject(id);
   if (!proj) return;
   currentDbProjectId = proj.id;
@@ -330,10 +347,9 @@ function setCrossY(v) {
 
 function setView(v) {
   VIEW = v;
-  // Update active tab — buttons use id tab-{view}
   document.querySelectorAll('.vtab').forEach(b => b.classList.remove('active'));
-  const activeTab = document.getElementById('tab-' + v);
-  if (activeTab) activeTab.classList.add('active');
+  const tab = document.getElementById('tab-' + v);
+  if (tab) tab.classList.add('active');
   renderCurrentView();
 }
 
@@ -348,36 +364,32 @@ function makeCanvas(w, h) {
 }
 
 function drawGrid(ctx, VW, VL) {
-  const W = px(VL) + PAD;
-  const H = px(VW) + OY + 20;
+  const refs = getTransitRefs();
+  const ox = PAD, oy = OY;
+  const W  = px(VL) + PAD + 20;
+  const H  = px(VW) + OY + 30;
+
   ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--canvas') || '#12121a';
   ctx.fillRect(0, 0, W, H);
 
-  const ox = PAD, oy = OY;
-
   // Minor grid (6")
-  ctx.strokeStyle = 'rgba(255,255,255,.04)';
-  ctx.lineWidth = 0.5;
-  for (let x = 0; x <= VL; x += 6) { ctx.beginPath(); ctx.moveTo(ox + px(x), oy); ctx.lineTo(ox + px(x), oy + px(VW)); ctx.stroke(); }
-  for (let y = 0; y <= VW; y += 6) { ctx.beginPath(); ctx.moveTo(ox, oy + px(y)); ctx.lineTo(ox + px(VL), oy + px(y)); ctx.stroke(); }
+  ctx.strokeStyle = 'rgba(255,255,255,.04)'; ctx.lineWidth = 0.5;
+  for (let x = 0; x <= VL; x += 6) { ctx.beginPath(); ctx.moveTo(ox+px(x), oy); ctx.lineTo(ox+px(x), oy+px(VW)); ctx.stroke(); }
+  for (let y = 0; y <= VW; y += 6) { ctx.beginPath(); ctx.moveTo(ox, oy+px(y)); ctx.lineTo(ox+px(VL), oy+px(y)); ctx.stroke(); }
 
   // Major grid (12" / 1 ft)
-  ctx.strokeStyle = 'rgba(255,255,255,.09)';
-  ctx.lineWidth = 1;
-  for (let x = 0; x <= VL; x += 12) { ctx.beginPath(); ctx.moveTo(ox + px(x), oy); ctx.lineTo(ox + px(x), oy + px(VW)); ctx.stroke(); }
-  for (let y = 0; y <= VW; y += 12) { ctx.beginPath(); ctx.moveTo(ox, oy + px(y)); ctx.lineTo(ox + px(VL), oy + px(y)); ctx.stroke(); }
+  ctx.strokeStyle = 'rgba(255,255,255,.09)'; ctx.lineWidth = 1;
+  for (let x = 0; x <= VL; x += 12) { ctx.beginPath(); ctx.moveTo(ox+px(x), oy); ctx.lineTo(ox+px(x), oy+px(VW)); ctx.stroke(); }
+  for (let y = 0; y <= VW; y += 12) { ctx.beginPath(); ctx.moveTo(ox, oy+px(y)); ctx.lineTo(ox+px(VL), oy+px(y)); ctx.stroke(); }
 
-  // Centerline X (driver/pass midpoint)
-  const cxPx = ox + px(VW / 2);
-  ctx.strokeStyle = 'rgba(74,176,224,.35)';
-  ctx.lineWidth = 1;
+  // Centerline (driver/pass midpoint)
+  ctx.strokeStyle = 'rgba(74,176,224,.35)'; ctx.lineWidth = 1;
   ctx.setLineDash([4, 4]);
-  ctx.beginPath(); ctx.moveTo(ox, oy + px(VW/2)); ctx.lineTo(ox + px(VL), oy + px(VW/2)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox, oy+px(VW/2)); ctx.lineTo(ox+px(VL), oy+px(VW/2)); ctx.stroke();
   ctx.setLineDash([]);
 
-  // Top ruler (length axis — front to rear)
-  ctx.fillStyle = 'rgba(255,255,255,.35)';
-  ctx.font = `${Math.max(7, S * 1.6)}px 'Space Mono', monospace`;
+  // Top ruler (length axis — rear to front/bulkhead)
+  ctx.font = Math.max(7, S * 1.6) + "px 'Space Mono', monospace";
   ctx.textAlign = 'center';
   for (let x = 0; x <= VL; x += (S < 2 ? 24 : S < 3 ? 12 : 6)) {
     const xp = ox + px(x);
@@ -385,11 +397,11 @@ function drawGrid(ctx, VW, VL) {
     ctx.fillRect(xp, oy - 6, 1, 6);
     if (x % 12 === 0) {
       ctx.fillStyle = 'rgba(255,255,255,.5)';
-      ctx.fillText(`${x}"`, xp, oy - 9);
+      ctx.fillText(x + '"', xp, oy - 9);
     }
   }
 
-  // Left ruler (width axis — with CL = 0)
+  // Left ruler (width axis — CL relative)
   ctx.textAlign = 'right';
   const CLy = VW / 2;
   for (let y = 0; y <= VW; y += (S < 2 ? 12 : 6)) {
@@ -399,32 +411,153 @@ function drawGrid(ctx, VW, VL) {
     ctx.fillRect(ox - 6, yp, 6, 1);
     if (y % 12 === 0 || Math.abs(offset) < 1) {
       ctx.fillStyle = offset === 0 ? 'rgba(74,176,224,.8)' : 'rgba(255,255,255,.45)';
-      const label = offset === 0 ? '±0' : (offset > 0 ? `+${offset}` : `${offset}`);
+      const label = offset === 0 ? '+-0' : (offset > 0 ? '+' + offset : '' + offset);
       ctx.fillText(label, ox - 8, yp + 3);
     }
   }
 
-  // CL label
-  ctx.fillStyle = 'rgba(74,176,224,.7)';
-  ctx.textAlign = 'left';
-  ctx.font = `bold ${Math.max(7, S * 1.4)}px 'Space Mono', monospace`;
-  ctx.fillText('CL', ox + px(VL) + 4, oy + px(VW/2) + 3);
+  // Floor interior fill
+  ctx.fillStyle = 'rgba(255,255,255,.02)';
+  ctx.fillRect(ox, oy, px(VL), px(VW));
 
-  // Van shell outline
-  ctx.strokeStyle = 'rgba(255,255,255,.55)';
-  ctx.lineWidth = 2;
+  // ── Wheel wells ──
+  // Coordinate convention:
+  //   ww.y = position along LENGTH axis from bulkhead  → maps to canvas x: ox + px(ww.y)
+  //   ww.x = position along WIDTH axis from driver wall → maps to canvas y: oy + px(ww.x)
+  //   ww.d = fore-aft depth (LENGTH axis)              → canvas width:  px(ww.d)
+  //   ww.w = wall intrusion (WIDTH axis)               → canvas height: px(ww.w)
+  [refs.wheelWellL, refs.wheelWellR].forEach(function(ww) {
+    if (!ww) return;
+    const cx = ox + px(ww.y);   // canvas x = length position
+    const cy = oy + px(ww.x);   // canvas y = width position (0 = driver wall)
+    const cw = px(ww.d);         // canvas width = fore-aft depth
+    const ch = px(ww.w);         // canvas height = wall intrusion
+
+    // Diagonal hatch fill
+    ctx.save();
+    ctx.beginPath(); ctx.rect(cx, cy, cw, ch); ctx.clip();
+    ctx.strokeStyle = 'rgba(232,160,32,.28)'; ctx.lineWidth = 1;
+    for (let i = -ch; i < cw + ch; i += 5) {
+      ctx.beginPath(); ctx.moveTo(cx + i, cy); ctx.lineTo(cx + i + ch, cy + ch); ctx.stroke();
+    }
+    ctx.restore();
+
+    // Block fill + border
+    ctx.fillStyle = 'rgba(232,160,32,.1)';
+    ctx.fillRect(cx, cy, cw, ch);
+    ctx.strokeStyle = 'rgba(232,160,32,.8)'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(cx, cy, cw, ch);
+
+    // "WW" label
+    ctx.fillStyle = 'rgba(232,160,32,.9)';
+    ctx.font = 'bold ' + Math.max(6, S * 1.1) + "px 'Space Mono', monospace";
+    ctx.textAlign = 'center';
+    ctx.fillText('WW', cx + cw/2, cy + ch/2 + 3);
+
+    // Dimension note inside well
+    ctx.fillStyle = 'rgba(232,160,32,.65)';
+    ctx.font = Math.max(5, S * 0.9) + "px 'Space Mono', monospace";
+    ctx.fillText(ww.d + '"x' + ww.w + '"', cx + cw/2, cy + ch/2 + 3 + Math.max(9, S * 1.5));
+
+    // "11 H" note outside van wall (above driver well, below pass well)
+    ctx.fillText('11"H', cx + cw/2, ww.x === 0 ? cy - 8 : cy + ch + 10);
+  });
+
+  // Van shell outline (drawn after wells so walls overlay them)
+  ctx.strokeStyle = 'rgba(255,255,255,.65)'; ctx.lineWidth = 2.5;
   ctx.setLineDash([]);
   ctx.strokeRect(ox, oy, px(VL), px(VW));
 
-  // Front wall (cab bulkhead)
-  ctx.strokeStyle = 'rgba(255,255,255,.35)';
-  ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox, oy + px(VW)); ctx.stroke();
-
-  // Rear wall
-  ctx.strokeStyle = 'rgba(232,160,32,.5)';
-  ctx.lineWidth = 2;
+  // Front bulkhead — right wall (cab end), thick with slight fill
+  ctx.fillStyle = 'rgba(255,255,255,.1)';
+  ctx.fillRect(ox + px(VL) - 3, oy, 6, px(VW));
+  ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 4;
   ctx.beginPath(); ctx.moveTo(ox + px(VL), oy); ctx.lineTo(ox + px(VL), oy + px(VW)); ctx.stroke();
+  // BULKHEAD label (rotated)
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,255,255,.28)';
+  ctx.font = 'bold ' + Math.max(5, S * 0.9) + "px 'Space Mono', monospace";
+  ctx.textAlign = 'center';
+  ctx.translate(ox + px(VL) + 13, oy + px(VW/2));
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('BULKHEAD', 0, 0);
+  ctx.restore();
+
+  // Rear double doors — left wall (rear of van)
+  ctx.strokeStyle = 'rgba(232,160,32,.85)'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox, oy + px(VW)); ctx.stroke();
+  // Center split between the two doors
+  ctx.strokeStyle = 'rgba(232,160,32,.4)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.moveTo(ox, oy + px(VW/2)); ctx.lineTo(ox + px(8), oy + px(VW/2)); ctx.stroke();
+  ctx.setLineDash([]);
+  // Door swing arcs
+  const arc = px(Math.min(VW/2, 24));
+  ctx.strokeStyle = 'rgba(232,160,32,.18)'; ctx.lineWidth = 1; ctx.setLineDash([2, 4]);
+  ctx.beginPath(); ctx.arc(ox, oy, arc, 0, Math.PI/2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(ox, oy + px(VW), arc, -Math.PI/2, 0); ctx.stroke();
+  ctx.setLineDash([]);
+  // REAR DOORS label
+  ctx.save();
+  ctx.fillStyle = 'rgba(232,160,32,.45)';
+  ctx.font = 'bold ' + Math.max(5, S * 0.9) + "px 'Space Mono', monospace";
+  ctx.textAlign = 'center';
+  ctx.translate(ox - 14, oy + px(VW/2));
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('REAR DOORS', 0, 0);
+  ctx.restore();
+
+  // Slide door — passenger wall (bottom of canvas), measured from bulkhead (right)
+  if (refs.slideDoor) {
+    const sd    = refs.slideDoor;
+    const sdX1  = ox + px(VL) - px(sd.yEnd);
+    const sdX2  = ox + px(VL) - px(sd.yStart);
+    const sdW   = sdX2 - sdX1;
+    const wallY = oy + px(VW);
+
+    // Clear a gap in the bottom wall to show the opening
+    ctx.clearRect(sdX1, wallY - 2, sdW, 5);
+
+    // Colored door line
+    ctx.strokeStyle = 'rgba(82,200,122,.9)'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(sdX1, wallY); ctx.lineTo(sdX2, wallY); ctx.stroke();
+
+    // Parked door indicator (dashed rect showing door slid toward rear)
+    ctx.strokeStyle = 'rgba(82,200,122,.28)'; ctx.lineWidth = 1; ctx.setLineDash([4, 2]);
+    ctx.strokeRect(sdX1 - sdW, wallY - px(3), sdW, px(3));
+    ctx.setLineDash([]);
+
+    // Edge tick marks at door jambs
+    [sdX1, sdX2].forEach(function(tx) {
+      ctx.strokeStyle = 'rgba(82,200,122,.6)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(tx, wallY - px(4)); ctx.lineTo(tx, wallY + 6); ctx.stroke();
+    });
+
+    // Labels
+    ctx.fillStyle = 'rgba(82,200,122,.85)';
+    ctx.font = 'bold ' + Math.max(6, S * 1.1) + "px 'Space Mono', monospace";
+    ctx.textAlign = 'center';
+    ctx.fillText('SLIDE DOOR', (sdX1 + sdX2) / 2, wallY + 14);
+    ctx.fillStyle = 'rgba(82,200,122,.5)';
+    ctx.font = Math.max(5, S) + "px 'Space Mono', monospace";
+    ctx.fillText((sd.yEnd - sd.yStart) + '" opening', (sdX1 + sdX2) / 2, wallY + 23);
+  }
+
+  // CL label (right of centerline)
+  ctx.fillStyle = 'rgba(74,176,224,.7)';
+  ctx.textAlign = 'left';
+  ctx.font = 'bold ' + Math.max(7, S * 1.4) + "px 'Space Mono', monospace";
+  ctx.fillText('CL', ox + px(VL) + 16, oy + px(VW/2) + 3);
+
+  // Overall dimension callouts
+  ctx.fillStyle = 'rgba(255,255,255,.4)';
+  ctx.font = Math.max(6, S * 1.2) + "px 'Space Mono', monospace";
+  ctx.textAlign = 'center';
+  ctx.fillText(VL + '" cargo length', ox + px(VL/2), oy - 18);
+  ctx.save();
+  ctx.translate(ox - 42, oy + px(VW/2));
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText(VW + '" interior width', 0, 0);
+  ctx.restore();
 }
 
 function makeSVG(w, h) {
@@ -473,14 +606,86 @@ function renderPlan() {
   cvs.style.position = 'absolute'; cvs.style.top = '0'; cvs.style.left = '0';
   wrap.appendChild(cvs);
 
-  // Slide door clearance zone (24" from B-pillar on pass side)
   const bpillar = refs.bpillar || 42;
+  const showRefs = document.getElementById('s-refs')?.checked !== false;
+
+  // SVG overlay for structural references
+  const svg = makeSVG(W, H);
+  wrap.appendChild(svg);
+
+  if (showRefs) {
+    const ox = PAD, oy = OY;
+
+    // Floor ribs
+    (refs.ribs || []).forEach(r => {
+      if (r === 0 || r >= VL) return;
+      const line = svgEl('line', { x1: ox+px(r), y1: oy, x2: ox+px(r), y2: oy+px(VW),
+        stroke:'rgba(255,255,255,.12)', 'stroke-width':'1', 'stroke-dasharray':'3,4' });
+      svg.appendChild(line);
+    });
+
+    // B-pillar
+    const bpx = ox + px(bpillar);
+    const bline = svgEl('line', { x1:bpx, y1:oy, x2:bpx, y2:oy+px(VW),
+      stroke:'rgba(74,176,224,.5)', 'stroke-width':'2' });
+    svg.appendChild(bline);
+    const btxt = svgText(bpx+3, oy+10, 'B', 'rgba(74,176,224,.7)', 8, 'start');
+    svg.appendChild(btxt);
+
+    // C-pillar
+    if (refs.cPillar) {
+      const cpx = ox + px(refs.cPillar);
+      svg.appendChild(svgEl('line', { x1:cpx, y1:oy, x2:cpx, y2:oy+px(VW),
+        stroke:'rgba(74,176,224,.35)', 'stroke-width':'1.5' }));
+      svg.appendChild(svgText(cpx+3, oy+10, 'C', 'rgba(74,176,224,.5)', 8, 'start'));
+    }
+
+    // D-pillar
+    if (refs.dPillar) {
+      const dpx = ox + px(refs.dPillar);
+      svg.appendChild(svgEl('line', { x1:dpx, y1:oy, x2:dpx, y2:oy+px(VW),
+        stroke:'rgba(74,176,224,.35)', 'stroke-width':'1.5' }));
+      svg.appendChild(svgText(dpx+3, oy+10, 'D', 'rgba(74,176,224,.5)', 8, 'start'));
+    }
+
+    // Wheel wells
+    [refs.wheelWellL, refs.wheelWellR].forEach(ww => {
+      if (!ww) return;
+      const wx = ox + px(ww.x), wy = oy + px(ww.y);
+      const wr = svgEl('rect', { x:wx, y:wy, width:px(ww.w), height:px(ww.d),
+        fill:'rgba(232,160,32,.08)', stroke:'rgba(232,160,32,.4)', 'stroke-width':'1.5',
+        rx:'2' });
+      svg.appendChild(wr);
+      svg.appendChild(svgText(wx+px(ww.w/2), wy+px(ww.d/2)+3, 'WW',
+        'rgba(232,160,32,.5)', 7));
+    });
+
+    // Frame rails
+    (refs.frameRails || []).forEach(rx => {
+      const fline = svgEl('line', {
+        x1: ox+px(rx), y1: oy, x2: ox+px(rx), y2: oy+px(VW),
+        stroke:'rgba(160,130,200,.25)', 'stroke-width':'2', 'stroke-dasharray':'6,3'
+      });
+      svg.appendChild(fline);
+    });
+
+    // Garage zone line
+    if (refs.garageStart) {
+      const gz = ox + px(refs.garageStart);
+      svg.appendChild(svgEl('line', { x1:gz, y1:oy, x2:gz, y2:oy+px(VW),
+        stroke:'rgba(232,160,32,.3)', 'stroke-width':'1', 'stroke-dasharray':'8,4' }));
+      svg.appendChild(svgText(gz+3, oy+px(VW)-4, 'GARAGE',
+        'rgba(232,160,32,.4)', 6, 'start'));
+    }
+  }
+
+  // Dropzone div (for module drag/drop)
   const dz = document.createElement('div');
   dz.id = 'plan-dropzone';
   dz.style.cssText = `position:absolute;left:${PAD}px;top:${OY}px;width:${px(VL)}px;height:${px(VW)}px;`;
   wrap.appendChild(dz);
 
-  // Slider door zone overlay
+  // Slide door clearance zone
   const slideZone = document.createElement('div');
   slideZone.style.cssText = `
     position:absolute;
@@ -491,7 +696,7 @@ function renderPlan() {
   `;
   const slideLabel = document.createElement('div');
   slideLabel.style.cssText = 'position:absolute;bottom:2px;left:2px;font-size:6px;color:rgba(82,200,122,.5);font-family:monospace;white-space:nowrap;';
-  slideLabel.textContent = '24" clear';
+  slideLabel.textContent = '24\" clear';
   slideZone.appendChild(slideLabel);
   dz.appendChild(slideZone);
 
@@ -673,8 +878,6 @@ function runConstraints() {
       }
     }
 
-    // Min walkway: if two floor modules in same depth zone
-    // (simplified: just flag if total floor coverage > 70%)
     if (m.cat === 'galley' && m.w < 18) errs.push('Galley too narrow (min 18")');
     if (m.cat === 'bed' && m.w < 24)    errs.push('Bed too narrow (min 24")');
 
@@ -765,12 +968,12 @@ function openEdit() {
   toggleAnchorFields();
 }
 
-function closeModalOut(e) {
-  if (e.target === document.getElementById('moverlay')) closeEdit();
-}
-
 function closeEdit() {
   document.getElementById('moverlay').classList.remove('open');
+}
+
+function closeModalOut(e) {
+  if (e.target === document.getElementById('moverlay')) closeEdit();
 }
 
 function resetEditForm() {
@@ -946,7 +1149,6 @@ function showAnchorHud(m) {
     </div>
   `;
 
-  // Make HUD draggable
   let hudX = parseInt(hud.style.left) || 10;
   let hudY = parseInt(hud.style.top)  || 200;
   hud.style.left = hudX + 'px';
@@ -1045,109 +1247,9 @@ function toggleAnchorPt(pt, btn) {
   }
 }
 
-// ── Inventory / Assets ────────────────────────────────────────────────────────
+// ── Elevation / Cross / Roof / Systems Views ──────────────────────────────────
 
-const STATUS_LABELS = {
-  tobuy:   { label: '📋 To Buy',    color: 'rgba(232,160,32,.8)' },
-  ordered: { label: '✅ Ordered',   color: 'rgba(82,200,122,.8)' },
-  done:    { label: '🔧 Installed', color: 'rgba(74,176,224,.8)' },
-  owned:   { label: '👍 Owned',     color: 'rgba(160,130,200,.8)' },
-  phase2:  { label: '⏳ Phase 2',   color: 'rgba(150,150,170,.6)' },
-};
-
-function renderInvList() {
-  const list = document.getElementById('inv-list');
-  const totalEl = document.getElementById('inv-total');
-  if (!list) return;
-
-  if (!inventory.length) {
-    list.innerHTML = '<div style="color:rgba(255,255,255,.25);font-size:.72rem;text-align:center;padding:16px">No items yet.<br>Add items or import a JSON file.</div>';
-    if (totalEl) totalEl.textContent = 'Total: $0';
-    return;
-  }
-
-  // Group by group name
-  const groups = {};
-  inventory.forEach(item => {
-    const g = item.group || 'General';
-    if (!groups[g]) groups[g] = [];
-    groups[g].push(item);
-  });
-
-  const totalCost = inventory.reduce((s, i) => s + (parseFloat(i.cost) || 0), 0);
-  const phaseCost = inventory.filter(i => i.status !== 'phase2').reduce((s, i) => s + (parseFloat(i.cost) || 0), 0);
-
-  list.innerHTML = Object.entries(groups).map(([grp, items]) => {
-    const grpTotal = items.reduce((s, i) => s + (parseFloat(i.cost) || 0), 0);
-    return `
-      <div class="inv-group">
-        <div class="inv-group-header">
-          <span>${grp}</span>
-          <span style="color:rgba(255,255,255,.4);font-size:.65rem">$${grpTotal.toLocaleString()}</span>
-        </div>
-        ${items.map(item => {
-          const st = STATUS_LABELS[item.status] || STATUS_LABELS.tobuy;
-          return `
-            <div class="inv-item" data-iid="${item.id}">
-              <div class="inv-item-main">
-                <div class="inv-item-name">${item.name}${item.url ? ` <a href="${item.url}" target="_blank" style="color:rgba(74,176,224,.6);font-size:.6rem">↗</a>` : ''}</div>
-                <div class="inv-item-meta">
-                  <span style="color:${st.color};font-size:.62rem">${st.label}</span>
-                  ${item.cost ? `<span style="color:rgba(255,255,255,.5);font-size:.65rem">$${parseFloat(item.cost).toLocaleString()}</span>` : ''}
-                </div>
-                ${item.notes ? `<div class="inv-item-notes">${item.notes}</div>` : ''}
-              </div>
-              <button class="inv-del-btn" onclick="delInv('${item.id}')" title="Delete">✕</button>
-            </div>`;
-        }).join('')}
-      </div>`;
-  }).join('');
-
-  if (totalEl) totalEl.innerHTML = `
-    <div style="display:flex;justify-content:space-between;padding:6px 10px;font-size:.72rem">
-      <span style="color:rgba(255,255,255,.5)">Phase 1 Total</span>
-      <span style="color:#fff;font-weight:700">$${phaseCost.toLocaleString()}</span>
-    </div>
-    <div style="display:flex;justify-content:space-between;padding:2px 10px 6px;font-size:.65rem">
-      <span style="color:rgba(255,255,255,.3)">All phases</span>
-      <span style="color:rgba(255,255,255,.4)">$${totalCost.toLocaleString()}</span>
-    </div>`;
-}
-
-function addInv() {
-  const name   = document.getElementById('ii-name')?.value.trim();
-  const group  = document.getElementById('ii-group')?.value.trim() || 'General';
-  const cost   = parseFloat(document.getElementById('ii-cost')?.value) || 0;
-  const status = document.getElementById('ii-status')?.value || 'tobuy';
-  if (!name) return;
-
-  inventory.push({ id: 'inv_' + Date.now(), name, group, cost, status, notes: '', url: '' });
-  document.getElementById('ii-name').value = '';
-  document.getElementById('ii-cost').value = '';
-  renderInvList();
-  scheduleAutoSave();
-}
-
-function delInv(id) {
-  inventory = inventory.filter(i => i.id !== id);
-  renderInvList();
-  scheduleAutoSave();
-}
-
-function exportCSV() {
-  if (!inventory.length) { showToast('No items to export', 'error'); return; }
-  const rows = [['Name','Group','Status','Cost','Notes','URL']];
-  inventory.forEach(i => rows.push([i.name, i.group, i.status, i.cost||'', i.notes||'', i.url||'']));
-  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `vaniq_assets_${Date.now()}.csv`;
-  a.click();
-  showToast('📊 BOM exported');
-}
-
-function renderElev(side = 'driver') {
+function renderElev(side = "driver") {
   const refs = getTransitRefs();
   const VL = refs.vl, VH = refs.vh;
   const W = px(VL) + PAD + 20;
@@ -1162,16 +1264,13 @@ function renderElev(side = 'driver') {
   ctx.fillStyle = '#12121a'; ctx.fillRect(0,0,W,H);
 
   const ox = PAD, oy = OY;
-  // Draw elevation grid
   ctx.strokeStyle = 'rgba(255,255,255,.07)'; ctx.lineWidth = 0.5;
   for (let x = 0; x <= VL; x += 12) { ctx.beginPath(); ctx.moveTo(ox+px(x),oy); ctx.lineTo(ox+px(x),oy+px(VH)); ctx.stroke(); }
   for (let y = 0; y <= VH; y += 12) { ctx.beginPath(); ctx.moveTo(ox,oy+px(y)); ctx.lineTo(ox+px(VL),oy+px(y)); ctx.stroke(); }
 
-  // Van outline
   ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 1.5;
   ctx.strokeRect(ox, oy, px(VL), px(VH));
 
-  // Modules (side view — use x for position, h for height)
   const svg = makeSVG(W, H);
   modules.forEach(m => {
     if (!m.h) return;
@@ -1211,7 +1310,6 @@ function renderCross() {
   ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 1.5;
   ctx.strokeRect(ox, oy, px(VW), px(VH));
 
-  // Modules at crossY
   const svg = makeSVG(W, H);
   const slice = modules.filter(m => m.x <= crossY && m.x + m.w >= crossY);
   slice.forEach(m => {
@@ -1226,7 +1324,6 @@ function renderCross() {
     svg.appendChild(r);
   });
 
-  // Centerline
   svg.appendChild(svgLine(ox + px(VW/2), oy, ox + px(VW/2), oy + px(VH), 'rgba(74,176,224,.4)', 1));
 
   cvs.style.cssText = 'position:absolute;top:0;left:0;';
@@ -1234,7 +1331,6 @@ function renderCross() {
   svg.style.cssText = 'position:absolute;top:0;left:0;';
   wrap.appendChild(svg);
 
-  // Cross-section position indicator label
   const lbl = document.createElement('div');
   lbl.style.cssText = 'position:absolute;top:6px;left:' + (ox+px(VW/2)-20) + 'px;color:rgba(74,176,224,.7);font-size:.65rem;font-family:monospace';
   lbl.textContent = `@ ${crossY}"`;
@@ -1242,7 +1338,6 @@ function renderCross() {
 }
 
 function renderRoof() {
-  // Simplified: same as plan but shows roof-layer modules
   renderPlan(); // TODO: filter to roof layer items only
 }
 
@@ -1263,31 +1358,28 @@ function renderSystems() {
 }
 
 function renderCurrentView() {
-  if      (VIEW === 'plan')              renderPlan();
+  if      (VIEW === 'plan')                      renderPlan();
   else if (VIEW === 'driver' || VIEW === 'elev') renderElev('driver');
-  else if (VIEW === 'pass')              renderElev('pass');
-  else if (VIEW === 'cross')             renderCross();
-  else if (VIEW === 'roof')              renderRoof();
-  else if (VIEW === 'systems')           renderSystems();
+  else if (VIEW === 'pass')                      renderElev('pass');
+  else if (VIEW === 'cross')                     renderCross();
+  else if (VIEW === 'roof')                      renderRoof();
+  else if (VIEW === 'systems')                   renderSystems();
 }
 
 // ── Sidebar Tabs ──────────────────────────────────────────────────────────────
 
 function lTab(tab) {
-  // Tabs use .lptab with id lptab-{name}
   document.querySelectorAll('.lptab').forEach(t => {
-    const tid = t.id?.replace('lptab-', '');
-    t.classList.toggle('active', tid === tab);
+    t.classList.toggle('active', t.id === 'lptab-' + tab);
   });
-  // Panels use .lp-panel with id lp-{name}
   document.querySelectorAll('.lp-panel').forEach(p => {
     const pid = p.id?.replace('lp-', '');
-    p.style.display = (pid === tab || (tab === 'inv' && pid === 'inv')) ? 'block' : 'none';
     p.classList.toggle('active', pid === tab);
+    p.style.display = pid === tab ? 'flex' : 'none';
   });
 }
 
-// ── Export / Import / Share ───────────────────────────────────────────────────
+// ── Share ─────────────────────────────────────────────────────────────────────
 
 async function shareLayout() {
   if (!canShare()) { showUpgradeModal('share'); return; }
@@ -1301,69 +1393,305 @@ async function shareLayout() {
   }
 }
 
+// ── Export / Import Build ─────────────────────────────────────────────────────
+
 function exportBuild() {
-  if (!canExport()) { showUpgradeModal('export'); return; }
-  const data = {
-    version: '2.0',
-    project: projects[currentProjectIdx],
-    modules,
-    exported: new Date().toISOString()
+  const proj = projects[currentProjectIdx] || {};
+  const payload = {
+    vaniq_version: '2.0',
+    exported_at: new Date().toISOString(),
+    project: {
+      name: proj.name || 'My Van Build',
+      vanModel: proj.vanModel || 'Transit 148 HR',
+    },
+    modules: modules,
+    inventory: inventory || [],
+    settings: {
+      scale: S,
+      crossY: crossY,
+      view: VIEW
+    }
   };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `vaniq_build_${Date.now()}.json`;
+
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const name = (proj.name || 'vaniq-build').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+  a.href     = url;
+  a.download = `${name}-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('⬇ Build exported as JSON', 'success');
 }
 
 function importBuild() {
   const input = document.createElement('input');
-  input.type = 'file'; input.accept = '.json';
-  input.onchange = e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      try {
-        const data = JSON.parse(ev.target.result);
+  input.type   = 'file';
+  input.accept = '.json,application/json';
 
-        // Inventory import
-        if (data.vaniq_import_type === 'inventory' && data.inventory) {
-          inventory = data.inventory.map(item => ({
-            id: item.id || 'inv_' + Date.now() + Math.random(),
-            name: item.name || 'Item',
-            group: item.group || 'General',
-            cost: parseFloat(item.cost) || 0,
-            status: item.status || 'tobuy',
-            notes: item.notes || '',
-            url: item.url || ''
-          }));
-          lTab('inv');
-          renderInvList();
-          showToast(`📦 ${inventory.length} items imported`, 'success');
-          scheduleAutoSave();
+  input.onchange = e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = evt => {
+      try {
+        const data = JSON.parse(evt.target.result);
+
+        if (!data.modules || !Array.isArray(data.modules)) {
+          showToast('⚠ Invalid file — no modules found', 'error');
           return;
         }
 
-        // Module/build import
-        if (data.modules) {
-          modules = data.modules;
-          if (data.project) projects[currentProjectIdx] = { ...projects[currentProjectIdx], ...data.project };
-          if (data.inventory) inventory = data.inventory;
-          runConstraints();
-          renderCurrentView();
-          renderModList();
-          renderInvList();
-          showToast('📂 Build imported');
+        const modCount = data.modules.length;
+        const projName = data.project?.name || 'Imported Build';
+        if (!confirm(`Import "${projName}" with ${modCount} module(s)?\n\nThis will replace your current layout.`)) return;
+
+        modules = data.modules;
+
+        if (data.project?.vanModel && projects[currentProjectIdx]) {
+          projects[currentProjectIdx].vanModel = data.project.vanModel;
+          projects[currentProjectIdx].name     = data.project.name || projects[currentProjectIdx].name;
         }
-      } catch(err) {
-        showToast('Import failed: invalid file', 'error');
+
+        if (data.settings) {
+          if (data.settings.scale)  S      = data.settings.scale;
+          if (data.settings.crossY) crossY = data.settings.crossY;
+          if (data.settings.view)   VIEW   = data.settings.view;
+        }
+
+        if (data.inventory && Array.isArray(data.inventory)) {
+          inventory = data.inventory;
+          renderInvList?.();
+        }
+
+        pushUndo();
+        runConstraints();
+        renderCurrentView();
+        renderModList();
+        renderProjectSelect();
+        showToast(`✅ Imported "${projName}" — ${modCount} modules loaded`, 'success');
+
+      } catch (err) {
+        console.error('Import error:', err);
+        showToast('⚠ Failed to parse JSON file: ' + err.message, 'error');
       }
     };
+
+    reader.onerror = () => {
+      showToast('⚠ Could not read file', 'error');
+    };
+
     reader.readAsText(file);
   };
+
+  input.style.display = 'none';
+  document.body.appendChild(input);
   input.click();
+  document.body.removeChild(input);
 }
+
+// ── CSV Asset Import ──────────────────────────────────────────────────────────
+// importCSV()          — open file picker, parse CSV, add items to canvas
+// downloadCSVTemplate() — download blank template for users
+//
+// Accepted schemas:
+//   A) VanIQ standard:  name*, category*, width*, depth*, height, cost, notes, status, url
+//   B) Build-list:      Item*, Phase*, Cost, Notes, Status, Brand/Link, URL
+//   (* = required)
+//
+// category values: bed, galley, bath, power, frame, garage, seating, work, storage
+// ─────────────────────────────────────────────────────────────────────────────
+
+function importCSV() {
+  const input = document.createElement('input');
+  input.type   = 'file';
+  input.accept = '.csv,text/csv,application/csv';
+  input.style.display = 'none';
+
+  input.onchange = function(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      try {
+        const raw   = evt.target.result.replace(/^\uFEFF/, ''); // strip BOM
+        const rows  = _parseCSVtoRows(raw);
+        if (rows.length < 2) { showToast('CSV appears empty', 'error'); return; }
+
+        const headers = rows[0].map(function(h) { return h.trim().toLowerCase().replace(/[^a-z0-9]/g, ''); });
+
+        const isStandard  = headers.includes('name') &&
+          (headers.includes('category') || headers.includes('cat')) &&
+          (headers.includes('width') || headers.includes('w'));
+        const isBuildList = headers.includes('item') && headers.includes('phase');
+
+        if (!isStandard && !isBuildList) {
+          showToast('CSV needs: name/item, category/phase, width, depth — or download the template', 'error');
+          return;
+        }
+
+        function colIdx() {
+          var aliases = Array.prototype.slice.call(arguments);
+          for (var a = 0; a < aliases.length; a++) {
+            var i = headers.findIndex(function(h) { return h === aliases[a] || h.startsWith(aliases[a]); });
+            if (i >= 0) return i;
+          }
+          return -1;
+        }
+        function str(row) {
+          var aliases = Array.prototype.slice.call(arguments, 1);
+          var i = colIdx.apply(null, aliases);
+          return i >= 0 ? (row[i] || '').trim() : '';
+        }
+        function num(row, def) {
+          var aliases = Array.prototype.slice.call(arguments, 2);
+          return parseFloat(str.apply(null, [row].concat(aliases))) || def;
+        }
+
+        var CAT_MAP = {
+          bed:'bed', sleep:'bed',
+          galley:'galley', kitchen:'galley', cook:'galley',
+          bath:'bath', plumb:'bath', heat:'bath', water:'bath',
+          power:'power', elec:'power', solar:'power',
+          frame:'frame', wall:'frame', ceil:'frame', insul:'frame', struct:'frame',
+          garage:'garage', bike:'garage', gear:'garage',
+          seat:'seating', chair:'seating',
+          work:'work', office:'work', desk:'work',
+          storage:'storage', addon:'storage', roof:'storage', interior:'storage'
+        };
+        function mapCat(raw) {
+          var key = (raw || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          var match = Object.keys(CAT_MAP).find(function(k) { return key.includes(k); });
+          return match ? CAT_MAP[match] : 'storage';
+        }
+
+        var imported = [], skipped = 0;
+        rows.slice(1).forEach(function(row, idx) {
+          var name, cat, w, d, h, cost, notes, status, url;
+          if (isStandard) {
+            name   = str(row, 'name');
+            cat    = mapCat(str(row, 'category', 'cat'));
+            w      = num(row, 24, 'width', 'w');
+            d      = num(row, 24, 'depth', 'd');
+            h      = num(row, 0,  'height', 'h');
+            cost   = num(row, 0,  'cost', 'price');
+            notes  = str(row, 'notes', 'note');
+            status = str(row, 'status');
+            url    = str(row, 'url', 'link');
+          } else {
+            name   = str(row, 'item');
+            cat    = mapCat(str(row, 'phase'));
+            w = 24; d = 24; h = 0;
+            cost   = num(row, 0,  'cost', 'price');
+            notes  = str(row, 'notes', 'note');
+            status = str(row, 'status');
+            url    = str(row, 'url', 'link', 'brand');
+            var brand     = str(row, 'brand');
+            var powerNote = str(row, 'power');
+            if (brand)     notes = [notes, 'Brand: ' + brand].filter(Boolean).join(' | ');
+            if (powerNote) notes = [notes, 'Power: ' + powerNote].filter(Boolean).join(' | ');
+          }
+          if (!name || /^https?:\/\//.test(name)) { skipped++; return; }
+          imported.push({
+            id:     'csv_' + Date.now() + '_' + idx,
+            name: name, cat: cat,
+            w: Math.max(6, w), d: Math.max(6, d), h: h,
+            cost: cost, notes: notes,
+            status: status || 'To Buy',
+            url: url,
+            x: (idx % 4) * 26,
+            y: Math.floor(idx / 4) * 26,
+            layer: 'floor',
+            anchor: { enabled: false, points: [] }
+          });
+        });
+
+        if (imported.length === 0) { showToast('No valid items found — check column names', 'error'); return; }
+
+        var totalCost = imported.reduce(function(s, m) { return s + (m.cost || 0); }, 0);
+        var msg = 'Import ' + imported.length + ' items from CSV?' +
+          (skipped ? '\n(' + skipped + ' blank rows skipped)' : '') +
+          (totalCost ? '\nEstimated total: $' + totalCost.toLocaleString() : '');
+
+        if (!confirm(msg)) return;
+
+        modules.push.apply(modules, imported);
+        if (typeof pushUndo === 'function') pushUndo();
+        if (typeof runConstraints === 'function') runConstraints();
+        if (typeof renderCurrentView === 'function') renderCurrentView();
+        if (typeof renderModList === 'function') renderModList();
+        if (typeof scheduleAutoSave === 'function') scheduleAutoSave();
+        showToast('Imported ' + imported.length + ' items · $' + totalCost.toLocaleString() + ' total', 'success');
+
+      } catch(err) {
+        console.error('VanIQ CSV import error:', err);
+        showToast('CSV parse failed: ' + err.message, 'error');
+      }
+    };
+    reader.onerror = function() { showToast('Could not read file', 'error'); };
+    reader.readAsText(file);
+  };
+
+  document.body.appendChild(input);
+  input.click();
+  document.body.removeChild(input);
+}
+
+// RFC-4180 CSV parser — handles quoted fields, embedded commas, embedded newlines
+function _parseCSVtoRows(text) {
+  var rows = [], row = [], field = '', inQ = false;
+  for (var i = 0; i < text.length; i++) {
+    var c = text[i], n = text[i + 1];
+    if (inQ) {
+      if (c === '"' && n === '"') { field += '"'; i++; }
+      else if (c === '"')         { inQ = false; }
+      else                        { field += c; }
+    } else {
+      if      (c === '"')  { inQ = true; }
+      else if (c === ',')  { row.push(field); field = ''; }
+      else if (c === '\n') {
+        row.push(field); field = '';
+        if (row.some(function(f) { return f.trim(); })) rows.push(row);
+        row = [];
+      } else if (c !== '\r') { field += c; }
+    }
+  }
+  row.push(field);
+  if (row.some(function(f) { return f.trim(); })) rows.push(row);
+  return rows;
+}
+
+function downloadCSVTemplate() {
+  var rows = [
+    ['name','category','width','depth','height','cost','notes','status','url'],
+    ['Queen Bed Platform','bed','60','80','12','400','Storage drawers below','To Buy',''],
+    ['Galley Counter','galley','70','28','36','1800','Sink + induction top','To Buy',''],
+    ['EcoFlow Power Hub','power','13','16','18','1200','10kWh LiFePO4','To Buy',''],
+    ['Garage Zone','garage','70','60','24','0','E-bike + gear storage','To Buy',''],
+    ['Water Tank','bath','32','14','16','300','29gal under bed','To Buy',''],
+    ['Air Heater','bath','10','10','8','1500','Webasto or Espar','To Buy',''],
+    ['Vent Fan','storage','14','14','6','500','MaxxAir or Fan-Tastic','To Buy',''],
+    ['Swivel Seats','seating','22','22','4','400','Driver + passenger','To Buy',''],
+    ['Work Desk','work','30','20','0','200','Lagun table or fold-out','To Buy','']
+  ];
+  function esc(f) { return f.includes(',') ? '"' + f + '"' : f; }
+  var csv = rows.map(function(r) { return r.map(esc).join(','); }).join('\n');
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'vaniq-build-template.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+  showToast('Template downloaded — open in Excel or Google Sheets', 'success');
+}
+
 
 // ── Project Modal ─────────────────────────────────────────────────────────────
 
@@ -1412,8 +1740,8 @@ async function renderProjList() {
 }
 
 async function createProject() {
-  const name    = document.getElementById('proj-new-name')?.value.trim() || 'My Van Build';
-  const vanModel= document.getElementById('proj-new-van')?.value || 'Transit 148 HR';
+  const name     = document.getElementById('proj-new-name')?.value.trim() || 'My Van Build';
+  const vanModel = document.getElementById('proj-new-van')?.value || 'Transit 148 HR';
   modules = [];
   selId = null;
   currentDbProjectId = null;
@@ -1487,7 +1815,6 @@ function renderLibrary() {
 
 function addFromLibrary(idx) {
   const template = MODULE_LIBRARY[idx];
-  const refs = getTransitRefs();
   const m = {
     ...template,
     id: 'mod_' + Date.now(),
@@ -1506,7 +1833,7 @@ function addFromLibrary(idx) {
   scheduleAutoSave();
 }
 
-// ── Resources ────────────────────────────────────────────────────────────────
+// ── Resources ─────────────────────────────────────────────────────────────────
 
 function toggleResMenu() {
   const menu = document.getElementById('res-menu');
@@ -1516,7 +1843,6 @@ function toggleResMenu() {
   if (btn) btn.classList.toggle('open', isOpen);
 }
 
-// Close resources menu on outside click
 document.addEventListener('click', e => {
   const wrap = document.getElementById('res-wrap');
   if (wrap && !wrap.contains(e.target)) {
@@ -1559,33 +1885,65 @@ async function loadGithubResources() {
   }
 }
 
-function openLocalResource() {
-  const input = document.createElement('input');
-  input.type = 'file'; input.accept = '.html';
-  input.onchange = e => {
-    const file = e.target.files[0];
-    if (!file) return;
+// ── Doc Viewer — iframe modal for HTML resource files ────────────────────────
+
+function openDocViewer(url, title) {
+  let overlay = document.getElementById('doc-viewer-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'doc-viewer-overlay';
+    overlay.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:9999;align-items:flex-start;justify-content:center;padding:20px;box-sizing:border-box;';
+    overlay.innerHTML =
+      '<div style="background:#12121e;border:1px solid rgba(255,255,255,.12);border-radius:8px;width:100%;max-width:900px;height:calc(100vh - 40px);display:flex;flex-direction:column;overflow:hidden;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.1);flex-shrink:0">' +
+          '<span id="doc-viewer-title" style="font-family:\'Barlow Condensed\',sans-serif;font-weight:700;font-size:.85rem;color:#fff;letter-spacing:.04em"></span>' +
+          '<div style="display:flex;gap:8px;align-items:center">' +
+            '<a id="doc-viewer-newwin" href="#" target="_blank" style="font-size:.65rem;color:rgba(255,255,255,.4);text-decoration:none;font-family:\'Space Mono\',monospace">⬡ open tab</a>' +
+            '<button onclick="closeDocViewer()" style="background:none;border:none;color:rgba(255,255,255,.5);font-size:1.1rem;cursor:pointer;line-height:1;padding:2px 6px;">&#x2715;</button>' +
+          '</div>' +
+        '</div>' +
+        '<iframe id="doc-viewer-frame" style="flex:1;border:none;background:#fff;" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeDocViewer(); });
+  }
+  document.getElementById('doc-viewer-title').textContent = title || 'Document';
+  document.getElementById('doc-viewer-frame').src = url;
+  const link = document.getElementById('doc-viewer-newwin');
+  link.href = url;
+  overlay.style.display = 'flex';
+}
+
+function closeDocViewer() {
+  const ov = document.getElementById('doc-viewer-overlay');
+  if (ov) { ov.style.display = 'none'; document.getElementById('doc-viewer-frame').src = 'about:blank'; }
+}
+
+function openLocalResource(evt) {
+  if (evt && evt.target && evt.target.files && evt.target.files[0]) {
+    const file = evt.target.files[0];
     const url = URL.createObjectURL(file);
-    window.open(url, '_blank');
-  };
-  input.click();
+    openDocViewer(url, file.name.replace('.html',''));
+  } else {
+    const inp = document.getElementById('local-res-input');
+    if (inp) inp.click();
+  }
 }
 
 // ── Guide ─────────────────────────────────────────────────────────────────────
 
 function openGuide() {
-  document.getElementById('guide-overlay').style.display = 'flex';
+  openDocViewer('/guide.html', '📖 VanIQ User Guide');
 }
 function closeGuide() {
-  document.getElementById('guide-overlay').style.display = 'none';
+  closeDocViewer();
 }
 
 // ── Panel Toggle ──────────────────────────────────────────────────────────────
 
 function togglePanel() {
-  const panel  = document.querySelector('.lpanel');
-  const btn    = document.getElementById('panel-toggle');
-  const wrap   = document.querySelector('.app-body');
+  const panel = document.querySelector('.lpanel');
+  const btn   = document.getElementById('panel-toggle');
   if (!panel) return;
   panel.classList.toggle('collapsed');
   const collapsed = panel.classList.contains('collapsed');
@@ -1597,7 +1955,7 @@ function togglePanel() {
 document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
   if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveLayout(); }
-  if (e.key === 'Escape') { desel(); closeEdit(); hideAuthModal(); hideUpgradeModal(); document.getElementById('res-menu')?.classList.remove('open'); }
+  if (e.key === 'Escape') { desel(); closeEdit(); hideAuthModal?.(); hideUpgradeModal?.(); }
   if (e.key === 'Delete' && selId && !document.getElementById('moverlay')?.classList.contains('open')) {
     delMod();
   }
@@ -1606,23 +1964,19 @@ document.addEventListener('keydown', e => {
 // ── Initialization ────────────────────────────────────────────────────────────
 
 async function init() {
-  // Default project
   projects = [{
     name: 'My Van Build',
     vanModel: 'Transit 148 HR',
     id: 'local_default'
   }];
 
-  // Init auth
   await initAuth();
   updateAuthUI();
 
-  // Listen for auth changes
   onAuthChange(async (event, user, profile) => {
     updateAuthUI();
     if (event === 'signed_in') {
       renderProjectSelect();
-      // Try to load most recent project
       const dbProjects = await dbGetProjects();
       if (dbProjects.length > 0) {
         await loadProjectById(dbProjects[0].id);
@@ -1630,11 +1984,9 @@ async function init() {
     }
   });
 
-  // Handle post-payment redirect
   handlePostPayment?.();
 
-  // Handle share link
-  const params = new URLSearchParams(window.location.search);
+  const params  = new URLSearchParams(window.location.search);
   const shareId = params.get('share');
   if (shareId) {
     const shared = await dbGetSharedProject(shareId);
@@ -1644,15 +1996,11 @@ async function init() {
     }
   }
 
-  // Render
   setView('plan');
-  lTab('dims');
   renderModList();
-  renderInvList();
   autoFitScale();
   syncDimInputs();
 
-  // Autosave hint for free users
   if (!canSave()) {
     setTimeout(() => {
       const banner = document.getElementById('free-banner');
