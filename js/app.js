@@ -756,8 +756,6 @@ function runConstraints() {
       }
     }
 
-    // Min walkway: if two floor modules in same depth zone
-    // (simplified: just flag if total floor coverage > 70%)
     if (m.cat === 'galley' && m.w < 18) errs.push('Galley too narrow (min 18")');
     if (m.cat === 'bed' && m.w < 24)    errs.push('Bed too narrow (min 24")');
 
@@ -1029,7 +1027,6 @@ function showAnchorHud(m) {
     </div>
   `;
 
-  // Make HUD draggable
   let hudX = parseInt(hud.style.left) || 10;
   let hudY = parseInt(hud.style.top)  || 200;
   hud.style.left = hudX + 'px';
@@ -1145,16 +1142,13 @@ function renderElev(side = "driver") {
   ctx.fillStyle = '#12121a'; ctx.fillRect(0,0,W,H);
 
   const ox = PAD, oy = OY;
-  // Draw elevation grid
   ctx.strokeStyle = 'rgba(255,255,255,.07)'; ctx.lineWidth = 0.5;
   for (let x = 0; x <= VL; x += 12) { ctx.beginPath(); ctx.moveTo(ox+px(x),oy); ctx.lineTo(ox+px(x),oy+px(VH)); ctx.stroke(); }
   for (let y = 0; y <= VH; y += 12) { ctx.beginPath(); ctx.moveTo(ox,oy+px(y)); ctx.lineTo(ox+px(VL),oy+px(y)); ctx.stroke(); }
 
-  // Van outline
   ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 1.5;
   ctx.strokeRect(ox, oy, px(VL), px(VH));
 
-  // Modules (side view — use x for position, h for height)
   const svg = makeSVG(W, H);
   modules.forEach(m => {
     if (!m.h) return;
@@ -1194,7 +1188,6 @@ function renderCross() {
   ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 1.5;
   ctx.strokeRect(ox, oy, px(VW), px(VH));
 
-  // Modules at crossY
   const svg = makeSVG(W, H);
   const slice = modules.filter(m => m.x <= crossY && m.x + m.w >= crossY);
   slice.forEach(m => {
@@ -1209,7 +1202,6 @@ function renderCross() {
     svg.appendChild(r);
   });
 
-  // Centerline
   svg.appendChild(svgLine(ox + px(VW/2), oy, ox + px(VW/2), oy + px(VH), 'rgba(74,176,224,.4)', 1));
 
   cvs.style.cssText = 'position:absolute;top:0;left:0;';
@@ -1217,7 +1209,6 @@ function renderCross() {
   svg.style.cssText = 'position:absolute;top:0;left:0;';
   wrap.appendChild(svg);
 
-  // Cross-section position indicator label
   const lbl = document.createElement('div');
   lbl.style.cssText = 'position:absolute;top:6px;left:' + (ox+px(VW/2)-20) + 'px;color:rgba(74,176,224,.7);font-size:.65rem;font-family:monospace';
   lbl.textContent = `@ ${crossY}"`;
@@ -1225,7 +1216,6 @@ function renderCross() {
 }
 
 function renderRoof() {
-  // Simplified: same as plan but shows roof-layer modules
   renderPlan(); // TODO: filter to roof layer items only
 }
 
@@ -1246,12 +1236,12 @@ function renderSystems() {
 }
 
 function renderCurrentView() {
-  if      (VIEW === 'plan')                   renderPlan();
+  if      (VIEW === 'plan')                      renderPlan();
   else if (VIEW === 'driver' || VIEW === 'elev') renderElev('driver');
-  else if (VIEW === 'pass')                   renderElev('pass');
-  else if (VIEW === 'cross')                  renderCross();
-  else if (VIEW === 'roof')                   renderRoof();
-  else if (VIEW === 'systems')                renderSystems();
+  else if (VIEW === 'pass')                      renderElev('pass');
+  else if (VIEW === 'cross')                     renderCross();
+  else if (VIEW === 'roof')                      renderRoof();
+  else if (VIEW === 'systems')                   renderSystems();
 }
 
 // ── Sidebar Tabs ──────────────────────────────────────────────────────────────
@@ -1267,7 +1257,7 @@ function lTab(tab) {
   });
 }
 
-// ── Export / Import / Share ───────────────────────────────────────────────────
+// ── Share ─────────────────────────────────────────────────────────────────────
 
 async function shareLayout() {
   if (!canShare()) { showUpgradeModal('share'); return; }
@@ -1281,46 +1271,106 @@ async function shareLayout() {
   }
 }
 
+// ── Export / Import Build ─────────────────────────────────────────────────────
+
 function exportBuild() {
-  if (!canExport()) { showUpgradeModal('export'); return; }
-  const data = {
-    version: '2.0',
-    project: projects[currentProjectIdx],
-    modules,
-    exported: new Date().toISOString()
+  const proj = projects[currentProjectIdx] || {};
+  const payload = {
+    vaniq_version: '2.0',
+    exported_at: new Date().toISOString(),
+    project: {
+      name: proj.name || 'My Van Build',
+      vanModel: proj.vanModel || 'Transit 148 HR',
+    },
+    modules: modules,
+    inventory: inventory || [],
+    settings: {
+      scale: S,
+      crossY: crossY,
+      view: VIEW
+    }
   };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `vaniq_build_${Date.now()}.json`;
+
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const name = (proj.name || 'vaniq-build').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+  a.href     = url;
+  a.download = `${name}-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('⬇ Build exported as JSON', 'success');
 }
 
 function importBuild() {
   const input = document.createElement('input');
-  input.type = 'file'; input.accept = '.json';
+  input.type   = 'file';
+  input.accept = '.json,application/json';
+
   input.onchange = e => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
+
     const reader = new FileReader();
-    reader.onload = ev => {
+
+    reader.onload = evt => {
       try {
-        const data = JSON.parse(ev.target.result);
-        if (data.modules) {
-          modules = data.modules;
-          if (data.project) projects[currentProjectIdx] = { ...projects[currentProjectIdx], ...data.project };
-          runConstraints();
-          renderCurrentView();
-          renderModList();
-          showToast('📂 Build imported');
+        const data = JSON.parse(evt.target.result);
+
+        if (!data.modules || !Array.isArray(data.modules)) {
+          showToast('⚠ Invalid file — no modules found', 'error');
+          return;
         }
-      } catch(err) {
-        showToast('Import failed: invalid file', 'error');
+
+        const modCount = data.modules.length;
+        const projName = data.project?.name || 'Imported Build';
+        if (!confirm(`Import "${projName}" with ${modCount} module(s)?\n\nThis will replace your current layout.`)) return;
+
+        modules = data.modules;
+
+        if (data.project?.vanModel && projects[currentProjectIdx]) {
+          projects[currentProjectIdx].vanModel = data.project.vanModel;
+          projects[currentProjectIdx].name     = data.project.name || projects[currentProjectIdx].name;
+        }
+
+        if (data.settings) {
+          if (data.settings.scale)  S      = data.settings.scale;
+          if (data.settings.crossY) crossY = data.settings.crossY;
+          if (data.settings.view)   VIEW   = data.settings.view;
+        }
+
+        if (data.inventory && Array.isArray(data.inventory)) {
+          inventory = data.inventory;
+          renderInvList?.();
+        }
+
+        pushUndo();
+        runConstraints();
+        renderCurrentView();
+        renderModList();
+        renderProjectSelect();
+        showToast(`✅ Imported "${projName}" — ${modCount} modules loaded`, 'success');
+
+      } catch (err) {
+        console.error('Import error:', err);
+        showToast('⚠ Failed to parse JSON file: ' + err.message, 'error');
       }
     };
+
+    reader.onerror = () => {
+      showToast('⚠ Could not read file', 'error');
+    };
+
     reader.readAsText(file);
   };
+
+  input.style.display = 'none';
+  document.body.appendChild(input);
   input.click();
+  document.body.removeChild(input);
 }
 
 // ── Project Modal ─────────────────────────────────────────────────────────────
@@ -1370,8 +1420,8 @@ async function renderProjList() {
 }
 
 async function createProject() {
-  const name    = document.getElementById('proj-new-name')?.value.trim() || 'My Van Build';
-  const vanModel= document.getElementById('proj-new-van')?.value || 'Transit 148 HR';
+  const name     = document.getElementById('proj-new-name')?.value.trim() || 'My Van Build';
+  const vanModel = document.getElementById('proj-new-van')?.value || 'Transit 148 HR';
   modules = [];
   selId = null;
   currentDbProjectId = null;
@@ -1445,7 +1495,6 @@ function renderLibrary() {
 
 function addFromLibrary(idx) {
   const template = MODULE_LIBRARY[idx];
-  const refs = getTransitRefs();
   const m = {
     ...template,
     id: 'mod_' + Date.now(),
@@ -1464,7 +1513,7 @@ function addFromLibrary(idx) {
   scheduleAutoSave();
 }
 
-// ── Resources ────────────────────────────────────────────────────────────────
+// ── Resources ─────────────────────────────────────────────────────────────────
 
 function toggleResMenu() {
   const menu = document.getElementById('res-menu');
@@ -1473,6 +1522,7 @@ function toggleResMenu() {
   const isOpen = menu.classList.toggle('open');
   if (btn) btn.classList.toggle('open', isOpen);
 }
+
 document.addEventListener('click', e => {
   const wrap = document.getElementById('res-wrap');
   if (wrap && !wrap.contains(e.target)) {
@@ -1539,9 +1589,8 @@ function closeGuide() {
 // ── Panel Toggle ──────────────────────────────────────────────────────────────
 
 function togglePanel() {
-  const panel  = document.querySelector('.lpanel');
-  const btn    = document.getElementById('panel-toggle');
-  const wrap   = document.querySelector('.app-body');
+  const panel = document.querySelector('.lpanel');
+  const btn   = document.getElementById('panel-toggle');
   if (!panel) return;
   panel.classList.toggle('collapsed');
   const collapsed = panel.classList.contains('collapsed');
@@ -1553,7 +1602,7 @@ function togglePanel() {
 document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
   if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveLayout(); }
-  if (e.key === 'Escape') { desel(); closeEdit(); hideAuthModal(); hideUpgradeModal(); }
+  if (e.key === 'Escape') { desel(); closeEdit(); hideAuthModal?.(); hideUpgradeModal?.(); }
   if (e.key === 'Delete' && selId && !document.getElementById('moverlay')?.classList.contains('open')) {
     delMod();
   }
@@ -1562,23 +1611,19 @@ document.addEventListener('keydown', e => {
 // ── Initialization ────────────────────────────────────────────────────────────
 
 async function init() {
-  // Default project
   projects = [{
     name: 'My Van Build',
     vanModel: 'Transit 148 HR',
     id: 'local_default'
   }];
 
-  // Init auth
   await initAuth();
   updateAuthUI();
 
-  // Listen for auth changes
   onAuthChange(async (event, user, profile) => {
     updateAuthUI();
     if (event === 'signed_in') {
       renderProjectSelect();
-      // Try to load most recent project
       const dbProjects = await dbGetProjects();
       if (dbProjects.length > 0) {
         await loadProjectById(dbProjects[0].id);
@@ -1586,11 +1631,9 @@ async function init() {
     }
   });
 
-  // Handle post-payment redirect
   handlePostPayment?.();
 
-  // Handle share link
-  const params = new URLSearchParams(window.location.search);
+  const params  = new URLSearchParams(window.location.search);
   const shareId = params.get('share');
   if (shareId) {
     const shared = await dbGetSharedProject(shareId);
@@ -1600,13 +1643,11 @@ async function init() {
     }
   }
 
-  // Render
   setView('plan');
   renderModList();
   autoFitScale();
   syncDimInputs();
 
-  // Autosave hint for free users
   if (!canSave()) {
     setTimeout(() => {
       const banner = document.getElementById('free-banner');
@@ -1616,133 +1657,3 @@ async function init() {
 }
 
 window.addEventListener('load', init);
-
-// PATCH: fix lTab to use correct CSS classes
-function lTab(tab) {
-  document.querySelectorAll('.lptab').forEach(t => {
-    t.classList.toggle('active', t.id === 'lptab-' + tab);
-  });
-  document.querySelectorAll('.lp-panel').forEach(p => {
-    const pid = p.id?.replace('lp-', '');
-    p.classList.toggle('active', pid === tab);
-    p.style.display = pid === tab ? 'flex' : 'none';
-  });
-}
-
-// PATCH: fix resources menu close on outside click
-document.addEventListener('click', function(e) {
-  const wrap = document.getElementById('res-wrap');
-  if (wrap && !wrap.contains(e.target)) {
-    document.getElementById('res-menu')?.classList.remove('open');
-  }
-});
-// ── Export / Import Build ─────────────────────────────────────────────────────
-// Add these functions to app.js (root level)
-
-function exportBuild() {
-  const proj = projects[currentProjectIdx] || {};
-  const payload = {
-    vaniq_version: '2.0',
-    exported_at: new Date().toISOString(),
-    project: {
-      name: proj.name || 'My Van Build',
-      vanModel: proj.vanModel || 'Transit 148 HR',
-    },
-    modules: modules,
-    inventory: inventory || [],
-    settings: {
-      scale: S,
-      crossY: crossY,
-      view: VIEW
-    }
-  };
-
-  const json = JSON.stringify(payload, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  const name = (proj.name || 'vaniq-build').replace(/[^a-z0-9]/gi, '-').toLowerCase();
-  a.href     = url;
-  a.download = `${name}-${new Date().toISOString().slice(0,10)}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showToast('⬇ Build exported as JSON', 'success');
-}
-
-function importBuild() {
-  const input = document.createElement('input');
-  input.type  = 'file';
-  input.accept = '.json,application/json';
-
-  input.onchange = e => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-
-    reader.onload = evt => {
-      try {
-        const data = JSON.parse(evt.target.result);
-
-        // Validate it's a VanIQ file
-        if (!data.modules || !Array.isArray(data.modules)) {
-          showToast('⚠ Invalid file — no modules found', 'error');
-          return;
-        }
-
-        // Confirm before overwriting
-        const modCount = data.modules.length;
-        const projName = data.project?.name || 'Imported Build';
-        if (!confirm(`Import "${projName}" with ${modCount} module(s)?\n\nThis will replace your current layout.`)) return;
-
-        // Apply the data
-        modules = data.modules;
-
-        // Restore project info
-        if (data.project?.vanModel && projects[currentProjectIdx]) {
-          projects[currentProjectIdx].vanModel = data.project.vanModel;
-          projects[currentProjectIdx].name     = data.project.name || projects[currentProjectIdx].name;
-        }
-
-        // Restore settings
-        if (data.settings) {
-          if (data.settings.scale)  S      = data.settings.scale;
-          if (data.settings.crossY) crossY = data.settings.crossY;
-          if (data.settings.view)   VIEW   = data.settings.view;
-        }
-
-        // Restore inventory
-        if (data.inventory && Array.isArray(data.inventory)) {
-          inventory = data.inventory;
-          renderInvList?.();
-        }
-
-        // Refresh everything
-        pushUndo();
-        runConstraints();
-        renderCurrentView();
-        renderModList();
-        renderProjectSelect();
-        showToast(`✅ Imported "${projName}" — ${modCount} modules loaded`, 'success');
-
-      } catch (err) {
-        console.error('Import error:', err);
-        showToast('⚠ Failed to parse JSON file: ' + err.message, 'error');
-      }
-    };
-
-    reader.onerror = () => {
-      showToast('⚠ Could not read file', 'error');
-    };
-
-    reader.readAsText(file);
-  };
-
-  // Must append to body for Firefox compatibility
-  input.style.display = 'none';
-  document.body.appendChild(input);
-  input.click();
-  document.body.removeChild(input);
-}
