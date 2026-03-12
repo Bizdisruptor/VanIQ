@@ -64,6 +64,7 @@ const VAN_MODELS = {
     sideOpen: 48, rearOpen: 61.5,
     ribs: [16, 32, 48, 64, 80, 96, 112, 128, 144],
     garageStart: 100,
+    hzones: [24,48,72], cab:{depth:22,seatW:22,seatH:16,centerConsoleW:12},
   },
 
   // ── FORD TRANSIT 148 EXTENDED WB ──────────────────────────────────────────
@@ -81,6 +82,7 @@ const VAN_MODELS = {
     sideOpen: 36, rearOpen: 53,
     ribs: [16, 32, 48, 64, 80, 96, 112, 128, 144, 160],
     garageStart: 100,
+    hzones: [24,48,72], cab:{depth:22,seatW:22,seatH:16,centerConsoleW:12},
   },
 
   // ── FORD TRANSIT 130 WB ────────────────────────────────────────────────────
@@ -99,6 +101,7 @@ const VAN_MODELS = {
     sideOpen: 36, rearOpen: 53,
     ribs: [16, 32, 48, 64, 80, 96, 112, 128],
     garageStart: 85,
+    hzones: [24,48], cab:{depth:22,seatW:22,seatH:16,centerConsoleW:12},
   },
   'Transit 130 MR': {
     label: 'Ford Transit 130 MR', source: 'upfitsupply.com',
@@ -111,6 +114,7 @@ const VAN_MODELS = {
     sideOpen: 36, rearOpen: 53,
     ribs: [16, 32, 48, 64, 80, 96, 112, 128],
     garageStart: 85,
+    hzones: [24,48], cab:{depth:22,seatW:20,seatH:15,centerConsoleW:10},
   },
 
   // ── MERCEDES SPRINTER 144 WB ───────────────────────────────────────────────
@@ -129,6 +133,7 @@ const VAN_MODELS = {
     sideOpen: 51.5, rearOpen: 61,
     ribs: [16, 32, 48, 64, 80, 96, 112, 128, 144],
     garageStart: 95,
+    hzones: [24,48,72], cab:{depth:22,seatW:20,seatH:15,centerConsoleW:10},
   },
   'Sprinter 144 HR': {
     label: 'Sprinter 144 High Roof', source: 'upfitsupply.com',
@@ -141,6 +146,7 @@ const VAN_MODELS = {
     sideOpen: 51.5, rearOpen: 61,
     ribs: [16, 32, 48, 64, 80, 96, 112, 128, 144],
     garageStart: 95,
+    hzones: [24,48,72], cab:{depth:22,seatW:20,seatH:15,centerConsoleW:10},
   },
 
   // ── MERCEDES SPRINTER 170 WB ───────────────────────────────────────────────
@@ -158,6 +164,7 @@ const VAN_MODELS = {
     sideOpen: 51.5, rearOpen: 61,
     ribs: [16, 32, 48, 64, 80, 96, 112, 128, 144, 160],
     garageStart: 120,
+    hzones: [24,48,72], cab:{depth:22,seatW:20,seatH:15,centerConsoleW:10},
   },
 
   // ── MERCEDES SPRINTER 170 EXT WB ──────────────────────────────────────────
@@ -173,6 +180,7 @@ const VAN_MODELS = {
     sideOpen: 51.5, rearOpen: 61,
     ribs: [16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192],
     garageStart: 142,
+    hzones: [24,48,72], cab:{depth:22,seatW:20,seatH:15,centerConsoleW:10},
   },
 
   // ── RAM PROMASTER 136 WB ───────────────────────────────────────────────────
@@ -191,6 +199,7 @@ const VAN_MODELS = {
     sideOpen: 43, rearOpen: 61,
     ribs: [16, 32, 48, 64, 80, 96, 112, 128],
     garageStart: 88,
+    hzones: [24,48,72], cab:{depth:22,seatW:22,seatH:16,centerConsoleW:11},
   },
 
   // ── RAM PROMASTER 159 WB ───────────────────────────────────────────────────
@@ -208,6 +217,7 @@ const VAN_MODELS = {
     sideOpen: 48.5, rearOpen: 61,
     ribs: [16, 32, 48, 64, 80, 96, 112, 128, 144, 160],
     garageStart: 110,
+    hzones: [24,48,72], cab:{depth:22,seatW:22,seatH:16,centerConsoleW:11},
   },
 
   // ── CUSTOM ─────────────────────────────────────────────────────────────────
@@ -222,6 +232,7 @@ const VAN_MODELS = {
     sideOpen: 48, rearOpen: 61.5,
     ribs: [16, 32, 48, 64, 80, 96, 112, 128, 144],
     garageStart: 100,
+    hzones: [24,48,72], cab:{depth:22,seatW:22,seatH:16,centerConsoleW:12},
   },
 };
 
@@ -655,8 +666,8 @@ function makeCanvas(w, h) {
 // ── PLAN VIEW — Transit top-down blueprint ─────────────────────────────────────
 // Layout constants (padding around the interior cargo floor):
 const PLAN_PAD_L = 68;   // left:  length ruler + "DRIVER" label
-const PLAN_PAD_T = 52;   // top:   width ruler + "BULKHEAD" label
-const PLAN_PAD_R = 72;   // right: slide door label + exterior body overhang
+const PLAN_PAD_T = 95;   // top:   width ruler + labels + space above cab
+const PLAN_PAD_R = 160;  // right: slide door + height zones + length arrow
 const PLAN_PAD_B = 68;   // bottom: rear door labels + exterior body overhang
 
 // Body wall: how far exterior outline extends beyond interior floor edge (each side)
@@ -667,13 +678,16 @@ function renderPlan() {
   const VW = refs.vw, VL = refs.vl;
   const iw = px(VW), il = px(VL);
   const WE = px(PLAN_WALL);   // wall extent in px
+  const cabH = px(CAB_H_IN);  // cab section height above cargo
 
+  // Width: interior + padding + exterior overhang
   const W = iw + PLAN_PAD_L + PLAN_PAD_R + WE * 2;
-  const H = il + PLAN_PAD_T + PLAN_PAD_B + WE * 2;
+  // Height: top padding + cab section + gap + exterior top + cargo + exterior bottom + bottom padding
+  const H = PLAN_PAD_T + cabH + 8 + WE + il + WE + PLAN_PAD_B + 110; // +110 for legend
 
-  // Interior cargo floor origin
+  // Interior cargo floor origin — oy is further down to make room for cab
   const ox = PLAN_PAD_L + WE;
-  const oy = PLAN_PAD_T + WE;
+  const oy = PLAN_PAD_T + cabH + 8 + WE;  // cargo floor top
 
   const wrap = document.getElementById('canvas-wrap');
   if (!wrap) return;
@@ -821,376 +835,489 @@ function showVanSpecs(refs) {
   document.body.appendChild(modal);
 }
 
-// ── Core blueprint drawing — white background, professional engineering style ───
-// Matches Upfit Supply / AVC RIG aesthetic: clean white, black lines, colored annotations
-function drawPlanBlueprint(ctx, refs, ox, oy, iw, il, WE, W, H) {
-  const VW = refs.vw, VL = refs.vl;
+// ── Blueprint constants ──────────────────────────────────────────────────────
+const CAB_H_IN = 24; // inches — cab illustration height above cargo floor
+const C = {
+  bg:'#ffffff', bodyFill:'#e8ecf2', bodyStroke:'#0d0f1a',
+  cargoFill:'#ffffff',
+  grid1:'rgba(0,70,180,0.06)', grid6:'rgba(0,70,180,0.12)', grid12:'rgba(0,60,160,0.24)',
+  rib:'rgba(30,70,200,0.30)', ribEnd:'rgba(30,70,200,0.55)',
+  wwFill:'#b8bfcc', wwHatch:'rgba(0,0,0,0.22)', wwStroke:'#0d0f1a',
+  bulkhead:'#0d0f1a', rear:'#0d0f1a', slide:'#00a651',
+  partLine:'rgba(180,0,0,0.5)', bpillar:'rgba(0,60,160,0.55)',
+  cabFill:'#dde3ed', cabStroke:'#0d0f1a',
+  seatFill:'#c0c8d8', seatStroke:'#555',
+  ruler:'#333', rulerMaj:'#111', dimArrow:'#333',
+  hz1:'rgba(255,200,0,0.06)', hz2:'rgba(0,200,100,0.05)',
+  hz3:'rgba(0,150,255,0.05)', hz4:'rgba(200,0,255,0.04)',
+  hz1b:'rgba(180,130,0,0.7)', hz2b:'rgba(0,140,50,0.7)',
+  hz3b:'rgba(0,100,200,0.7)', hz4b:'rgba(140,0,180,0.7)',
+};
 
-  // ── 0. White background ──────────────────────────────────────────────────────
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, W, H);
+// ── Blueprint helper functions ─────────────────────────────────────────────────
+function roundRect(ctx, x, y, w, h, r1, r2, r3, r4) {
+  ctx.beginPath();
+  ctx.moveTo(x+r1, y);
+  ctx.lineTo(x+w-r2, y); ctx.quadraticCurveTo(x+w,y, x+w,y+r2);
+  ctx.lineTo(x+w, y+h-r3); ctx.quadraticCurveTo(x+w,y+h, x+w-r3,y+h);
+  ctx.lineTo(x+r4, y+h); ctx.quadraticCurveTo(x,y+h, x,y+h-r4);
+  ctx.lineTo(x, y+r1); ctx.quadraticCurveTo(x,y, x+r1,y);
+  ctx.closePath();
+}
+function lv(ctx, x, y0, y1) { ctx.beginPath(); ctx.moveTo(x,y0); ctx.lineTo(x,y1); ctx.stroke(); }
+function lh(ctx, y, x0, x1) { ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x1,y); ctx.stroke(); }
+function drawSeat(ctx, x, y, w, h, label) {
+  // Seat back
+  ctx.fillStyle = C.seatFill;
+  ctx.fillRect(x, y, w, h*0.6);
+  ctx.strokeStyle = C.seatStroke; ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, w, h*0.6);
+  // Seat cushion
+  ctx.fillStyle = '#aab8cc';
+  ctx.fillRect(x, y+h*0.6, w, h*0.4);
+  ctx.strokeRect(x, y+h*0.6, w, h*0.4);
+  // Headrest
+  const hrW = w*0.5, hrH = h*0.18;
+  ctx.fillStyle = '#99aabc';
+  ctx.fillRect(x+w*0.25, y-hrH, hrW, hrH);
+  ctx.strokeRect(x+w*0.25, y-hrH, hrW, hrH);
+  // Label
+  ctx.fillStyle='#444'; ctx.font=Math.max(5,S*0.85)+'px Arial'; ctx.textAlign='center';
+  ctx.fillText(label, x+w/2, y+h*0.35);
+}
+function drawFenderBump(ctx, ww, side, ox, oy, bxL, bxR, BUMP) {
+  if (!ww) return;
+  const at = oy+px(ww.y), ab = oy+px(ww.y+ww.d);
+  const AR = px(5);
+  const wx = side==='L' ? bxL : bxR;
+  const tx = side==='L' ? bxL-BUMP : bxR+BUMP;
+  const sign = side==='L' ? 1 : -1;
 
-  // Light rule lines outside cargo area (for rulers to land on)
-  ctx.strokeStyle = 'rgba(0,0,0,0.06)';
-  ctx.lineWidth = 0.5;
-  ctx.strokeRect(0, 0, W, H);
+  ctx.fillStyle = '#d4dae6';
+  ctx.beginPath();
+  ctx.moveTo(wx, at); ctx.lineTo(tx+sign*AR, at);
+  ctx.quadraticCurveTo(tx,at, tx,at+AR);
+  ctx.lineTo(tx, ab-AR); ctx.quadraticCurveTo(tx,ab, tx+sign*AR,ab);
+  ctx.lineTo(wx, ab); ctx.closePath(); ctx.fill();
 
-  // ── 1. Exterior van body ─────────────────────────────────────────────────────
-  const bx = ox - WE, by = oy - WE, bw = iw + WE*2, bh = il + WE*2;
-  const rTop = Math.max(px(5), WE + px(1));
-  const rBot = Math.max(2, WE * 0.3);
+  ctx.strokeStyle = '#0d0f1a'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(wx, at); ctx.lineTo(tx+sign*AR, at);
+  ctx.quadraticCurveTo(tx,at, tx,at+AR);
+  ctx.lineTo(tx, ab-AR); ctx.quadraticCurveTo(tx,ab, tx+sign*AR,ab);
+  ctx.lineTo(wx, ab); ctx.stroke();
 
-  function bodyPath() {
-    ctx.beginPath();
-    ctx.moveTo(bx + rTop, by);
-    ctx.lineTo(bx + bw - rTop, by);
-    ctx.quadraticCurveTo(bx+bw, by,      bx+bw, by+rTop);
-    ctx.lineTo(bx+bw, by+bh-rBot);
-    ctx.quadraticCurveTo(bx+bw, by+bh,   bx+bw-rBot, by+bh);
-    ctx.lineTo(bx+rBot, by+bh);
-    ctx.quadraticCurveTo(bx, by+bh,      bx, by+bh-rBot);
-    ctx.lineTo(bx, by+rTop);
-    ctx.quadraticCurveTo(bx, by,         bx+rTop, by);
-    ctx.closePath();
-  }
-
-  // Body fill (very light gray — van body skin visible vs white background)
-  ctx.fillStyle = '#f0f2f5';
-  bodyPath(); ctx.fill();
-
-  // Body outline
-  ctx.strokeStyle = '#1a1a2e';
-  ctx.lineWidth = 2.5;
-  bodyPath(); ctx.stroke();
-
-  // ── 2. Wheel arch bumps (exterior fender protrusions) ────────────────────────
-  const BUMP = px(9);
-  const AR   = px(4);
-
-  function drawArchBump(ww, side) {
-    if (!ww) return;
-    const at = oy + px(ww.y), al = px(ww.d), ab = at + al;
-    const wx = side === 'L' ? bx : bx + bw;
-    const tx = side === 'L' ? bx - BUMP : bx + bw + BUMP;
-    const sign = side === 'L' ? 1 : -1;
-
-    ctx.fillStyle = '#e4e8ef';
-    ctx.beginPath();
-    ctx.moveTo(wx, at);
-    ctx.lineTo(tx + sign*AR, at);
-    ctx.quadraticCurveTo(tx, at, tx, at + AR);
-    ctx.lineTo(tx, ab - AR);
-    ctx.quadraticCurveTo(tx, ab, tx + sign*AR, ab);
-    ctx.lineTo(wx, ab);
-    ctx.closePath(); ctx.fill();
-
-    ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(wx, at);
-    ctx.lineTo(tx + sign*AR, at);
-    ctx.quadraticCurveTo(tx, at, tx, at + AR);
-    ctx.lineTo(tx, ab - AR);
-    ctx.quadraticCurveTo(tx, ab, tx + sign*AR, ab);
-    ctx.lineTo(wx, ab); ctx.stroke();
-
-    // Tire detail (small arc inside bump)
-    const tireR = al * 0.38;
-    const tireX = side === 'L' ? tx + px(3) : tx - px(3);
-    const tireMid = (at + ab) / 2;
-    ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(tireX + sign * tireR, tireMid, tireR, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-
-  drawArchBump(refs.wheelWellL, 'L');
-  drawArchBump(refs.wheelWellR, 'R');
-
-  // ── 3. Interior cargo floor ───────────────────────────────────────────────────
-  // Clean white floor — the canvas for the grid
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(ox, oy, iw, il);
-
-  // 1" minor grid (very fine — matches AVC RIG "1 square = 1 inch")
-  ctx.strokeStyle = 'rgba(0,100,200,0.08)';
-  ctx.lineWidth = 0.4;
-  for (let x = 0; x <= VW; x++) {
-    const xp = ox + px(x);
-    ctx.beginPath(); ctx.moveTo(xp, oy); ctx.lineTo(xp, oy+il); ctx.stroke();
-  }
-  for (let y = 0; y <= VL; y++) {
-    const yp = oy + px(y);
-    ctx.beginPath(); ctx.moveTo(ox, yp); ctx.lineTo(ox+iw, yp); ctx.stroke();
-  }
-
-  // 6" grid (light blue)
-  ctx.strokeStyle = 'rgba(0,80,180,0.12)';
-  ctx.lineWidth = 0.55;
-  for (let x = 0; x <= VW; x += 6) {
-    const xp = ox + px(x);
-    ctx.beginPath(); ctx.moveTo(xp, oy); ctx.lineTo(xp, oy+il); ctx.stroke();
-  }
-  for (let y = 0; y <= VL; y += 6) {
-    const yp = oy + px(y);
-    ctx.beginPath(); ctx.moveTo(ox, yp); ctx.lineTo(ox+iw, yp); ctx.stroke();
-  }
-
-  // 12" major grid (medium blue)
-  ctx.strokeStyle = 'rgba(0,60,160,0.22)';
-  ctx.lineWidth = 0.8;
-  for (let x = 0; x <= VW; x += 12) {
-    const xp = ox + px(x);
-    ctx.beginPath(); ctx.moveTo(xp, oy); ctx.lineTo(xp, oy+il); ctx.stroke();
-  }
-  for (let y = 0; y <= VL; y += 12) {
-    const yp = oy + px(y);
-    ctx.beginPath(); ctx.moveTo(ox, yp); ctx.lineTo(ox+iw, yp); ctx.stroke();
-  }
-
-  // Interior floor border (bold black)
-  ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 2;
-  ctx.strokeRect(ox, oy, iw, il);
-
-  // ── 4. Floor ribs (structural cross-members every 16") ───────────────────────
-  // Drawn as solid thick lines with end caps — clearly visible for builders
-  (refs.ribs || []).forEach(r => {
-    if (r === 0 || r >= VL) return;
-    const ry = oy + px(r);
-    // Rib label on left
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.font = 'bold ' + Math.max(5, px(0.75)) + 'px Arial';
-    ctx.textAlign = 'right';
-    ctx.fillText('R' + r, ox - 3, ry + 3);
-    // Rib line
-    ctx.strokeStyle = 'rgba(50,100,200,0.35)'; ctx.lineWidth = 1.5; ctx.setLineDash([]);
-    ctx.beginPath(); ctx.moveTo(ox + 1, ry); ctx.lineTo(ox + iw - 1, ry); ctx.stroke();
-    // End marks
-    ctx.strokeStyle = 'rgba(50,100,200,0.6)'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(ox, ry-3); ctx.lineTo(ox, ry+3); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(ox+iw, ry-3); ctx.lineTo(ox+iw, ry+3); ctx.stroke();
-  });
-
-  // ── 5. Wheel well cutouts (inside cargo floor) ───────────────────────────────
-  // Cross-hatched gray boxes — standard engineering drawing notation for solid object
-  [[refs.wheelWellL, 'L'], [refs.wheelWellR, 'R']].forEach(([ww, side]) => {
-    if (!ww) return;
-    const wy  = oy + px(ww.y);
-    const wl  = px(ww.d);
-    const wdp = px(ww.w);
-    const wxL = side === 'L' ? ox : ox + iw - wdp;
-
-    // Gray fill
-    ctx.fillStyle = '#d0d5de';
-    ctx.fillRect(wxL, wy, wdp, wl);
-
-    // Cross-hatch (45° engineering hatching)
-    ctx.save();
-    ctx.beginPath(); ctx.rect(wxL, wy, wdp, wl); ctx.clip();
-    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
-    const step = 6;
-    for (let i = -wl; i < wdp + wl; i += step) {
-      ctx.beginPath(); ctx.moveTo(wxL + i, wy); ctx.lineTo(wxL + i + wl, wy + wl); ctx.stroke();
-    }
-    ctx.restore();
-
-    // Well border (bold)
-    ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 1.8; ctx.setLineDash([]);
-    ctx.strokeRect(wxL, wy, wdp, wl);
-
-    // Dimension labels inside well
-    const midY = wy + wl / 2;
-    const midX = wxL + wdp / 2;
-    ctx.fillStyle = '#000000';
-    ctx.font = 'bold ' + Math.max(6, px(1.1)) + 'px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('WW', midX, midY - 4);
-    if (px(ww.d) > 28) {
-      ctx.font = Math.max(5, px(0.9)) + 'px Arial';
-      ctx.fillText(ww.d + '"×' + ww.w + '"', midX, midY + 8);
-    }
-  });
-
-  // ── 6. Partition line (typical partition depth annotation) ────────────────────
-  if (refs.partition) {
-    const partY = oy + px(refs.partition);
-    ctx.strokeStyle = 'rgba(180,0,0,0.4)'; ctx.lineWidth = 1.5; ctx.setLineDash([4,3]);
-    ctx.beginPath(); ctx.moveTo(ox, partY); ctx.lineTo(ox+iw, partY); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = 'rgba(180,0,0,0.6)';
-    ctx.font = Math.max(6, px(0.9)) + 'px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText('PARTITION ' + refs.partition + '"', ox + 3, partY - 3);
-  }
-
-  // ── 7. Bulkhead (top — cab end) ───────────────────────────────────────────────
-  ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 4; ctx.setLineDash([]);
-  ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox+iw, oy); ctx.stroke();
-  ctx.fillStyle = '#1a1a2e';
-  ctx.font = 'bold ' + Math.max(8, px(1.1)) + 'px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText('BULKHEAD / CAB END', ox+iw/2, oy - 10);
-
-  // ── 8. Rear doors (bottom) ────────────────────────────────────────────────────
-  ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.moveTo(ox, oy+il); ctx.lineTo(ox+iw, oy+il); ctx.stroke();
-  // Center split
-  ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1; ctx.setLineDash([6,4]);
-  ctx.beginPath(); ctx.moveTo(ox+iw/2, oy+il); ctx.lineTo(ox+iw/2, oy+il+px(4)); ctx.stroke();
-  ctx.setLineDash([]);
-  // Door swing arcs
-  const swR = Math.min(px(VW/2), px(36));
-  ctx.strokeStyle = 'rgba(0,0,0,0.12)'; ctx.lineWidth = 1; ctx.setLineDash([2,4]);
-  ctx.beginPath(); ctx.arc(ox, oy+il, swR, -Math.PI/2, 0); ctx.stroke();
-  ctx.beginPath(); ctx.arc(ox+iw, oy+il, swR, Math.PI, -Math.PI/2); ctx.stroke();
-  ctx.setLineDash([]);
-  // Rear door dimension callout
-  ctx.fillStyle = '#1a1a2e';
-  ctx.font = 'bold ' + Math.max(7, px(1.0)) + 'px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText('REAR DOORS  ' + (refs.rearOpen || '') + '" WIDE', ox+iw/2, oy+il+WE+18);
-
-  // ── 9. Slide door (passenger / right side) ────────────────────────────────────
-  if (refs.slideDoor) {
-    const sd = refs.slideDoor;
-    const sdY1 = oy + px(sd.yStart);
-    const sdY2 = oy + px(sd.yEnd);
-    const sdLen = sd.yEnd - sd.yStart;
-    const sdMid = (sdY1 + sdY2) / 2;
-
-    // Green bar on right wall edge
-    ctx.strokeStyle = '#00a651'; ctx.lineWidth = 6;
-    ctx.beginPath(); ctx.moveTo(ox+iw, sdY1); ctx.lineTo(ox+iw, sdY2); ctx.stroke();
-
-    // Jamb tick marks
-    [sdY1, sdY2].forEach(ty => {
-      ctx.strokeStyle = '#00a651'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(ox+iw-px(6), ty); ctx.lineTo(ox+iw+14, ty); ctx.stroke();
+  // Tire ring
+  const tR = (ab-at)*0.38;
+  ctx.strokeStyle='rgba(0,0,0,0.18)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(tx+sign*tR*0.7, (at+ab)/2, tR, 0, Math.PI*2); ctx.stroke();
+  // Tire center dot
+  ctx.fillStyle='rgba(0,0,0,0.15)';
+  ctx.beginPath(); ctx.arc(tx+sign*tR*0.7, (at+ab)/2, tR*0.2, 0, Math.PI*2); ctx.fill();
+}
+function dimArrow(ctx, x1, y1, x2, y2, label, dir) {
+  ctx.strokeStyle=C.dimArrow; ctx.lineWidth=1.2; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  if (dir==='h') {
+    [[x1,-1],[x2,1]].forEach(([x,d])=>{
+      ctx.beginPath(); ctx.moveTo(x,y1); ctx.lineTo(x+d*8,(y1)-3); ctx.moveTo(x,y1); ctx.lineTo(x+d*8,(y1)+3); ctx.stroke();
     });
-
-    // Label (rotated)
-    ctx.save();
-    ctx.fillStyle = '#00a651';
-    ctx.font = 'bold ' + Math.max(7, px(1.05)) + 'px Arial';
-    ctx.textAlign = 'center';
-    ctx.translate(ox+iw+WE+22, sdMid); ctx.rotate(Math.PI/2);
-    ctx.fillText('SLIDE  ' + sdLen + '"', 0, 0);
-    ctx.restore();
-  }
-
-  // ── 10. Driver shelf annotation ───────────────────────────────────────────────
-  if (refs.driverShelf) {
-    const shelfEnd = oy + px(VL);
-    const shelfStart = oy + px(VL - refs.driverShelf);
-    // Dimension line on driver (left) exterior
-    const dlX = bx - BUMP - 18;
-    ctx.strokeStyle = '#666'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(dlX, shelfStart); ctx.lineTo(dlX, shelfEnd); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(dlX-4, shelfStart); ctx.lineTo(dlX+4, shelfStart); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(dlX-4, shelfEnd); ctx.lineTo(dlX+4, shelfEnd); ctx.stroke();
-    ctx.save(); ctx.fillStyle = '#444';
-    ctx.font = Math.max(7, px(1.0)) + 'px Arial'; ctx.textAlign = 'center';
-    ctx.translate(dlX-10, (shelfStart+shelfEnd)/2); ctx.rotate(-Math.PI/2);
-    ctx.fillText('SHELF ' + refs.driverShelf + '"', 0, 0); ctx.restore();
-  }
-
-  // ── 11. Centerline ────────────────────────────────────────────────────────────
-  ctx.strokeStyle = 'rgba(0,60,160,0.25)'; ctx.lineWidth = 1; ctx.setLineDash([8,4]);
-  ctx.beginPath(); ctx.moveTo(ox+iw/2, oy); ctx.lineTo(ox+iw/2, oy+il); ctx.stroke();
-  ctx.setLineDash([]);
-
-  // ── 12. Width ruler (top, offset from center) ────────────────────────────────
-  const halfW = VW / 2;
-  const step = S >= 3 ? 6 : 12;
-  ctx.textAlign = 'center';
-  for (let x = 0; x <= VW; x += step) {
-    const xp = ox + px(x);
-    const off = Math.round(x - halfW);
-    const isMajor = (x % 12 === 0);
-    ctx.strokeStyle = isMajor ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.25)';
-    ctx.lineWidth = isMajor ? 1 : 0.6;
-    ctx.beginPath(); ctx.moveTo(xp, oy - (isMajor ? 10 : 6)); ctx.lineTo(xp, oy); ctx.stroke();
-    if (isMajor) {
-      const lbl = off === 0 ? '0' : (off > 0 ? '+'+off : ''+off);
-      ctx.fillStyle = off === 0 ? '#0050c8' : '#333';
-      ctx.font = (off === 0 ? 'bold ' : '') + Math.max(7, px(1.2)) + 'px Arial';
-      ctx.fillText(lbl + '"', xp, oy - 14);
-    }
-  }
-
-  // ── 13. Length ruler (left side, bulkhead = 0") ───────────────────────────────
-  ctx.textAlign = 'right';
-  const ystep = S >= 3 ? 12 : 24;
-  for (let y = 0; y <= VL; y += ystep) {
-    const yp = oy + px(y);
-    const isMajor = (y % 12 === 0);
-    ctx.strokeStyle = isMajor ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.25)';
-    ctx.lineWidth = isMajor ? 1 : 0.6;
-    ctx.beginPath(); ctx.moveTo(ox-(isMajor?10:6), yp); ctx.lineTo(ox, yp); ctx.stroke();
-    if (isMajor) {
-      ctx.fillStyle = '#333';
-      ctx.font = Math.max(7, px(1.1)) + 'px Arial';
-      ctx.fillText(y + '"', ox - 13, yp + 4);
-    }
-  }
-
-  // ── 14. Dimension annotation — interior width + length ────────────────────────
-  // Width: horizontal arrow across top
-  const arrowY = oy - 32;
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 1.2;
-  ctx.beginPath(); ctx.moveTo(ox, arrowY); ctx.lineTo(ox+iw, arrowY); ctx.stroke();
-  [[ox, -1],[ox+iw, 1]].forEach(([x,d]) => {
-    ctx.beginPath(); ctx.moveTo(x,arrowY); ctx.lineTo(x+d*8,arrowY-3); ctx.moveTo(x,arrowY); ctx.lineTo(x+d*8,arrowY+3); ctx.stroke();
-  });
-  ctx.fillStyle = '#1a1a2e'; ctx.font = 'bold ' + Math.max(8, px(1.2)) + 'px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#fff'; ctx.fillRect(ox+iw/2-20, arrowY-8, 40, 12);
-  ctx.fillStyle = '#1a1a2e'; ctx.fillText(VW + '"', ox+iw/2, arrowY+3);
-
-  // Length: vertical arrow on right side
-  const arrX = ox + iw + WE + (refs.slideDoor ? 52 : 22);
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 1.2;
-  ctx.beginPath(); ctx.moveTo(arrX, oy); ctx.lineTo(arrX, oy+il); ctx.stroke();
-  [[oy,-1],[oy+il,1]].forEach(([y,d]) => {
-    ctx.beginPath(); ctx.moveTo(arrX,y); ctx.lineTo(arrX-3,y+d*8); ctx.moveTo(arrX,y); ctx.lineTo(arrX+3,y+d*8); ctx.stroke();
-  });
-  ctx.fillStyle = '#fff'; ctx.fillRect(arrX-12, oy+il/2-8, 24, 14);
-  ctx.fillStyle = '#1a1a2e'; ctx.font = 'bold ' + Math.max(8, px(1.2)) + 'px Arial';
-  ctx.textAlign = 'center'; ctx.save();
-  ctx.translate(arrX+14, oy+il/2); ctx.rotate(Math.PI/2);
-  ctx.fillText(VL + '"', 0, 0); ctx.restore();
-
-  // ── 15. Side labels (DRIVER / PASSENGER) ─────────────────────────────────────
-  ctx.fillStyle = '#555'; ctx.font = 'bold ' + Math.max(7, px(0.95)) + 'px Arial';
-  ctx.save(); ctx.translate(bx - BUMP - 6, oy + il/2); ctx.rotate(-Math.PI/2);
-  ctx.textAlign = 'center'; ctx.fillText('DRIVER', 0, 0); ctx.restore();
-  ctx.save(); ctx.translate(bx+bw + BUMP + 6, oy + il/2); ctx.rotate(Math.PI/2);
-  ctx.textAlign = 'center'; ctx.fillText('PASSENGER', 0, 0); ctx.restore();
-
-  // ── 16. Scale label & title ───────────────────────────────────────────────────
-  ctx.fillStyle = '#555'; ctx.font = Math.max(7, px(0.9)) + 'px Arial';
-  ctx.textAlign = 'left';
-  ctx.fillText(
-    '1 square = 1"  ·  ' + (refs.label || 'Van Blueprint') + '  ·  Scale ' + S + 'px/in',
-    ox, oy + il + WE + 46
-  );
-
-  // ── 17. Between-wells dimension (horizontal) ──────────────────────────────────
-  if (refs.wheelWellL && refs.wheelWellR) {
-    const wwY = refs.wheelWellL.y;
-    const midWW = oy + px(wwY + refs.wheelWellL.d / 2);
-    const wwLR = ox + px(refs.wheelWellL.w);
-    const wwRR = ox + px(refs.wheelWellR.x);
-    ctx.strokeStyle = '#666'; ctx.lineWidth = 1; ctx.setLineDash([]);
-    ctx.beginPath(); ctx.moveTo(wwLR, midWW); ctx.lineTo(wwRR, midWW); ctx.stroke();
-    [[wwLR,-1],[wwRR,1]].forEach(([x,d]) => {
-      ctx.beginPath(); ctx.moveTo(x,midWW); ctx.lineTo(x+d*5,midWW-3); ctx.moveTo(x,midWW); ctx.lineTo(x+d*5,midWW+3); ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.fillRect((x1+x2)/2-30,(y1)-9,60,14);
+    ctx.fillStyle='#111'; ctx.font='bold '+Math.max(9,S*1.3)+'px Arial'; ctx.textAlign='center';
+    ctx.fillText(label, (x1+x2)/2, (y1)+3);
+  } else {
+    [[y1,-1],[y2,1]].forEach(([y,d])=>{
+      ctx.beginPath(); ctx.moveTo(x1,y); ctx.lineTo((x1)-3,y+d*8); ctx.moveTo(x1,y); ctx.lineTo((x1)+3,y+d*8); ctx.stroke();
     });
-    const bwLabel = refs.wheelWellR.x - refs.wheelWellL.w;
-    ctx.fillStyle = '#fff'; ctx.fillRect((wwLR+wwRR)/2-16, midWW-8, 32, 12);
-    ctx.fillStyle = '#444'; ctx.font = Math.max(6, px(0.9)) + 'px Arial'; ctx.textAlign = 'center';
-    ctx.fillText(bwLabel + '" apart', (wwLR+wwRR)/2, midWW+3);
+    ctx.save();
+    ctx.fillStyle='#fff'; ctx.fillRect(x1-8, (y1+y2)/2-22, 16, 44);
+    ctx.fillStyle='#111'; ctx.font='bold '+Math.max(9,S*1.3)+'px Arial'; ctx.textAlign='center';
+    ctx.translate(x1+13, (y1+y2)/2); ctx.rotate(Math.PI/2);
+    ctx.fillText(label, 0, 0); ctx.restore();
   }
 }
+function swatch(ctx, x, y, w, h, fill, stroke, hatch) {
+  ctx.fillStyle=fill; ctx.fillRect(x,y,w,h);
+  if (hatch) {
+    ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
+    ctx.strokeStyle='rgba(0,0,0,0.25)'; ctx.lineWidth=1;
+    for(let i=-h;i<w+h;i+=4){ctx.beginPath();ctx.moveTo(x+i,y);ctx.lineTo(x+i+h,y+h);ctx.stroke();}
+    ctx.restore();
+  }
+  ctx.strokeStyle=stroke||'#999'; ctx.lineWidth=1; ctx.strokeRect(x,y,w,h);
+}
+function drawLegend(ctx, lx, ly, lw, refs, showHeights) {
+  // Legend box
+  const lh = showHeights ? 90 : 66;
+  ctx.fillStyle='#f5f6f8';
+  ctx.fillRect(lx, ly, lw, lh);
+  ctx.strokeStyle='#ccd'; ctx.lineWidth=1;
+  ctx.strokeRect(lx, ly, lw, lh);
+
+  ctx.font='bold '+Math.max(8,S*1.05)+'px Arial';
+  ctx.fillStyle='#333'; ctx.textAlign='left';
+  ctx.fillText('LEGEND', lx+6, ly+13);
+
+  // Line 1: Grid
+  ctx.font=Math.max(8,S*1.05)+'px Arial';
+  let tx=lx+6, ty=ly+27;
+  swatch(ctx, tx, ty-7, 18, 10, 'rgba(0,60,160,0.22)', '#ccc'); ctx.fillStyle='#444'; ctx.fillText('12" major grid', tx+22, ty);
+  tx+=130;
+  swatch(ctx, tx, ty-7, 18, 10, 'rgba(0,70,180,0.12)', '#ccc'); ctx.fillText('6" grid', tx+22, ty);
+  tx+=90;
+  swatch(ctx, tx, ty-7, 18, 10, 'rgba(0,70,180,0.06)', '#ccc'); ctx.fillText('1" minor grid', tx+22, ty);
+
+  // Line 2: Features
+  tx=lx+6; ty+=18;
+  swatch(ctx, tx, ty-7, 18, 10, C.wwFill, C.wwStroke, true); ctx.fillStyle='#444'; ctx.fillText('Wheel well (WW) — hatched = solid structure', tx+22, ty);
+  tx+=240;
+  // Rib sample
+  ctx.strokeStyle=C.rib; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(tx, ty-3); ctx.lineTo(tx+18, ty-3); ctx.stroke();
+  ctx.strokeStyle=C.ribEnd; ctx.lineWidth=2.5;
+  ctx.beginPath(); ctx.moveTo(tx, ty-6); ctx.lineTo(tx, ty); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(tx+18, ty-6); ctx.lineTo(tx+18, ty); ctx.stroke();
+  ctx.fillStyle='#444'; ctx.fillText('Floor rib (every 16") — floor anchor points', tx+22, ty);
+
+  // Line 3: Doors + walls
+  tx=lx+6; ty+=18;
+  // Slide door sample
+  ctx.strokeStyle=C.slide; ctx.lineWidth=5;
+  ctx.beginPath(); ctx.moveTo(tx+2, ty-8); ctx.lineTo(tx+2, ty+3); ctx.stroke();
+  ctx.fillStyle='#444'; ctx.font=Math.max(8,S*1.05)+'px Arial';
+  ctx.fillText('Green = Slide door ('+refs.sideOpen+'") — clear required inside', tx+14, ty);
+  tx+=220;
+  // Driver wall
+  ctx.strokeStyle='rgba(0,140,60,0.7)'; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.moveTo(tx+2, ty-8); ctx.lineTo(tx+2, ty+3); ctx.stroke();
+  ctx.fillStyle='#444';
+  ctx.fillText('Driver wall usable: '+refs.driverShelf+'"  |  Pass wall: '+refs.passShelf+'"', tx+12, ty);
+
+  // Line 4: H-zones
+  if (showHeights) {
+    tx=lx+6; ty+=18;
+    ctx.font='bold '+Math.max(8,S*1.05)+'px Arial'; ctx.fillStyle='#333'; ctx.fillText('HEIGHT ZONES (wall height for planning racks, cabinets, roof storage):', tx, ty);
+    tx=lx+6; ty+=14;
+    const hz = [
+      ['H1', '0"–24"',  C.hz1b, 'Floor zone — low profile items, drawers, floor storage'],
+      ['H2', '24"–48"', C.hz2b, 'Lower wall — counter height, lower cabinet / shelf range'],
+      ['H3', '48"–72"', C.hz3b, 'Upper wall — tall cabinets, upper shelving, fan mounts'],
+      ['H4', '72"–'+refs.vh+'"', C.hz4b, 'Roof zone — overhead storage, racks, ventilation, lighting rail'],
+    ];
+    hz.filter(z => z[1].split('–')[0].replace('"','') < refs.vh || z[0]==='H4').forEach((z,i) => {
+      ctx.fillStyle=z[2]; ctx.font='bold '+Math.max(8,S*1.05)+'px Arial';
+      ctx.fillText(z[0]+' '+z[1]+'  ', tx + i*240, ty);
+      ctx.fillStyle='#444'; ctx.font=Math.max(8,S*0.98)+'px Arial';
+      ctx.fillText(z[3], tx+i*240+60, ty);
+    });
+  }
+}
+
+// ── Main blueprint drawing ─────────────────────────────────────────────────────
+// White background, looks like a real van, H-zones, seats, hatched wheel wells
+function drawPlanBlueprint(ctx, refs, ox, oy, iw, il, WE, W, H) {
+  /*
+   * TOP-DOWN PLAN VIEW — Transit 148 HR
+   * TOP    = CAB / FRONT of van (cab has seats, mirrors, windshield)
+   * BOTTOM = REAR DOORS
+   * LEFT   = DRIVER side (USA)
+   * RIGHT  = PASSENGER side
+   *
+   * ox, oy  = top-left of INTERIOR CARGO FLOOR
+   * Cab section drawn ABOVE oy (between canvas top and oy)
+   * Bulkhead line at (oy - GAP) separates cab from cargo
+   */
+  var VW = refs.vw, VL = refs.vl;
+  var BUMP = Math.max(8, px(8));
+  var bx   = ox - WE;
+  var bw   = iw + WE * 2;
+  var GAP  = px(6);
+  var cabH = px(refs.cabDepth || 24);
+  var by   = oy - WE - GAP - cabH;
+  var bh   = cabH + GAP + WE + il + WE;
+  var rF   = WE + px(9);
+  var rR   = WE + px(2);
+  var fLG  = Math.max(10, px(1.35));
+  var fMD  = Math.max(9,  px(1.05));
+  var fSM  = Math.max(7,  px(0.88));
+  var fXS  = Math.max(6,  px(0.72));
+
+  function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();}
+
+  // 0. White BG
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+
+  // 1. Full van exterior body
+  ctx.beginPath();
+  ctx.moveTo(bx+rF,by); ctx.lineTo(bx+bw-rF,by);
+  ctx.arcTo(bx+bw,by,bx+bw,by+rF,rF); ctx.lineTo(bx+bw,by+bh-rR);
+  ctx.arcTo(bx+bw,by+bh,bx+bw-rR,by+bh,rR); ctx.lineTo(bx+rR,by+bh);
+  ctx.arcTo(bx,by+bh,bx,by+bh-rR,rR); ctx.lineTo(bx,by+rF);
+  ctx.arcTo(bx,by,bx+rF,by,rF); ctx.closePath();
+  ctx.fillStyle='#e2e6f0'; ctx.fill();
+  ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=2.5; ctx.stroke();
+
+  // 2. Cab section fill
+  var cabTop=by, cabBot=by+cabH;
+  ctx.save(); rr(bx+1,cabTop+1,bw-2,cabH-2,rF-1); ctx.clip();
+  ctx.fillStyle='#cdd3e2'; ctx.fill(); ctx.restore();
+
+  // Hood grille line
+  ctx.strokeStyle='#aab2c4'; ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.moveTo(bx+rF,cabTop+px(2)); ctx.lineTo(bx+bw-rF,cabTop+px(2)); ctx.stroke();
+
+  // Windshield arc
+  ctx.strokeStyle='#8898b5'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(bx+px(5),cabTop+px(5));
+  ctx.quadraticCurveTo(bx+bw/2,cabTop+px(10),bx+bw-px(5),cabTop+px(5)); ctx.stroke();
+
+  // Side mirrors (outside body at top of cab)
+  var mW=px(5),mH=px(9),mY=cabTop+px(6);
+  rr(bx-mW,mY,mW,mH,2); ctx.fillStyle='#bcc5d5'; ctx.fill(); ctx.strokeStyle='#7a8090'; ctx.lineWidth=1; ctx.stroke();
+  rr(bx+bw,mY,mW,mH,2); ctx.fillStyle='#bcc5d5'; ctx.fill(); ctx.stroke();
+
+  // Steering wheel (driver = LEFT side USA)
+  var swX=bx+bw*0.24, swY=cabTop+cabH*0.54, swR=Math.max(5,px(3.5));
+  ctx.strokeStyle='#3a3f52'; ctx.lineWidth=2.2;
+  ctx.beginPath(); ctx.arc(swX,swY,swR,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(swX-swR,swY); ctx.lineTo(swX+swR,swY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(swX,swY-swR); ctx.lineTo(swX,swY+swR); ctx.stroke();
+  ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(swX,swY+swR); ctx.lineTo(swX,cabBot-2); ctx.stroke();
+
+  // Front seats — top-down silhouettes
+  function seat(cx,cy,sw_,sd_,lbl){
+    var sw=px(sw_),sd=px(sd_),sx=cx-sw/2,sy=cy-sd/2;
+    rr(sx,sy,sw,sd,3); ctx.fillStyle='#b8c2d5'; ctx.fill(); ctx.strokeStyle='#7a8499'; ctx.lineWidth=1; ctx.stroke();
+    rr(sx,sy,sw,sd*0.38,3); ctx.fillStyle='#a0afc7'; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx,sy+sd*0.15,sw*0.22,0,Math.PI*2); ctx.fillStyle='#8e9ab5'; ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#4a5060'; ctx.font=fXS+'px Arial'; ctx.textAlign='center';
+    ctx.fillText(lbl,cx,sy+sd+10);
+  }
+  var sY=cabTop+cabH*0.52;
+  seat(bx+bw*0.23,sY,16,14,'DRV');
+  seat(bx+bw*0.77,sY,16,14,'PASS');
+
+  // 3. Bulkhead line
+  ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=5; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(bx,cabBot); ctx.lineTo(bx+bw,cabBot); ctx.stroke();
+  ctx.fillStyle='#1a1a2e'; ctx.font='bold '+fMD+'px Arial'; ctx.textAlign='center';
+  ctx.fillText('BULKHEAD  —  0"', bx+bw/2, oy-4);
+
+  // 4. Interior cargo floor
+  ctx.fillStyle='#fff'; ctx.fillRect(ox,oy,iw,il);
+
+  // 5. Grid
+  ctx.strokeStyle='rgba(0,80,200,0.055)'; ctx.lineWidth=0.3;
+  for(var x=0;x<=VW;x++){var xp=ox+px(x);ctx.beginPath();ctx.moveTo(xp,oy);ctx.lineTo(xp,oy+il);ctx.stroke();}
+  for(var y=0;y<=VL;y++){var yp2=oy+px(y);ctx.beginPath();ctx.moveTo(ox,yp2);ctx.lineTo(ox+iw,yp2);ctx.stroke();}
+  ctx.strokeStyle='rgba(0,50,160,0.18)'; ctx.lineWidth=0.75;
+  for(var x=0;x<=VW;x+=12){var xp=ox+px(x);ctx.beginPath();ctx.moveTo(xp,oy);ctx.lineTo(xp,oy+il);ctx.stroke();}
+  for(var y=0;y<=VL;y+=12){var yp2=oy+px(y);ctx.beginPath();ctx.moveTo(ox,yp2);ctx.lineTo(ox+iw,yp2);ctx.stroke();}
+  ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=2; ctx.setLineDash([]); ctx.strokeRect(ox,oy,iw,il);
+
+  // 6. Ribs R1, R2 ...
+  (refs.ribs||[]).forEach(function(r,i){
+    if(r<=0||r>=VL)return;
+    var ry=oy+px(r);
+    ctx.strokeStyle='rgba(50,90,200,0.28)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(ox+3,ry); ctx.lineTo(ox+iw-3,ry); ctx.stroke();
+    ctx.strokeStyle='rgba(50,90,200,0.55)'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(ox,ry-4); ctx.lineTo(ox,ry+4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ox+iw,ry-4); ctx.lineTo(ox+iw,ry+4); ctx.stroke();
+    ctx.fillStyle='rgba(30,70,180,0.72)'; ctx.font='bold '+fSM+'px Arial'; ctx.textAlign='left';
+    ctx.fillText('R'+(i+1),ox+iw+5,ry+4);
+    ctx.fillStyle='rgba(30,70,180,0.48)'; ctx.font=fXS+'px Arial'; ctx.textAlign='right';
+    ctx.fillText(r+'"',ox-5,ry+4);
+  });
+
+  // 7. Fender bumps
+  function fender(ww,side){
+    if(!ww)return;
+    var wy1=oy+px(ww.y),wy2=wy1+px(ww.d),wallX=side==='L'?bx:bx+bw,bumpX=side==='L'?bx-BUMP:bx+bw+BUMP,cv=Math.max(4,BUMP*0.4),sg=side==='L'?1:-1;
+    ctx.fillStyle='#c8ced8';
+    ctx.beginPath(); ctx.moveTo(wallX,wy1); ctx.lineTo(bumpX+sg*cv,wy1); ctx.arcTo(bumpX,wy1,bumpX,wy1+cv,cv); ctx.lineTo(bumpX,wy2-cv); ctx.arcTo(bumpX,wy2,bumpX+sg*cv,wy2,cv); ctx.lineTo(wallX,wy2); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=2; ctx.stroke();
+    var tR=px(ww.d)*0.38,tX=bumpX+sg*tR*0.78,tY=(wy1+wy2)/2;
+    ctx.strokeStyle='rgba(0,0,0,0.14)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(tX,tY,tR,0,Math.PI*2); ctx.stroke();
+    ctx.strokeStyle='rgba(0,0,0,0.08)'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(tX,tY,tR*0.58,0,Math.PI*2); ctx.stroke();
+  }
+  var wwL=refs.wwL||refs.wheelWellL, wwR=refs.wwR||refs.wheelWellR;
+  fender(wwL,'L'); fender(wwR,'R');
+
+  // 8. Wheel wells
+  function well(ww,side){
+    if(!ww)return;
+    var wy=oy+px(ww.y),wl=px(ww.d),wd=px(ww.w),wx=side==='L'?ox:ox+iw-wd;
+    ctx.fillStyle='#bec5d0'; ctx.fillRect(wx,wy,wd,wl);
+    ctx.save(); ctx.beginPath(); ctx.rect(wx,wy,wd,wl); ctx.clip();
+    ctx.strokeStyle='rgba(0,0,0,0.18)'; ctx.lineWidth=0.9;
+    for(var i=-wl;i<wd+wl;i+=5){ctx.beginPath();ctx.moveTo(wx+i,wy);ctx.lineTo(wx+i+wl,wy+wl);ctx.stroke();}
+    ctx.restore();
+    ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=1.8; ctx.setLineDash([]); ctx.strokeRect(wx,wy,wd,wl);
+    var mX=wx+wd/2,mY=wy+wl/2;
+    ctx.fillStyle='#111'; ctx.font='bold '+fSM+'px Arial'; ctx.textAlign='center';
+    ctx.fillText('WW',mX,mY-2); ctx.font=fXS+'px Arial'; ctx.fillText(ww.d+'"x'+ww.w+'"',mX,mY+11);
+  }
+  well(wwL,'L'); well(wwR,'R');
+
+  if(wwL&&wwR){
+    var mWY=oy+px(wwL.y+wwL.d/2),bwL=ox+px(wwL.w),bwR=ox+px(VW-wwR.w);
+    ctx.strokeStyle='#777'; ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(bwL,mWY);ctx.lineTo(bwR,mWY);ctx.stroke();
+    [[bwL,-1],[bwR,1]].forEach(function(p){ctx.beginPath();ctx.moveTo(p[0],mWY);ctx.lineTo(p[0]+p[1]*5,mWY-3);ctx.stroke();ctx.beginPath();ctx.moveTo(p[0],mWY);ctx.lineTo(p[0]+p[1]*5,mWY+3);ctx.stroke();});
+    ctx.fillStyle='#fff'; ctx.fillRect((bwL+bwR)/2-26,mWY-8,52,14);
+    ctx.fillStyle='#444'; ctx.font=fSM+'px Arial'; ctx.textAlign='center';
+    ctx.fillText((refs.btwn||'')+'\" between wells',(bwL+bwR)/2,mWY+4);
+  }
+
+  // 9. Partition
+  if(refs.partition){
+    var pY=oy+px(refs.partition);
+    ctx.strokeStyle='rgba(180,0,0,0.52)'; ctx.lineWidth=1.3; ctx.setLineDash([5,3]);
+    ctx.beginPath();ctx.moveTo(ox,pY);ctx.lineTo(ox+iw,pY);ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='rgba(180,0,0,0.65)'; ctx.font='bold '+fSM+'px Arial'; ctx.textAlign='left';
+    ctx.fillText('PARTITION  '+refs.partition+'"  (unusable zone)',ox+4,pY-4);
+  }
+
+  // 10. Shelf zones (green wall bars)
+  if(refs.driverShelf){
+    var dsT=oy+px(VL-refs.driverShelf);
+    ctx.strokeStyle='rgba(0,130,55,0.7)'; ctx.lineWidth=5; ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(ox+3,dsT);ctx.lineTo(ox+3,oy+il);ctx.stroke();
+    [dsT,oy+il-2].forEach(function(y){ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(ox,y);ctx.lineTo(ox+9,y);ctx.stroke();});
+  }
+  if(refs.passShelf){
+    var psT=oy+px(VL-refs.passShelf);
+    ctx.strokeStyle='rgba(0,130,55,0.45)'; ctx.lineWidth=5; ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(ox+iw-3,psT);ctx.lineTo(ox+iw-3,oy+il);ctx.stroke();
+    [psT,oy+il-2].forEach(function(y){ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(ox+iw,y);ctx.lineTo(ox+iw-9,y);ctx.stroke();});
+  }
+
+  // 11. Rear doors
+  ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=4; ctx.setLineDash([]);
+  ctx.beginPath();ctx.moveTo(ox,oy+il);ctx.lineTo(ox+iw,oy+il);ctx.stroke();
+  ctx.lineWidth=1.5; ctx.beginPath();ctx.moveTo(ox+iw/2,oy+il);ctx.lineTo(ox+iw/2,oy+il+px(8));ctx.stroke();
+  var swingR=Math.min(iw/2-4,px(28));
+  ctx.strokeStyle='rgba(0,0,0,0.09)'; ctx.lineWidth=1; ctx.setLineDash([2,4]);
+  ctx.beginPath();ctx.arc(ox,oy+il,swingR,-Math.PI/2,0);ctx.stroke();
+  ctx.beginPath();ctx.arc(ox+iw,oy+il,swingR,Math.PI,-Math.PI/2);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#1a1a2e'; ctx.font='bold '+fMD+'px Arial'; ctx.textAlign='center';
+  ctx.fillText('REAR DOORS  '+(refs.rearOpen||'')+'\"',ox+iw/2,oy+il+WE+22);
+
+  // 12. Slide door
+  var sd=refs.slideDoor;
+  if(sd){
+    var sdY1=oy+px(sd.y1!==undefined?sd.y1:sd.yStart),sdY2=oy+px(sd.y2!==undefined?sd.y2:sd.yEnd),sdLen=(sd.y2!==undefined?sd.y2:sd.yEnd)-(sd.y1!==undefined?sd.y1:sd.yStart),sdMid=(sdY1+sdY2)/2;
+    ctx.strokeStyle='#00a651'; ctx.lineWidth=8;
+    ctx.beginPath();ctx.moveTo(ox+iw,sdY1);ctx.lineTo(ox+iw,sdY2);ctx.stroke();
+    [sdY1,sdY2].forEach(function(ty){ctx.strokeStyle='#00a651';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(ox+iw-px(6),ty);ctx.lineTo(ox+iw+18,ty);ctx.stroke();});
+    ctx.save(); ctx.fillStyle='#00a651'; ctx.font='bold '+fMD+'px Arial'; ctx.textAlign='center';
+    ctx.translate(ox+iw+WE+28,sdMid); ctx.rotate(Math.PI/2);
+    ctx.fillText('SLIDE DOOR  '+sdLen+'"',0,0); ctx.restore();
+  }
+
+  // 13. Width ruler (above cargo floor)
+  var half=VW/2, rulerY=oy-20;
+  ctx.textAlign='center';
+  for(var rx=0;rx<=VW;rx+=6){
+    var xp=ox+px(rx),off=Math.round(rx-half),maj=(rx%12===0);
+    ctx.strokeStyle=maj?'rgba(0,0,0,0.5)':'rgba(0,0,0,0.2)'; ctx.lineWidth=maj?1.2:0.6;
+    ctx.beginPath();ctx.moveTo(xp,rulerY-(maj?11:6));ctx.lineTo(xp,rulerY);ctx.stroke();
+    if(maj){ctx.fillStyle=off===0?'#0050c8':'#333'; ctx.font=(off===0?'bold ':'')+fSM+'px Arial'; ctx.fillText((off===0?'0':(off>0?'+'+off:''+off))+'"',xp,rulerY-15);}
+  }
+  ctx.fillStyle='#444'; ctx.font='bold '+fMD+'px Arial'; ctx.textAlign='center';
+  ctx.fillText('INTERIOR WIDTH  '+VW+'"   (0 = centerline)',ox+iw/2,rulerY-28);
+
+  // 14. Length ruler (left side)
+  ctx.textAlign='right';
+  for(var lr=0;lr<=VL;lr+=24){
+    var yp=oy+px(lr);
+    ctx.strokeStyle='rgba(0,0,0,0.42)'; ctx.lineWidth=1.2;
+    ctx.beginPath();ctx.moveTo(ox-12,yp);ctx.lineTo(ox,yp);ctx.stroke();
+    ctx.fillStyle='#333'; ctx.font=fSM+'px Arial'; ctx.fillText(lr+'"',ox-15,yp+4);
+  }
+  ctx.save(); ctx.fillStyle='#444'; ctx.font='bold '+fMD+'px Arial';
+  ctx.translate(ox-52,oy+il/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center';
+  ctx.fillText('LENGTH  '+VL+'"   (0 = bulkhead)',0,0); ctx.restore();
+
+  // 15. Side labels
+  ctx.save(); ctx.fillStyle='#444'; ctx.font='bold '+fMD+'px Arial';
+  ctx.translate(bx-BUMP-9,oy+il/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center';
+  ctx.fillText('DRIVER SIDE',0,0); ctx.restore();
+  ctx.save(); ctx.fillStyle='#444'; ctx.font='bold '+fMD+'px Arial';
+  ctx.translate(bx+bw+BUMP+9,oy+il/2); ctx.rotate(Math.PI/2); ctx.textAlign='center';
+  ctx.fillText('PASSENGER SIDE',0,0); ctx.restore();
+
+  // 16. Height zones (right-side callouts only, no floor fill)
+  if(refs.heights&&refs.heights.length>0){
+    var hZX=ox+iw+WE+(sd?56:20)+8;
+    ctx.fillStyle='#222'; ctx.font='bold '+fLG+'px Arial'; ctx.textAlign='left';
+    ctx.fillText('HEIGHT ZONES',hZX,oy-16);
+    ctx.fillStyle='#888'; ctx.font='italic '+fXS+'px Arial';
+    ctx.fillText('floor to ceiling (inches)',hZX,oy-2);
+    refs.heights.forEach(function(hz){
+      var hPx=px(hz.h),lY=oy+hPx,color=hz.color||'#333',bxW=138,bxH=16;
+      ctx.strokeStyle=color+'88'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.moveTo(ox+iw+10,oy);ctx.lineTo(ox+iw+10,lY);ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle=color; ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(ox+iw,lY);ctx.lineTo(hZX-6,lY);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ox+iw,lY);ctx.lineTo(ox+iw-8,lY-3);ctx.moveTo(ox+iw,lY);ctx.lineTo(ox+iw-8,lY+3);ctx.stroke();
+      ctx.fillStyle='#fff'; ctx.fillRect(hZX-2,lY-bxH/2,bxW,bxH);
+      ctx.strokeStyle=color; ctx.lineWidth=1.2; ctx.strokeRect(hZX-2,lY-bxH/2,bxW,bxH);
+      ctx.fillStyle=color; ctx.font='bold '+fSM+'px Arial'; ctx.textAlign='left';
+      ctx.fillText(hz.label+'  '+hz.h+'"',hZX+3,lY+5);
+    });
+    var lhPx=px(refs.heights[refs.heights.length-1].h);
+    ctx.fillStyle='#888'; ctx.font='italic '+fXS+'px Arial'; ctx.textAlign='left';
+    ctx.fillText('use to size roof racks,',hZX,oy+lhPx+16);
+    ctx.fillText('fans & cabinet heights',hZX,oy+lhPx+28);
+  }
+
+  // 17. Dimension arrows
+  var arWY=oy-50;
+  ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=1.2;
+  ctx.beginPath();ctx.moveTo(ox,arWY);ctx.lineTo(ox+iw,arWY);ctx.stroke();
+  [[ox,-1],[ox+iw,1]].forEach(function(p){ctx.beginPath();ctx.moveTo(p[0],arWY);ctx.lineTo(p[0]+p[1]*7,arWY-3);ctx.stroke();ctx.beginPath();ctx.moveTo(p[0],arWY);ctx.lineTo(p[0]+p[1]*7,arWY+3);ctx.stroke();});
+  ctx.fillStyle='#fff'; ctx.fillRect(ox+iw/2-22,arWY-8,44,13);
+  ctx.fillStyle='#1a1a2e'; ctx.font='bold '+fMD+'px Arial'; ctx.textAlign='center'; ctx.fillText(VW+'"',ox+iw/2,arWY+3);
+
+  var hzX2=ox+iw+WE+(sd?56:20)+8+148;
+  ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=1.2;
+  ctx.beginPath();ctx.moveTo(hzX2,oy);ctx.lineTo(hzX2,oy+il);ctx.stroke();
+  [[oy,-1],[oy+il,1]].forEach(function(p){ctx.beginPath();ctx.moveTo(hzX2,p[0]);ctx.lineTo(hzX2-3,p[0]+p[1]*7);ctx.stroke();ctx.beginPath();ctx.moveTo(hzX2,p[0]);ctx.lineTo(hzX2+3,p[0]+p[1]*7);ctx.stroke();});
+  ctx.fillStyle='#fff'; ctx.fillRect(hzX2-12,oy+il/2-8,24,14);
+  ctx.fillStyle='#1a1a2e'; ctx.save(); ctx.translate(hzX2+14,oy+il/2); ctx.rotate(Math.PI/2);
+  ctx.font='bold '+fMD+'px Arial'; ctx.textAlign='center'; ctx.fillText(VL+'"',0,0); ctx.restore();
+
+  // 18. Legend box
+  var legY=oy+il+WE+50, legW=iw;
+  ctx.fillStyle='#f4f5f8'; ctx.fillRect(ox,legY,legW,80);
+  ctx.strokeStyle='#ccc'; ctx.lineWidth=1; ctx.strokeRect(ox,legY,legW,80);
+  ctx.fillStyle='#222'; ctx.font='bold '+fMD+'px Arial'; ctx.textAlign='left';
+  ctx.fillText('LEGEND',ox+8,legY+16);
+  [['▨ WW','Wheel well — raised floor, no full-height storage'],
+   ['━ Green','Usable wall shelf/cabinet length'],
+   ['─ ─ Red','Partition zone — unusable, connects to cab'],
+   ['R1…R9','Floor ribs every 16" — structural bolt points'],
+   ['H1/H2/H3','Height zones: plan racks, fans, cabinets'],
+   ['Blue grid','1" minor · 12" major']
+  ].forEach(function(lg,i){
+    var col=i<3?ox+8:ox+legW/2+4, row=legY+28+(i%3)*16;
+    ctx.fillStyle='#333'; ctx.font='bold '+fSM+'px Arial'; ctx.textAlign='left';
+    ctx.fillText(lg[0],col,row);
+    ctx.fillStyle='#666'; ctx.font=fXS+'px Arial'; ctx.fillText(lg[1],col+55,row);
+  });
+
+  // 19. Title
+  ctx.fillStyle='#1a1a2e'; ctx.font='bold '+fLG+'px Arial'; ctx.textAlign='center';
+  ctx.fillText((refs.label||'Van Blueprint')+' — Base Plan View',ox+iw/2,legY+96);
+  ctx.fillStyle='#aaa'; ctx.font=fXS+'px Arial';
+  ctx.fillText('View 1 of 8  |  1 sq = 1"  |  Scale '+S+'px/in  |  Data: upfitsupply.com',ox+iw/2,legY+110);
+}
+
+
+
 
 function makeSVG(w, h) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
