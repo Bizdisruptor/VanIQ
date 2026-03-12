@@ -281,6 +281,84 @@ function syncDimInputs() {
   });
 }
 
+// ── Van Model Switcher (live dropdown on topbar) ──────────────────────────────
+
+function switchVanModel(model) {
+  if (!model || !VAN_MODELS[model]) return;
+  if (!projects[currentProjectIdx]) return;
+  projects[currentProjectIdx].vanModel = model;
+  syncDimInputs();
+  runConstraints();
+  autoFitScale();
+  renderCurrentView();
+  recalc();
+  closeVanPicker();
+  showToast('Van model → ' + model);
+  scheduleAutoSave();
+}
+
+function openVanPicker() {
+  let ov = document.getElementById('van-picker-overlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'van-picker-overlay';
+    ov.style.cssText = 'display:none;position:fixed;inset:0;z-index:8000;';
+    ov.addEventListener('click', e => { if (e.target === ov) closeVanPicker(); });
+
+    const panel = document.createElement('div');
+    panel.style.cssText = 'position:absolute;top:38px;left:50%;transform:translateX(-50%);background:#1a1a2e;border:1px solid rgba(255,255,255,.18);border-radius:8px;min-width:260px;padding:8px 0;box-shadow:0 8px 32px rgba(0,0,0,.6);font-family:"Space Mono",monospace;font-size:.72rem;z-index:8001;';
+
+    const groups = {
+      'Ford Transit':       ['Transit 130 LR','Transit 130 MR','Transit 148 HR','Transit 148 EXT HR'],
+      'Mercedes Sprinter':  ['Sprinter 144 SR','Sprinter 144 HR','Sprinter 170 HR','Sprinter 170 EXT HR'],
+      'Ram ProMaster':      ['ProMaster 136 HR','ProMaster 159 HR'],
+      'Custom':             ['Custom'],
+    };
+
+    Object.entries(groups).forEach(([groupName, models]) => {
+      const hdr = document.createElement('div');
+      hdr.style.cssText = 'padding:4px 14px;font-size:.62rem;color:rgba(255,255,255,.3);letter-spacing:.08em;text-transform:uppercase;';
+      hdr.textContent = groupName;
+      panel.appendChild(hdr);
+
+      models.forEach(m => {
+        const btn = document.createElement('button');
+        btn.style.cssText = 'display:block;width:100%;padding:6px 16px;background:none;border:none;color:rgba(255,255,255,.75);cursor:pointer;text-align:left;font-family:"Space Mono",monospace;font-size:.72rem;white-space:nowrap;';
+        const mRefs = VAN_MODELS[m];
+        btn.textContent = (VAN_MODELS[m]?.label || m);
+        if (mRefs) {
+          const sub = document.createElement('span');
+          sub.style.cssText = 'display:block;font-size:.6rem;color:rgba(255,255,255,.3);';
+          sub.textContent = `${mRefs.vl}"L × ${mRefs.vw}"W × ${mRefs.vh}"H`;
+          btn.appendChild(sub);
+        }
+        btn.onmouseenter = () => btn.style.background = 'rgba(255,255,255,.07)';
+        btn.onmouseleave = () => btn.style.background = 'none';
+        const isCurrent = projects[currentProjectIdx]?.vanModel === m;
+        if (isCurrent) {
+          btn.style.color = '#f5a623';
+          btn.style.borderLeft = '2px solid #f5a623';
+          btn.style.paddingLeft = '14px';
+        }
+        btn.onclick = () => switchVanModel(m);
+        panel.appendChild(btn);
+      });
+    });
+
+    ov.appendChild(panel);
+    document.body.appendChild(ov);
+  }
+  ov.style.display = 'block';
+}
+
+function closeVanPicker() {
+  const ov = document.getElementById('van-picker-overlay');
+  if (ov) {
+    ov.style.display = 'none';
+    ov.remove(); // remove so it rebuilds fresh next time (to update selection highlight)
+  }
+}
+
 function syncSysCheckboxes() { /* populated from project data */ }
 function applyInsulPreset(val) { /* insulation preset logic */ }
 function clearInsulPreset() { /* clear insul preset */ }
@@ -296,7 +374,13 @@ function recalc() {
   const cost = modules.reduce((sum, m) => sum + (m.cost || 0), 0);
   const slideOK = checkSlideDoor();
 
-  el('tb-van',    v => v.textContent = projects[currentProjectIdx]?.vanModel || 'Transit 148 HR');
+  el('tb-van', v => {
+    const model = projects[currentProjectIdx]?.vanModel || 'Transit 148 HR';
+    // Preserve the ▾ arrow child span
+    const arrow = v.querySelector('#tb-van-arrow');
+    v.textContent = model;
+    if (arrow) v.appendChild(arrow);
+  });
   el('tb-usable', v => v.textContent = `${pct}% used · ${(used/144).toFixed(1)} sqft`);
   el('tb-slide',  v => { v.textContent = slideOK ? '✓ Slide OK' : '⚠ Slide'; v.style.borderColor = slideOK ? '' : 'var(--error)'; });
   el('tb-cost',   v => v.textContent = `$${cost.toLocaleString()}`);
@@ -704,6 +788,12 @@ function renderPlan() {
   modules.filter(m => m.layer === 'floor').forEach(m => addPlanMod(m, dz, VW, VL));
   modules.filter(m => m.layer !== 'floor').forEach(m => addPlanMod(m, dz, VW, VL));
 
+  // ── Blueprint legend ──
+  const legend = document.createElement('div');
+  legend.style.cssText = `position:absolute;left:${PAD}px;top:${OY+px(VW)+28}px;display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-family:'Space Mono',monospace;font-size:8px;color:rgba(255,255,255,.38);pointer-events:none;`;
+  legend.innerHTML = '<span style="color:rgba(232,160,32,.75)">▪ WW</span> = Wheel well &nbsp;|&nbsp; <span style="color:rgba(82,200,122,.8)">━</span> = Slide door &nbsp;|&nbsp; <span style="color:rgba(74,176,224,.65)">┊ B/C/D</span> = Pillars &nbsp;|&nbsp; <span style="color:rgba(160,130,200,.55)">┊</span> = Frame rail &nbsp;|&nbsp; <span style="color:rgba(232,160,32,.4)">┊</span> = Garage zone &nbsp;|&nbsp; <span style="color:rgba(82,200,122,.4)">▒</span> = 24" slide clearance';
+  wrap.appendChild(legend);
+
   recalc();
 }
 
@@ -955,6 +1045,40 @@ function jumpToViolation(modId) {
 }
 
 // ── Module CRUD ───────────────────────────────────────────────────────────────
+
+// Roof rack quick-add preset — auto-centered on van roof
+function addRoofRack() {
+  const refs = getTransitRefs();
+  const VL = refs.vl, VW = refs.vw;
+  // Typical roof rack: 60" long × 50" wide (spans roof gutters to gutters)
+  const rw = Math.min(54, VW - 4);   // width = van interior width minus gutter margin
+  const rd = Math.min(80, VL - 10);  // depth (fore-aft) = most of the roof
+  const rx = Math.round((VW - rw) / 2); // centered on van width
+  const ry = Math.round((VL - rd) / 2); // centered fore-aft
+  const mod = {
+    id: 'mod_' + Date.now(),
+    name: 'Roof Rack',
+    cat: 'frame',
+    layer: 'roof',
+    w: rw,
+    d: rd,
+    h: 4,
+    x: rx,
+    y: ry,
+    cost: 600,
+    notes: 'Roof rack — centered on van roof',
+    anchor: { enabled: false, points: [] }
+  };
+  pushUndo();
+  modules.push(mod);
+  selId = mod.id;
+  runConstraints();
+  setView('roof');
+  renderCurrentView();
+  renderModList();
+  showToast('✅ Roof Rack added — centered on roof');
+  scheduleAutoSave();
+}
 
 function openAdd() {
   selId = null;
@@ -1389,83 +1513,211 @@ function renderCross() {
 function renderRoof() {
   const refs = getTransitRefs();
   const VL = refs.vl, VW = refs.vw;
-  const W = px(VL) + PAD + 20;
-  const H = px(VW) + OY + 30;
+  const GUTTER = 28; // extra canvas space around van for labels/overhangs
+  const W = px(VL) + PAD + GUTTER + 20;
+  const H = px(VW) + OY + GUTTER + 30;
   const wrap = document.getElementById('canvas-wrap');
   if (!wrap) return;
   wrap.innerHTML = '';
+  wrap.style.position = 'relative';
   wrap.style.minWidth = W + 'px'; wrap.style.minHeight = H + 'px';
 
   const cvs = makeCanvas(W, H);
   const ctx = cvs.getContext('2d');
-  ctx.fillStyle = '#0e0e1a'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = '#0b0b18'; ctx.fillRect(0,0,W,H);
 
   const ox = PAD, oy = OY;
+  const vw_px = px(VW), vl_px = px(VL);
+  const r = Math.min(px(4), 10); // corner radius
 
-  // Grid
-  ctx.strokeStyle = 'rgba(255,255,255,.06)'; ctx.lineWidth = 0.5;
-  for (let x = 0; x <= VL; x += 12) { ctx.beginPath(); ctx.moveTo(ox+px(x),oy); ctx.lineTo(ox+px(x),oy+px(VW)); ctx.stroke(); }
-  for (let y = 0; y <= VW; y += 12) { ctx.beginPath(); ctx.moveTo(ox,oy+px(y)); ctx.lineTo(ox+px(VL),oy+px(y)); ctx.stroke(); }
-
-  // Van roof outline
-  ctx.strokeStyle = 'rgba(255,255,255,.3)'; ctx.lineWidth = 2;
-  ctx.strokeRect(ox, oy, px(VL), px(VW));
-
-  // Centerline
-  ctx.strokeStyle = 'rgba(74,176,224,.25)'; ctx.lineWidth = 1;
-  ctx.setLineDash([6,4]);
-  ctx.beginPath(); ctx.moveTo(ox, oy + px(VW/2)); ctx.lineTo(ox + px(VL), oy + px(VW/2)); ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Label
-  ctx.fillStyle = 'rgba(255,255,255,.25)';
-  ctx.font = '500 ' + Math.max(9, S*1.8) + 'px Barlow Condensed, sans-serif';
-  ctx.fillText('⬡ ROOF PLAN (looking down)', ox + 6, oy - 6);
-
-  // Ruler
-  ctx.fillStyle = 'rgba(255,255,255,.2)';
-  ctx.font = Math.max(7, S*1.2) + 'px Space Mono, monospace';
-  for (let x = 0; x <= VL; x += 24) {
-    ctx.fillText(x + '"', ox + px(x) + 2, oy - 4);
+  // ── Grid ──
+  ctx.strokeStyle = 'rgba(255,255,255,.05)'; ctx.lineWidth = 0.5;
+  for (let x = 0; x <= VL; x += 12) {
+    ctx.beginPath(); ctx.moveTo(ox+px(x), oy-4); ctx.lineTo(ox+px(x), oy+vw_px+4); ctx.stroke();
+  }
+  for (let y = 0; y <= VW; y += 12) {
+    ctx.beginPath(); ctx.moveTo(ox-4, oy+px(y)); ctx.lineTo(ox+vl_px+4, oy+px(y)); ctx.stroke();
   }
 
+  // ── Roof panel fill (the actual roof skin) ──
+  ctx.fillStyle = 'rgba(40,44,68,.6)';
+  ctx.beginPath();
+  ctx.moveTo(ox + r, oy);
+  ctx.lineTo(ox + vl_px - r, oy);
+  ctx.quadraticCurveTo(ox + vl_px, oy, ox + vl_px, oy + r);
+  ctx.lineTo(ox + vl_px, oy + vw_px - r);
+  ctx.quadraticCurveTo(ox + vl_px, oy + vw_px, ox + vl_px - r, oy + vw_px);
+  ctx.lineTo(ox + r, oy + vw_px);
+  ctx.quadraticCurveTo(ox, oy + vw_px, ox, oy + vw_px - r);
+  ctx.lineTo(ox, oy + r);
+  ctx.quadraticCurveTo(ox, oy, ox + r, oy);
+  ctx.closePath();
+  ctx.fill();
+
+  // ── Rain channel gutters (sides of roof) ──
+  const gutterW = px(2.5);
+  ctx.fillStyle = 'rgba(255,255,255,.06)';
+  ctx.fillRect(ox, oy, vl_px, gutterW);               // driver side gutter
+  ctx.fillRect(ox, oy + vw_px - gutterW, vl_px, gutterW); // pass side gutter
+  ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 1;
+  ctx.strokeRect(ox, oy, vl_px, gutterW);
+  ctx.strokeRect(ox, oy + vw_px - gutterW, vl_px, gutterW);
+
+  // ── Roof ribs (structural cross-members, approx every 16") ──
+  ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 1.5;
+  [16,32,48,64,80,96,112,128].forEach(r_pos => {
+    if (r_pos >= VL) return;
+    const rx = ox + px(r_pos);
+    ctx.beginPath(); ctx.moveTo(rx, oy + gutterW); ctx.lineTo(rx, oy + vw_px - gutterW); ctx.stroke();
+  });
+
+  // ── Cab/bulkhead notch on front (right side) — shows cab cutoff ──
+  const cabDepth = px(6), cabInset = vw_px * 0.28;
+  ctx.fillStyle = 'rgba(0,0,0,.5)';
+  // Driver-side cab notch
+  ctx.fillRect(ox + vl_px - cabDepth, oy, cabDepth, cabInset);
+  // Pass-side cab notch
+  ctx.fillRect(ox + vl_px - cabDepth, oy + vw_px - cabInset, cabDepth, cabInset);
+  ctx.strokeStyle = 'rgba(255,255,255,.3)'; ctx.lineWidth = 1.5;
+  ctx.strokeRect(ox + vl_px - cabDepth, oy, cabDepth, cabInset);
+  ctx.strokeRect(ox + vl_px - cabDepth, oy + vw_px - cabInset, cabDepth, cabInset);
+
+  // ── Windshield line ──
+  ctx.strokeStyle = 'rgba(74,176,224,.3)'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+  ctx.beginPath();
+  ctx.moveTo(ox + vl_px - cabDepth, oy + cabInset);
+  ctx.lineTo(ox + vl_px - cabDepth, oy + vw_px - cabInset);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ── Pillar lines on roof ──
+  const bpillar = refs.bpillar || 42;
+  const pillars = [
+    { pos: bpillar, label: 'B', color: 'rgba(74,176,224,.45)' },
+    ...(refs.cPillar ? [{ pos: refs.cPillar, label: 'C', color: 'rgba(74,176,224,.3)' }] : []),
+    ...(refs.dPillar ? [{ pos: refs.dPillar, label: 'D', color: 'rgba(74,176,224,.25)' }] : []),
+  ];
+  pillars.forEach(p => {
+    const px_ = ox + px(p.pos);
+    ctx.strokeStyle = p.color; ctx.lineWidth = 1.5; ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(px_, oy); ctx.lineTo(px_, oy + vw_px); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = p.color;
+    ctx.font = 'bold ' + Math.max(7, S*1.2) + "px 'Space Mono', monospace";
+    ctx.textAlign = 'center';
+    ctx.fillText(p.label, px_, oy - 5);
+  });
+
+  // ── Centerline ──
+  ctx.strokeStyle = 'rgba(74,176,224,.35)'; ctx.lineWidth = 1;
+  ctx.setLineDash([6,4]);
+  ctx.beginPath(); ctx.moveTo(ox, oy + px(VW/2)); ctx.lineTo(ox + vl_px, oy + px(VW/2)); ctx.stroke();
+  ctx.setLineDash([]);
+  // CL label
+  ctx.fillStyle = 'rgba(74,176,224,.5)';
+  ctx.font = Math.max(6, S*1.1) + "px 'Space Mono', monospace";
+  ctx.textAlign = 'left';
+  ctx.fillText('CL', ox + vl_px + 4, oy + px(VW/2) + 3);
+
+  // ── Van shell outline — thick border ──
+  ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 2.5; ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(ox + r, oy);
+  ctx.lineTo(ox + vl_px - r, oy);
+  ctx.quadraticCurveTo(ox + vl_px, oy, ox + vl_px, oy + r);
+  ctx.lineTo(ox + vl_px, oy + vw_px - r);
+  ctx.quadraticCurveTo(ox + vl_px, oy + vw_px, ox + vl_px - r, oy + vw_px);
+  ctx.lineTo(ox + r, oy + vw_px);
+  ctx.quadraticCurveTo(ox, oy + vw_px, ox, oy + vw_px - r);
+  ctx.lineTo(ox, oy + r);
+  ctx.quadraticCurveTo(ox, oy, ox + r, oy);
+  ctx.closePath();
+  ctx.stroke();
+
+  // ── Rear door line ──
+  ctx.strokeStyle = 'rgba(232,160,32,.8)'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(ox, oy + r); ctx.lineTo(ox, oy + vw_px - r); ctx.stroke();
+  ctx.fillStyle = 'rgba(232,160,32,.5)';
+  ctx.font = 'bold ' + Math.max(5, S*0.9) + "px 'Space Mono', monospace";
+  ctx.textAlign = 'center';
+  ctx.save(); ctx.translate(ox - 14, oy + vw_px/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('REAR', 0, 0); ctx.restore();
+
+  // ── Bulkhead label ──
+  ctx.fillStyle = 'rgba(255,255,255,.3)';
+  ctx.font = 'bold ' + Math.max(5, S*0.9) + "px 'Space Mono', monospace";
+  ctx.textAlign = 'center';
+  ctx.save(); ctx.translate(ox + vl_px + 14, oy + vw_px/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('BULKHEAD', 0, 0); ctx.restore();
+
+  // ── DRIVER / PASS labels on sides ──
+  ctx.fillStyle = 'rgba(255,255,255,.25)';
+  ctx.font = Math.max(6, S*1.1) + "px 'Space Mono', monospace";
+  ctx.textAlign = 'center';
+  ctx.save(); ctx.translate(ox + vl_px/2, oy - 16); ctx.fillText('← REAR   FRONT →', 0, 0); ctx.restore();
+  ctx.save(); ctx.translate(ox - 36, oy + vw_px/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('DRIVER', 0, 0); ctx.restore();
+  ctx.save(); ctx.translate(ox + vl_px + 36, oy + vw_px/2); ctx.rotate(Math.PI/2);
+  ctx.fillText('PASS', 0, 0); ctx.restore();
+
+  // ── Top ruler ──
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,255,255,.4)';
+  ctx.font = Math.max(7, S*1.2) + "px 'Space Mono', monospace";
+  for (let x = 0; x <= VL; x += (S < 2 ? 48 : S < 3 ? 24 : 12)) {
+    const xp = ox + px(x);
+    ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.fillRect(xp, oy - 8, 1, 8);
+    if (x % 24 === 0) { ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillText(x + '"', xp, oy - 11); }
+  }
+
+  // ── Side ruler ──
+  ctx.textAlign = 'right';
+  for (let y = 0; y <= VW; y += (S < 3 ? 12 : 6)) {
+    const yp = oy + px(y);
+    ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.fillRect(ox - 8, yp, 8, 1);
+    if (y % 12 === 0) { ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.fillText(y + '"', ox - 10, yp + 3); }
+  }
+
+  // ── View label ──
+  ctx.fillStyle = 'rgba(255,255,255,.22)';
+  ctx.font = '600 ' + Math.max(9, S*2) + "px 'Barlow Condensed', sans-serif";
+  ctx.textAlign = 'left';
+  ctx.fillText('ROOF PLAN  (top-down view)', ox + 4, oy + vw_px + 18);
+
+  cvs.style.cssText = 'position:absolute;top:0;left:0;';
+  wrap.appendChild(cvs);
+
+  // ── SVG overlay for modules ──
   const svg = makeSVG(W, H);
 
-  // Show only roof-layer modules
   const roofMods = modules.filter(m => m.layer === 'roof');
   roofMods.forEach(m => {
     const rw = Math.max(4, px(m.w));
     const rd = Math.max(4, px(m.d || m.w));
     const rx = ox + px(m.x);
     const ry = oy + px(m.y);
-    const r = svgEl('rect', {
-      x: rx, y: ry, width: rw, height: rd,
-      fill: (CAT[m.cat]||CAT.frame).bg,
-      stroke: (CAT[m.cat]||CAT.frame).border,
-      'stroke-width': 1.5, rx: 2
-    });
-    svg.appendChild(r);
-    if (rw > 20) {
-      const t = svgText(rx + rw/2, ry + rd/2 + 4, m.name, (CAT[m.cat]||CAT.frame).text, Math.max(7, S*1.4));
-      svg.appendChild(t);
+    const c  = CAT[m.cat] || CAT.frame;
+    const rect = svgEl('rect', { x:rx, y:ry, width:rw, height:rd,
+      fill:c.bg, stroke:c.border, 'stroke-width':1.5, rx:3 });
+    svg.appendChild(rect);
+    if (rw > 24) {
+      svg.appendChild(svgText(rx+rw/2, ry+rd/2+4, m.name, c.text, Math.max(7, S*1.4)));
+      if (rd > 20) {
+        svg.appendChild(svgText(rx+rw/2, ry+rd/2+4+Math.max(8,S*1.5),
+          m.w+'×'+(m.d||m.w)+'"', 'rgba(255,255,255,.35)', Math.max(6,S*1.1)));
+      }
     }
   });
 
   if (roofMods.length === 0) {
-    const msg = svgEl('text', {
-      x: ox + px(VL/2), y: oy + px(VW/2),
-      fill: 'rgba(255,255,255,.2)',
-      'text-anchor': 'middle',
-      'font-size': '11',
-      'font-family': 'Space Mono, monospace'
-    });
-    msg.textContent = 'No roof modules yet — add a module with Layer = Roof';
-    svg.appendChild(msg);
+    const t = svgEl('text', { x: ox+vl_px/2, y: oy+vw_px/2+4,
+      fill:'rgba(255,255,255,.18)', 'text-anchor':'middle',
+      'font-size': Math.max(9,S*1.6), 'font-family':"'Space Mono', monospace" });
+    t.textContent = 'No roof modules — add a module and set Layer = Roof';
+    svg.appendChild(t);
   }
 
-  cvs.style.cssText = 'position:absolute;top:0;left:0;';
-  wrap.appendChild(cvs);
-  svg.style.cssText = 'position:absolute;top:0;left:0;';
+  svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;';
   wrap.appendChild(svg);
 }
 
@@ -2061,10 +2313,51 @@ function openLocalResource(evt) {
 // ── Guide ─────────────────────────────────────────────────────────────────────
 
 function openGuide() {
-  openDocViewer('/guide.html', '📖 VanIQ User Guide');
+  let ov = document.getElementById('guide-overlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'guide-overlay';
+    ov.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:flex-start;justify-content:center;padding:24px;box-sizing:border-box;overflow-y:auto;';
+    ov.innerHTML = `
+<div style="background:#12121e;border:1px solid rgba(255,255,255,.12);border-radius:10px;width:100%;max-width:820px;font-family:'Barlow Condensed',sans-serif;overflow:hidden;margin:auto;">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid rgba(255,255,255,.1);background:#0e0e1a;">
+    <span style="font-weight:700;font-size:1.1rem;color:#fff;letter-spacing:.04em">📖 VanIQ User Guide</span>
+    <button onclick="closeGuide()" style="background:none;border:none;color:rgba(255,255,255,.5);font-size:1.2rem;cursor:pointer;padding:4px 10px;">✕</button>
+  </div>
+  <div style="padding:24px 28px;font-size:.82rem;color:rgba(255,255,255,.75);line-height:1.7;font-family:'Space Mono',monospace;">
+
+    <h2 style="color:#f5a623;font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;margin:0 0 6px;">VIEWS</h2>
+    <p><b style="color:#fff">PLAN</b> — Top-down floor plan of the van. Drag modules around, resize with the handle (bottom-right corner). <b style="color:#f5a623">Orange boxes</b> = wheel wells. <b style="color:rgba(82,200,122,.9)">Green line</b> = slide door opening. <b style="color:rgba(74,176,224,.7)">Blue lines</b> = B/C/D pillars.</p>
+    <p><b style="color:#fff">DRIVER / PASS ELEV</b> — Side elevation views showing what mounts on the driver or passenger wall.</p>
+    <p><b style="color:#fff">SECTION</b> — Cross-section cut at a chosen position. Shows available height and aisle.</p>
+    <p><b style="color:#fff">ROOF</b> — Top-down view of the roof skin. Add roof racks, solar panels, fans, etc. with <em>Layer = Roof</em>.</p>
+
+    <h2 style="color:#f5a623;font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;margin:16px 0 6px;">ADDING MODULES</h2>
+    <p>Click <b style="color:#fff">+ Add Module</b> (or press the Modules tab → +). Fill in Name, Category, Width (W), Depth (D), Layer, and position. Drag it on the canvas to reposition. Double-click to edit.</p>
+    <p>Use <b style="color:#fff">IMPORT → CSV</b> to bulk-import a build list. Download a template first with the <b style="color:#fff">TEMPLATE</b> button.</p>
+
+    <h2 style="color:#f5a623;font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;margin:16px 0 6px;">ROOF RACK</h2>
+    <p>Click <b style="color:#fff">Resources → Add Roof Rack</b> to insert a pre-centered roof rack. It auto-fills the roof width and centers fore-aft. Edit width/depth to match your specific rack. Set Layer = Roof to see it in the Roof view.</p>
+
+    <h2 style="color:#f5a623;font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;margin:16px 0 6px;">DIMENSIONS & COORDS</h2>
+    <p>All dimensions in <b style="color:#fff">inches</b>. <b>X</b> = position from driver wall (left). <b>Y</b> = position from rear doors (front = higher numbers). The centerline (CL) is the width midpoint of the van.</p>
+
+    <h2 style="color:#f5a623;font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;margin:16px 0 6px;">SAVING & PROJECTS</h2>
+    <p>Sign in and upgrade to save projects to the cloud. Free users can use Export/Import (JSON) to save locally. Use <b>Ctrl+S</b> (or ⌘S on Mac) to save.</p>
+
+    <h2 style="color:#f5a623;font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;margin:16px 0 6px;">KEYBOARD SHORTCUTS</h2>
+    <p><b style="color:#fff">1–6</b> = Switch views &nbsp;|&nbsp; <b style="color:#fff">Del</b> = Delete selected &nbsp;|&nbsp; <b style="color:#fff">E</b> = Edit selected &nbsp;|&nbsp; <b style="color:#fff">Ctrl+Z</b> = Undo &nbsp;|&nbsp; <b style="color:#fff">Ctrl+S</b> = Save &nbsp;|&nbsp; <b style="color:#fff">Esc</b> = Close modal</p>
+
+  </div>
+</div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener('click', e => { if (e.target === ov) closeGuide(); });
+  }
+  ov.style.display = 'flex';
 }
 function closeGuide() {
-  closeDocViewer();
+  const ov = document.getElementById('guide-overlay');
+  if (ov) ov.style.display = 'none';
 }
 
 // ── Panel Toggle ──────────────────────────────────────────────────────────────
@@ -2127,6 +2420,43 @@ async function init() {
   setView('plan');
   renderModList();
   syncDimInputs();
+
+  // ── Wire up tb-van as a live van model switcher ──
+  requestAnimationFrame(() => {
+    const tbVan = document.getElementById('tb-van');
+    if (tbVan && !tbVan._vanPickerWired) {
+      tbVan._vanPickerWired = true;
+      tbVan.title = 'Click to change van model';
+      tbVan.style.cursor = 'pointer';
+      tbVan.style.userSelect = 'none';
+      // Add dropdown arrow
+      const arrow = document.createElement('span');
+      arrow.id = 'tb-van-arrow';
+      arrow.textContent = ' ▾';
+      arrow.style.cssText = 'font-size:.65em;opacity:.6;';
+      tbVan.appendChild(arrow);
+      tbVan.addEventListener('click', openVanPicker);
+    }
+  });
+
+  // ── Inject "Add Roof Rack" into Resources menu ──
+  requestAnimationFrame(() => {
+    const resMenu = document.getElementById('res-menu');
+    if (resMenu && !document.getElementById('res-roof-rack-btn')) {
+      const divider = document.createElement('div');
+      divider.className = 'res-section';
+      divider.textContent = 'Quick Add';
+      const rrBtn = document.createElement('button');
+      rrBtn.id = 'res-roof-rack-btn';
+      rrBtn.className = 'res-item';
+      rrBtn.style.cssText = 'width:100%;text-align:left;background:none;border:none;cursor:pointer;color:inherit;padding:0;';
+      rrBtn.innerHTML = '<span class="ri">🏗</span><span><div>Add Roof Rack</div><div class="rd">Auto-centered · Layer = Roof</div></span>';
+      rrBtn.onclick = () => { toggleResMenu(); addRoofRack(); };
+      resMenu.insertBefore(rrBtn, resMenu.firstChild);
+      resMenu.insertBefore(divider, resMenu.firstChild);
+    }
+  });
+
   // Defer autoFitScale so canvas-wrap has real clientWidth after layout paints
   requestAnimationFrame(() => requestAnimationFrame(() => {
     autoFitScale();
