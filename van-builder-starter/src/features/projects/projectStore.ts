@@ -55,8 +55,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             user_id: userId,
             name: project.name,
             van_id: project.vanId,
-            active_view: project.activeView,
-            settings: project.settings,
+            items: project.placedModules,
           })
           .select()
           .single();
@@ -70,8 +69,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           .update({
             name: project.name,
             van_id: project.vanId,
-            active_view: project.activeView,
-            settings: project.settings,
+            items: project.placedModules,
+            updated_at: new Date().toISOString(),
           })
           .eq('id', project.id);
         if (error) throw error;
