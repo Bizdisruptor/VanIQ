@@ -1,13 +1,13 @@
 import { listVanDefinitions } from '../../features/vans/api';
 import { useProjectStore } from '../../features/projects/projectStore';
-import { useAuthStore } from '../../store/authStore';
+import { useAuth } from '../../hooks/useAuth';
 
 export function Topbar() {
   const project = useProjectStore((s) => s.project);
   const setVanId = useProjectStore((s) => s.setVanId);
   const vans = listVanDefinitions();
 
-  const { user, loading, signInWithGoogle, signOut } = useAuthStore();
+  const { user, loading, signIn, signOut } = useAuth();
 
   return (
     <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 shadow-sm">
@@ -28,7 +28,7 @@ export function Topbar() {
         </select>
 
         {/* Save button */}
-        <SaveButton />
+        <SaveButton user={user} />
 
         {/* Auth */}
         {loading ? (
@@ -37,7 +37,7 @@ export function Topbar() {
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-500">{user.email}</span>
             <button
-              onClick={signOut}
+              onClick={() => signOut()}
               className="rounded border border-slate-300 px-3 py-1.5 text-slate-600 hover:bg-slate-50"
             >
               Sign Out
@@ -45,7 +45,7 @@ export function Topbar() {
           </div>
         ) : (
           <button
-            onClick={signInWithGoogle}
+            onClick={() => signIn()}
             className="rounded bg-slate-900 px-3 py-1.5 text-white hover:bg-slate-800"
           >
             Sign in with Google
@@ -56,9 +56,7 @@ export function Topbar() {
   );
 }
 
-function SaveButton() {
-  const { user } = useAuthStore();
-  const project = useProjectStore((s) => s.project);
+function SaveButton({ user }: { user: { id: string } | null }) {
   const saveProject = useProjectStore((s) => s.saveProject);
   const saving = useProjectStore((s) => s.saving);
 
