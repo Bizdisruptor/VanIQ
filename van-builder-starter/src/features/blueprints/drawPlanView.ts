@@ -5,33 +5,23 @@
  * All measurements in inches, scale factor S = px per inch.
  */
 
-interface PlanViewRefs {
-  vw: number;       // interior width inches
-  vl: number;       // interior length inches
-  label: string;
-  partition: number;
-  btwn: number;     // between wheel wells
-  rearOpen: number;
-  slideDoor: { y1: number; y2: number };
-  wwL: { y: number; d: number; w: number };
-  wwR: { y: number; d: number; w: number };
-  driverShelf: number;
-  passShelf: number;
-  ribs: number[];
-}
+import { TRANSIT_148_HR } from '../../data/vans/transit148hr';
 
-const REFS: PlanViewRefs = {
-  vw: 70.2, vl: 143.7,
-  label: 'Ford Transit 148 HR',
-  partition: 9,
-  btwn: 54.8,
-  rearOpen: 61.7,
-  slideDoor: { y1: 30, y2: 78 },
-  wwL: { y: 85, d: 35, w: 7.5 },
-  wwR: { y: 85, d: 35, w: 7.5 },
-  driverShelf: 126,
-  passShelf: 75,
-  ribs: [16, 32, 48, 64, 80, 96, 112, 128, 144],
+const V = TRANSIT_148_HR;
+
+const REFS = {
+  vw:          V.cargoWidthMax,
+  vl:          V.cargoLengthAtFloor,
+  label:       'Ford Transit 148 HR',
+  partition:   V.partitionDepth,
+  btwn:        V.cargoWidthBetweenWells,
+  rearOpen:    V.rearDoorOpeningWidth,
+  slideDoor:   { y1: V.slideDoorStart, y2: V.slideDoorEnd },
+  wwL:         { y: V.wheelWellStart, d: V.wheelWellLength, w: V.wheelWellDepth },
+  wwR:         { y: V.wheelWellStart, d: V.wheelWellLength, w: V.wheelWellDepth },
+  driverShelf: V.driverWallLength,
+  passShelf:   V.passengerWallLength,
+  ribs:        [16, 32, 48, 64, 80, 96, 112, 128, 144],
 };
 
 export interface DrawOptions {
