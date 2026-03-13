@@ -1,6 +1,6 @@
 import { listVanDefinitions } from '../../features/vans/api';
 import { useProjectStore } from '../../features/projects/projectStore';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../features/auth/useAuth';
 
 export function Topbar() {
   const project = useProjectStore((s) => s.project);
