@@ -16,8 +16,8 @@
     "rear_door_opening_width": 61.5,
     "wheel_well_width": 35,
     "wheel_well_height": 11,
-    "wheel_well_depth": 7.5,
-    "distance_between_wheel_wells": 54
+    "wheel_well_depth": 13,
+    "distance_between_wheel_wells": 44
   },
   "views": {
     "plan": {
