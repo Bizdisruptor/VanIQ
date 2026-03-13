@@ -35,7 +35,7 @@ export function BlueprintCanvas() {
         <span style={{ color: '#00a651', whiteSpace: 'nowrap' }}>━ Slide door</span>
         <span style={{ color: 'rgba(200,60,60,0.9)', whiteSpace: 'nowrap' }}>─ ─ Partition</span>
         <span style={{ color: 'rgba(70,120,220,0.9)', whiteSpace: 'nowrap' }}>── Floor ribs</span>
-        <span style={{ color: '#4a8fd5', whiteSpace: 'nowrap' }}>H1/H2/H3 heights</span>
+        <span style={{ whiteSpace: 'nowrap' }}>HR 79"</span>
         <span style={{ color: '#444', marginLeft: 'auto' }}>|</span>
         <span style={{ whiteSpace: 'nowrap' }}>Scale:</span>
         {[2, 3, 4, 5, 6].map(s => (

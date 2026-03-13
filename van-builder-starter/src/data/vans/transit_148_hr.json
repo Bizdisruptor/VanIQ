@@ -13,11 +13,11 @@
     "driver_wall_usable_length": 126,
     "passenger_wall_usable_length": 75,
     "side_door_opening_width": 48,
-    "rear_door_opening_width": 61.5,
+    "rear_door_opening_width": 61.7,
     "wheel_well_width": 35,
     "wheel_well_height": 11,
-    "wheel_well_depth": 13,
-    "distance_between_wheel_wells": 44
+    "wheel_well_depth": 7.5,
+    "distance_between_wheel_wells": 54.8
   },
   "views": {
     "plan": {

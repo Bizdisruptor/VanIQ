@@ -18,26 +18,20 @@ interface PlanViewRefs {
   driverShelf: number;
   passShelf: number;
   ribs: number[];
-  heights: { label: string; h: number; color: string }[];
 }
 
 const REFS: PlanViewRefs = {
-  vw: 70, vl: 145,
+  vw: 70.2, vl: 143.7,
   label: 'Ford Transit 148 HR',
   partition: 9,
-  btwn: 44,
-  rearOpen: 61.5,
+  btwn: 54.8,
+  rearOpen: 61.7,
   slideDoor: { y1: 30, y2: 78 },
-  wwL: { y: 85, d: 35, w: 13 },
-  wwR: { y: 85, d: 35, w: 13 },
+  wwL: { y: 85, d: 35, w: 7.5 },
+  wwR: { y: 85, d: 35, w: 7.5 },
   driverShelf: 126,
   passShelf: 75,
   ribs: [16, 32, 48, 64, 80, 96, 112, 128, 144],
-  heights: [
-    { label: 'H1 Low Roof',          h: 53, color: '#1565C0' },
-    { label: 'H2 Med Roof',          h: 70, color: '#6A1B9A' },
-    { label: 'H3 High Roof (this)',  h: 79, color: '#C62828' },
-  ],
 };
 
 export interface DrawOptions {
@@ -49,7 +43,7 @@ export interface DrawOptions {
 // Padding constants (px, independent of scale)
 const PAD_L  = 80;
 const PAD_T  = 100;
-const PAD_R  = 200;  // room for height zones
+const PAD_R  = 80;
 const PAD_B  = 100;
 
 const WALL    = 5;   // in — exterior body beyond interior floor
@@ -170,7 +164,7 @@ export function drawPlanView(ctx: CanvasRenderingContext2D, scale: number) {
   // ── 4. Interior cargo floor ────────────────────────────────────────────────
   ctx.fillStyle = '#ffffff'; ctx.fillRect(ox, oy, iw, il);
 
-  // ── 5. Seats (behind bulkhead = just below oy, inside cargo zone) ──────────
+  // ── 5. Seats (in cab section, ABOVE the bulkhead line) ─────────────────────
   function drawSeat(cx: number, topY: number, lbl: string) {
     const sw = px(18), sd = px(16), sx = cx - sw/2, sy = topY;
     rr(sx, sy, sw, sd, 4);
@@ -182,7 +176,7 @@ export function drawPlanView(ctx: CanvasRenderingContext2D, scale: number) {
     ctx.fillStyle = '#445060'; ctx.font = `${fXS}px Arial`; ctx.textAlign = 'center';
     ctx.fillText(lbl, cx, sy + sd + px(1.5));
   }
-  const seatY = oy + px(2);
+  const seatY = oy - px(16) - px(4);  // seat height + margin, placed above bulkhead
   const drvCX = bx + bw * 0.24;
   const pasCX = bx + bw * 0.76;
   drawSeat(drvCX, seatY, 'DRV');
@@ -347,26 +341,7 @@ export function drawPlanView(ctx: CanvasRenderingContext2D, scale: number) {
   ctx.translate(bx+bw+BUMP+10, oy+il/2); ctx.rotate(Math.PI/2); ctx.textAlign = 'center';
   ctx.fillText('PASSENGER SIDE', 0, 0); ctx.restore();
 
-  // ── 17. Height zones (right side) ──────────────────────────────────────────
-  const hZX = ox+iw+WE+65;
-  ctx.fillStyle = '#222'; ctx.font = `bold ${fLG}px Arial`; ctx.textAlign = 'left';
-  ctx.fillText('HEIGHT ZONES', hZX, oy-18);
-  ctx.fillStyle = '#888'; ctx.font = `italic ${fXS}px Arial`;
-  ctx.fillText('floor to ceiling (in)', hZX, oy-4);
-  REFS.heights.forEach(hz => {
-    const lY = oy + px(hz.h);
-    ctx.strokeStyle = hz.color + '88'; ctx.lineWidth = 1.5; ctx.setLineDash([4,3]);
-    ctx.beginPath(); ctx.moveTo(ox+iw+10, oy); ctx.lineTo(ox+iw+10, lY); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.strokeStyle = hz.color; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(ox+iw, lY); ctx.lineTo(hZX-6, lY); ctx.stroke();
-    ctx.fillStyle = '#fff'; ctx.fillRect(hZX-2, lY-8, 148, 16);
-    ctx.strokeStyle = hz.color; ctx.lineWidth = 1.2; ctx.strokeRect(hZX-2, lY-8, 148, 16);
-    ctx.fillStyle = hz.color; ctx.font = `bold ${fSM}px Arial`; ctx.textAlign = 'left';
-    ctx.fillText(`${hz.label}  ${hz.h}"`, hZX+3, lY+5);
-  });
-
-  // ── 18. Dimension arrows ───────────────────────────────────────────────────
+  // ── 17. Dimension arrows ───────────────────────────────────────────────────
   const arWY = oy - 50;
   ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 1.2; ctx.setLineDash([]);
   ctx.beginPath(); ctx.moveTo(ox, arWY); ctx.lineTo(ox+iw, arWY); ctx.stroke();
