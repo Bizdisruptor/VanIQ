@@ -43,10 +43,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     })),
 
   saveProject: async (userId: string) => {
-    if (!supabase) {
-      alert('Supabase is not configured.');
-      return;
-    }
     set({ saving: true });
     const { project } = get();
     const isNew = project.id === 'local-dev-project';

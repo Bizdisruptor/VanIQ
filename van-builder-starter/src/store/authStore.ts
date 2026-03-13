@@ -17,7 +17,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   loading: true,
 
   signInWithGoogle: async () => {
-    if (!supabase) return;
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.origin },
@@ -25,16 +24,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   signOut: async () => {
-    if (!supabase) return;
     await supabase.auth.signOut();
     set({ user: null, session: null });
   },
 
   init: () => {
-    if (!supabase) {
-      set({ loading: false });
-      return;
-    }
     supabase.auth.getSession().then(({ data: { session } }) => {
       set({ session, user: session?.user ?? null, loading: false });
     });
