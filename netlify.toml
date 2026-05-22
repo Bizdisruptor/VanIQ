@@ -3,6 +3,14 @@
   command = "npm run build"
   publish = "dist"
 
+# Serve the Framingtool static file directly from the repo root,
+# BEFORE the SPA catch-all redirect grabs it.
+[[redirects]]
+  from = "/Framingtool/*"
+  to   = "https://raw.githubusercontent.com/Bizdisruptor/VanIQ/main/Framingtool/:splat"
+  status = 200
+  force  = true
+
 [[redirects]]
   from = "/*"
   to   = "/index.html"
