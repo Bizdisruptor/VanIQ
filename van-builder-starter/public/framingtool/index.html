@@ -5,34 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>VanIQ Builder v16</title>
+<title>VanIQ Builder v17</title>
 <style>
   :root {
-    --bg: #faf9f5;
-    --panel: #ffffff;
-    --panel-2: #f0eee8;
-    --border: #e2dfd6;
-    --text: #2c2c2c;
-    --text-sec: #6c6c6c;
-    --text-tert: #999;
-    --accent: #d97757;
-    --info-bg: #e0e9f5;
-    --danger: #c5392b;
-    --splice: #c08020;
-    --oversize: #9c6d2c;
+    --bg: #faf9f5; --panel: #ffffff; --panel-2: #f0eee8;
+    --border: #e2dfd6; --text: #2c2c2c; --text-sec: #6c6c6c;
+    --text-tert: #999; --accent: #d97757; --info-bg: #e0e9f5;
+    --danger: #c5392b; --splice: #c08020; --oversize: #9c6d2c;
   }
   * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
     background: var(--bg); color: var(--text);
-    overscroll-behavior: none;
-    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none; -webkit-tap-highlight-color: transparent;
   }
   body { padding: 12px; }
   h1 { font-size: 18px; margin: 0 0 4px; }
   .sub { font-size: 12px; color: var(--text-sec); margin-bottom: 12px; }
-
   .view-buttons { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
   button {
     padding: 8px 14px; font-size: 14px; background: var(--panel);
@@ -42,10 +32,8 @@
   }
   button:active { background: var(--panel-2); }
   button.active { background: var(--accent); color: white; border-color: var(--accent); }
-
   .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 12px; }
   @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
-
   #canvas-wrap {
     background: var(--panel-2); border: 1px solid var(--border);
     border-radius: 10px; height: 60vh; min-height: 380px;
@@ -60,7 +48,6 @@
   #legend { bottom: 12px; left: 12px; }
   #info { top: 12px; right: 12px; max-width: 260px; display: none; }
   #info b { color: var(--text); }
-
   .panel {
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 10px; padding: 12px; margin-bottom: 10px;
@@ -77,7 +64,6 @@
   .swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
   .sec-row .name { flex: 1; }
   .sec-row .meta { font-size: 10px; color: var(--text-tert); font-family: ui-monospace, monospace; }
-
   .list-output {
     font-size: 11px; font-family: ui-monospace, monospace;
     background: var(--panel-2); padding: 10px; border-radius: 8px;
@@ -93,10 +79,8 @@
     font-size: 11px; color: var(--text-sec); line-height: 1.5; margin-top: 8px;
   }
   .ship-note b { color: var(--text); }
-
   .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 6px; touch-action: manipulation; }
   .checkbox-row input { width: 20px; height: 20px; }
-
   .tab-row { display: flex; gap: 0; margin-bottom: 8px; border-bottom: 1px solid var(--border); }
   .tab-row button { border-radius: 0; border: none; border-bottom: 2px solid transparent; padding: 6px 10px; font-size: 12px; background: transparent; }
   .tab-row button.active { background: transparent; color: var(--accent); border-bottom-color: var(--accent); }
@@ -104,8 +88,8 @@
 </head>
 <body>
 
-<h1>VanIQ Builder v16</h1>
-<div class="sub">Transit 350 148" HR · Stronger profile wins at interfaces · Garage step at z=20"</div>
+<h1>VanIQ Builder v17</h1>
+<div class="sub">Shared edges at section interfaces · Continuous back rails · Drawer rails fixed</div>
 
 <div class="view-buttons">
   <button data-v="iso">Iso</button>
@@ -162,11 +146,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function(){
-  // v16:
-  //   - Profile auto-upgrade at interfaces: stronger profile wins when sticks share position
-  //   - Garage step stick: z=20", x=65, spans galley-to-workspace inner faces
-  //   - Profile rank: 1515 (rank 2) > 1515-lite (rank 1) > 1010 (rank 0)
-
   const HARD_CEILING = 94;
   const SOFT_CEILING = 47;
   const PROFILES = {
@@ -180,6 +159,13 @@
   const WHEELWELL = { xStart: 18, length: 30, depth: 9, height: 17 };
   const STEP_Z = 20;
 
+  // Cabinet pair definitions: which rear section abuts which forward section
+  // The interface X is the boundary line. The shared corner sticks are centered at that line.
+  const INTERFACES = [
+    { rear: 'plumbing',  fwd: 'galley',    side: 'passenger' },
+    { rear: 'electrical', fwd: 'workspace', side: 'driver' }
+  ];
+
   const sections = [
     { id: 'electrical', label: 'Electrical (rear, driver)', color: 0xD4537E, profile: '1515',
       length: 65, depth: 15.5, height: 37, anchor: 'rear_driver', doors: 3, wheelWellAware: true, floorMounted: true },
@@ -192,7 +178,7 @@
       length: 55, depth: 20, height: 37, anchor: 'forward_of_electrical', floorMounted: true,
       bays: [
         { type: 'doors',   length: 16, doors: 1 },
-        { type: 'drawers', length: 17, drawerRunners: 4 },
+        { type: 'drawers', length: 17, drawerCount: 4 },
         { type: 'fridge',  length: 22 }
       ] },
     { id: 'upper', label: 'Upper cabinet (driver)', color: 0xC9A227, profile: '1010',
@@ -207,7 +193,7 @@
   let allSticks = [];
   let stickIdCounter = 1;
 
-  // Position-based merging (ignores profile when matching; stronger profile wins)
+  // Position-based merge. Profile auto-upgrades to strongest.
   function addStick(profile, axis, length, x0, y0, z0, sectionId, role){
     if (length <= 0) return null;
     for (const s of allSticks){
@@ -216,10 +202,7 @@
       if (Math.abs(s.x0 - x0) > TOL) continue;
       if (Math.abs(s.y0 - y0) > TOL) continue;
       if (Math.abs(s.z0 - z0) > TOL) continue;
-      // Position match — merge. Upgrade profile if new one is stronger.
-      if (PROFILES[profile].rank > PROFILES[s.profile].rank){
-        s.profile = profile;
-      }
+      if (PROFILES[profile].rank > PROFILES[s.profile].rank) s.profile = profile;
       s.sections.add(sectionId);
       if (!s.roles.includes(role)) s.roles.push(role);
       return s;
@@ -227,6 +210,26 @@
     const stick = { id: 'k' + (stickIdCounter++), profile, axis, length, x0, y0, z0, sections: new Set([sectionId]), roles: [role], spliced: false, oversize: false };
     allSticks.push(stick);
     return stick;
+  }
+
+  // Returns { rearSharedX, fwdSharedX } if this section has a shared boundary with another.
+  // The shared corner stick sits at x = boundaryX - EX/2 (centered on the line)
+  function getSharedEdges(sec){
+    const EX = PROFILES[sec.profile].size;
+    const shared = { rearShared: null, fwdShared: null };
+    INTERFACES.forEach(iface => {
+      if (iface.rear === sec.id){
+        // This is a rear section. Its FRONT edge is shared with the forward section.
+        const b = sec._bounds;
+        shared.fwdShared = b.x1 - EX/2; // centerline of the leg at the boundary
+      }
+      if (iface.fwd === sec.id){
+        // This is a forward section. Its REAR edge is shared with the rear section.
+        const b = sec._bounds;
+        shared.rearShared = b.x0 - EX/2; // centerline of the leg at the boundary
+      }
+    });
+    return shared;
   }
 
   function getWheelWellOverlap(sec){
@@ -249,12 +252,26 @@
     const frontY = backIsHighY ? y0 : (y1 - EX);
     const ww = getWheelWellOverlap(sec);
     const floorMounted = sec.floorMounted && !isCeiling;
+    const shared = getSharedEdges(sec);
 
+    // Compute X positions for the verticals (corner legs + door dividers)
     const doors = sec.doors || 2;
     const totalV = doors + 1;
     const vXs = [];
-    if (totalV === 2){ vXs.push(x0, x1 - EX); }
-    else { for (let i = 0; i < totalV; i++){ vXs.push(x0 + i / (totalV - 1) * (Lx - EX)); } }
+
+    // Rear corner leg X
+    const rearLegX = (shared.rearShared !== null) ? shared.rearShared : x0;
+    // Front corner leg X
+    const fwdLegX = (shared.fwdShared !== null) ? shared.fwdShared : (x1 - EX);
+
+    // Distribute door dividers evenly between rearLegX and fwdLegX
+    if (totalV === 2){ vXs.push(rearLegX, fwdLegX); }
+    else {
+      for (let i = 0; i < totalV; i++){
+        const t = i / (totalV - 1);
+        vXs.push(rearLegX + t * (fwdLegX - rearLegX));
+      }
+    }
 
     const legLen = Lz - 2*EX;
     vXs.forEach((vx, idx) => {
@@ -263,20 +280,26 @@
       addStick(sec.profile, 'z', legLen, vx, backY,  z0 + EX, sec.id, role + ' (back)');
     });
 
+    // X-rails span from the rear-leg-center to the fwd-leg-center
+    // (rail starts at rearLegX, ends at fwdLegX + EX, total length = fwdLegX + EX - rearLegX)
+    const railStartX = rearLegX;
+    const railLen = (fwdLegX + EX) - rearLegX;
+
     const topZ = z1 - EX;
-    addStick(sec.profile, 'x', Lx, x0, frontY, topZ, sec.id, 'top front rail');
-    addStick(sec.profile, 'x', Lx, x0, backY,  topZ, sec.id, 'top back rail');
+    addStick(sec.profile, 'x', railLen, railStartX, frontY, topZ, sec.id, 'top front rail');
+    addStick(sec.profile, 'x', railLen, railStartX, backY,  topZ, sec.id, 'top back rail');
     vXs.forEach((vx) => addStick(sec.profile, 'y', Ly - 2*EX, vx, y0 + EX, topZ, sec.id, 'top Y-rail'));
 
-    addStick(sec.profile, 'x', Lx, x0, frontY, z0, sec.id, 'bottom front rail');
+    addStick(sec.profile, 'x', railLen, railStartX, frontY, z0, sec.id, 'bottom front rail');
     if (ww){
-      const seg1Len = ww.x0 - x0, seg2Len = x1 - ww.x1;
-      if (seg1Len > EX) addStick(sec.profile, 'x', seg1Len, x0, backY, z0, sec.id, 'bottom back (rear of WW)');
+      const seg1Len = ww.x0 - railStartX;
+      const seg2Len = (railStartX + railLen) - ww.x1;
+      if (seg1Len > EX) addStick(sec.profile, 'x', seg1Len, railStartX, backY, z0, sec.id, 'bottom back (rear of WW)');
       if (seg2Len > EX) addStick(sec.profile, 'x', seg2Len, ww.x1, backY, z0, sec.id, 'bottom back (fwd of WW)');
       const aboveZ = WHEELWELL.height + 1;
       addStick(sec.profile, 'x', ww.x1 - ww.x0, ww.x0, backY, aboveZ, sec.id, 'above-WW back rail');
     } else {
-      addStick(sec.profile, 'x', Lx, x0, backY, z0, sec.id, 'bottom back rail');
+      addStick(sec.profile, 'x', railLen, railStartX, backY, z0, sec.id, 'bottom back rail');
     }
     vXs.forEach((vx, idx) => {
       const isCorner = (idx === 0 || idx === vXs.length - 1);
@@ -286,7 +309,7 @@
 
     if (!isCeiling && Lz > 20){
       const mz = z0 + Lz/2 - EX/2;
-      addStick(sec.profile, 'x', Lx, x0, backY, mz, sec.id, 'mid back rail');
+      addStick(sec.profile, 'x', railLen, railStartX, backY, mz, sec.id, 'mid back rail');
       vXs.forEach((vx, idx) => {
         if (idx === 0 || idx === vXs.length - 1) return;
         addStick(sec.profile, 'y', Ly - 2*EX, vx, y0 + EX, mz, sec.id, 'mid cross');
@@ -305,11 +328,21 @@
     const legLen = Lz - 2*EX;
     const topZ = z1 - EX;
     const floorMounted = sec.floorMounted;
+    const shared = getSharedEdges(sec);
 
-    const bayEdgesX = [x0];
-    let cursorX = x0;
-    sec.bays.forEach(bay => { cursorX += bay.length; bayEdgesX.push(Math.min(cursorX, x1)); });
-    bayEdgesX[bayEdgesX.length - 1] = x1 - EX;
+    // Bay-edge X positions, with shared edge at rear if applicable
+    const rearLegX = (shared.rearShared !== null) ? shared.rearShared : x0;
+    const fwdLegX = (shared.fwdShared !== null) ? shared.fwdShared : (x1 - EX);
+
+    // Build bayEdgesX: starts at rearLegX, then advances by each bay length, ends at fwdLegX
+    const bayEdgesX = [rearLegX];
+    let cursorX = rearLegX + EX/2; // shift right to account for centered shared leg
+    sec.bays.forEach(bay => {
+      cursorX += bay.length;
+      bayEdgesX.push(cursorX - EX/2);
+    });
+    // Force last edge to fwdLegX
+    bayEdgesX[bayEdgesX.length - 1] = fwdLegX;
 
     bayEdgesX.forEach((vx, idx) => {
       const role = (idx === 0 || idx === bayEdgesX.length - 1) ? 'corner leg' : 'bay divider';
@@ -317,29 +350,45 @@
       addStick(sec.profile, 'z', legLen, vx, backY,  z0 + EX, sec.id, role + ' (back)');
     });
 
-    addStick(sec.profile, 'x', Lx, x0, frontY, topZ, sec.id, 'top front rail');
-    addStick(sec.profile, 'x', Lx, x0, backY,  topZ, sec.id, 'top back rail');
+    const railStartX = rearLegX;
+    const railLen = (fwdLegX + EX) - rearLegX;
+
+    addStick(sec.profile, 'x', railLen, railStartX, frontY, topZ, sec.id, 'top front rail');
+    addStick(sec.profile, 'x', railLen, railStartX, backY,  topZ, sec.id, 'top back rail');
     bayEdgesX.forEach(vx => addStick(sec.profile, 'y', Ly - 2*EX, vx, y0 + EX, topZ, sec.id, 'top Y-rail'));
 
-    addStick(sec.profile, 'x', Lx, x0, frontY, z0, sec.id, 'bottom front rail');
-    addStick(sec.profile, 'x', Lx, x0, backY,  z0, sec.id, 'bottom back rail');
+    addStick(sec.profile, 'x', railLen, railStartX, frontY, z0, sec.id, 'bottom front rail');
+    addStick(sec.profile, 'x', railLen, railStartX, backY,  z0, sec.id, 'bottom back rail');
     bayEdgesX.forEach((vx, idx) => {
       const isCorner = (idx === 0 || idx === bayEdgesX.length - 1);
       if (floorMounted && !isCorner) return;
       addStick(sec.profile, 'y', Ly - 2*EX, vx, y0 + EX, z0, sec.id, isCorner ? 'bottom corner Y-rail' : 'bottom Y-rail');
     });
 
+    // Mid back rail across full workspace at mid height
+    const mz = z0 + Lz/2 - EX/2;
+    addStick(sec.profile, 'x', railLen, railStartX, backY, mz, sec.id, 'mid back rail');
+
+    // Per-bay internal structure
     sec.bays.forEach((bay, idx) => {
       const bayX0 = bayEdgesX[idx];
       const bayX1 = bayEdgesX[idx + 1];
       const bayLen = bayX1 - bayX0;
+
       if (bay.type === 'drawers'){
-        const n = bay.drawerRunners || 3;
+        // DRAWER RAILS: Y-axis sticks on the two bay dividers (sides of drawer bay)
+        // at each drawer's height. These are the drawer-slide mounting rails.
+        // Position: bayX0 (left divider) and bayX1 (right divider)
+        // Y span: full cabinet depth (Ly - 2*EX)
+        // Z heights: evenly distributed in cabinet height
+        const n = bay.drawerCount || 4;
         for (let i = 1; i <= n; i++){
           const t = i / (n + 1);
           const rz = z0 + t * Lz - EX/2;
-          addStick(sec.profile, 'x', bayLen, bayX0, frontY, rz, sec.id, `drawer runner ${i} (front)`);
-          addStick(sec.profile, 'x', bayLen, bayX0, backY,  rz, sec.id, `drawer runner ${i} (back)`);
+          // Left divider rail
+          addStick(sec.profile, 'y', Ly - 2*EX, bayX0, y0 + EX, rz, sec.id, `drawer ${i} rail (left divider)`);
+          // Right divider rail
+          addStick(sec.profile, 'y', Ly - 2*EX, bayX1, y0 + EX, rz, sec.id, `drawer ${i} rail (right divider)`);
         }
       } else if (bay.type === 'doors'){
         const doors = bay.doors || 1;
@@ -350,9 +399,8 @@
           addStick(sec.profile, 'z', legLen, vx, frontY, z0 + EX, sec.id, 'door divider (front)');
           addStick(sec.profile, 'z', legLen, vx, backY,  z0 + EX, sec.id, 'door divider (back)');
         }
-        const mz = z0 + Lz/2 - EX/2;
-        addStick(sec.profile, 'x', bayLen, bayX0, backY, mz, sec.id, 'mid back (bay)');
       }
+      // Fridge bay has no internal sticks (open)
     });
   }
 
@@ -386,11 +434,9 @@
     if (n === 1) addStick(sec.profile, 'y', span, x0, yStart, railZ, sec.id, 'bed cross rail');
     else { for (let i = 0; i < n; i++){ const t = i/(n-1); const x = x0 + t*(Lx - EX); addStick(sec.profile, 'y', span, x, yStart, railZ, sec.id, 'bed cross rail'); } }
 
-    // GARAGE STEP STICK: at z=20", at x=65 (front-of-garage edge), spanning galley-to-workspace inner faces
-    // The galley/workspace inner faces are the same Y range as plumbing/electrical inner faces (the garage spans the same Y)
-    const stepX = x1 - EX; // align with the last bed rail at x=65
-    const stepZ = STEP_Z;
-    addStick(sec.profile, 'y', span, stepX, yStart, stepZ, sec.id, 'garage step support (z=20")');
+    // Garage step support at z=20"
+    const stepX = x1 - EX;
+    addStick(sec.profile, 'y', span, stepX, yStart, STEP_Z, sec.id, 'garage step support (z=20")');
   }
 
   function autoSplice(){
@@ -549,7 +595,6 @@
     const a = touches[ks[0]], b = touches[ks[1]];
     return Math.hypot(a.x - b.x, a.y - b.y);
   }
-
   canvas.addEventListener('pointerdown', (e) => {
     canvas.setPointerCapture(e.pointerId);
     touches[e.pointerId] = { x: e.clientX, y: e.clientY };
@@ -558,8 +603,7 @@
   });
   canvas.addEventListener('pointerup', (e) => {
     const wasShortTap = !touches[e.pointerId+'_moved'];
-    delete touches[e.pointerId];
-    delete touches[e.pointerId+'_moved'];
+    delete touches[e.pointerId]; delete touches[e.pointerId+'_moved'];
     if (Object.keys(touches).length === 0 && wasShortTap) tryHover(e);
   });
   canvas.addEventListener('pointercancel', (e) => {
@@ -572,8 +616,7 @@
     const ks = Object.keys(touches).filter(k => !k.includes('_moved'));
     if (ks.length === 1 && camUpAxis === 'z'){
       const dx = e.clientX - lastMidX, dy = e.clientY - lastMidY;
-      camTheta -= dx * 0.006;
-      camPhi   -= dy * 0.006;
+      camTheta -= dx * 0.006; camPhi -= dy * 0.006;
       camPhi = Math.max(0.12, Math.min(Math.PI - 0.12, camPhi));
       lastMidX = e.clientX; lastMidY = e.clientY;
       updateCamera();
@@ -648,11 +691,10 @@
       const n = allSticks.filter(k => k.sections.has(s.id)).length;
       const sh = allSticks.filter(k => k.sections.has(s.id) && k.sections.size > 1).length;
       const cls = (s.id === activeSection) ? 'active' : '';
-      const profileLabel = PROFILES[s.profile].label;
       return `<div class="sec-row ${cls}" data-id="${s.id}">
         <div class="swatch" style="background:#${s.color.toString(16).padStart(6,'0')}"></div>
         <span class="name">${s.label}</span>
-        <span class="meta">${profileLabel} · ${n}${sh?` (${sh}↔)`:''}</span>
+        <span class="meta">${PROFILES[s.profile].label} · ${n}${sh?` (${sh}↔)`:''}</span>
       </div>`;
     }).join('');
     el.querySelectorAll('.sec-row').forEach(r => r.addEventListener('click', () => {
@@ -679,7 +721,6 @@
   function renderOrderList(){
     const out = document.getElementById('orderlist');
     const pieces = getShippablePieces();
-
     if (currentTab === 'order'){
       const groups = {};
       pieces.forEach(p => {
@@ -693,22 +734,15 @@
         if (a.profile !== b.profile) return pOrder.indexOf(a.profile) - pOrder.indexOf(b.profile);
         return b.length - a.length;
       });
-
       const totalPieces = sorted.reduce((sum, g) => sum + g.count, 0);
       const linfeet = (sorted.reduce((sum, g) => sum + g.count * g.length, 0) / 12).toFixed(1);
       const splicedSticks = allSticks.filter(s => s.spliced).length;
       const oversizePieces = pieces.filter(p => p.oversize).length;
       const within47 = pieces.filter(p => p.length <= SOFT_CEILING).length;
-
       let html = `<div class="header">${totalPieces} pieces · ${linfeet} ft · ${splicedSticks} spliced</div>`;
       html += `<div class="header">${within47}/${totalPieces} fit ≤47" · ${oversizePieces} oversize (48"-94")</div>`;
-
       const byProfile = {};
-      sorted.forEach(g => {
-        if (!byProfile[g.profile]) byProfile[g.profile] = [];
-        byProfile[g.profile].push(g);
-      });
-
+      sorted.forEach(g => { if (!byProfile[g.profile]) byProfile[g.profile] = []; byProfile[g.profile].push(g); });
       ['1515', '1515-lite', '1010'].forEach(prof => {
         const list = byProfile[prof];
         if (!list || list.length === 0) return;
@@ -732,10 +766,8 @@
         if (!byProfile[s.profile][key]) byProfile[s.profile][key] = { length: s.length, axis: s.axis, count: 0, spliced: s.spliced, oversize: s.oversize };
         byProfile[s.profile][key].count += 1;
       });
-
       const totalSticks = allSticks.length;
       let html = `<div class="header">${totalSticks} logical sticks (model view)</div>`;
-
       ['1515', '1515-lite', '1010'].forEach(prof => {
         if (!byProfile[prof]) return;
         const list = Object.values(byProfile[prof]).sort((a, b) => b.length - a.length);
@@ -775,7 +807,6 @@
       if (a.profile !== b.profile) return pOrder.indexOf(a.profile) - pOrder.indexOf(b.profile);
       return b.length - a.length;
     });
-
     let text = `VanIQ Build - Cut List\n${'='.repeat(40)}\n\n`;
     ['1515', '1515-lite', '1010'].forEach(prof => {
       const list = sorted.filter(g => g.profile === prof);
@@ -789,7 +820,6 @@
       text += `\n`;
     });
     text += `Shipping notes:\n  - All pieces <= 94" (hard ceiling)\n  - Pieces marked OVERSIZE are 48"-94" (UPS surcharge)\n  - Please cut at $0.50/cut\n`;
-
     if (navigator.clipboard){
       navigator.clipboard.writeText(text).then(() => {
         const btn = document.getElementById('copy-order');
@@ -801,8 +831,7 @@
 
   ['shell','counter','floor','wheelwells'].forEach(k => {
     document.getElementById('show-' + k).addEventListener('change', e => {
-      view[k] = e.target.checked;
-      renderScene();
+      view[k] = e.target.checked; renderScene();
     });
   });
   document.getElementById('color-by-section').addEventListener('change', e => {
