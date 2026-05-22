@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>VanIQ Builder v13 — Transit 350 148" HR</title>
+<title>VanIQ Builder v16</title>
 <style>
   :root {
     --bg: #faf9f5;
@@ -18,6 +18,8 @@
     --accent: #d97757;
     --info-bg: #e0e9f5;
     --danger: #c5392b;
+    --splice: #c08020;
+    --oversize: #9c6d2c;
   }
   * { box-sizing: border-box; }
   html, body {
@@ -41,20 +43,13 @@
   button:active { background: var(--panel-2); }
   button.active { background: var(--accent); color: white; border-color: var(--accent); }
 
-  .layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 320px;
-    gap: 12px;
-  }
-  @media (max-width: 900px) {
-    .layout { grid-template-columns: 1fr; }
-  }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 12px; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
 
   #canvas-wrap {
     background: var(--panel-2); border: 1px solid var(--border);
     border-radius: 10px; height: 60vh; min-height: 380px;
-    position: relative; overflow: hidden;
-    touch-action: none;
+    position: relative; overflow: hidden; touch-action: none;
   }
   #c { display: block; width: 100%; height: 100%; }
   .overlay {
@@ -70,12 +65,12 @@
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 10px; padding: 12px; margin-bottom: 10px;
   }
-  .panel h3 { font-size: 12px; color: var(--text-sec); margin: 0 0 8px; font-weight: 600; }
+  .panel h3 { font-size: 12px; color: var(--text-sec); margin: 0 0 8px; font-weight: 600; display:flex; justify-content:space-between; align-items:center; }
+  .panel .copy-btn { font-size: 11px; padding: 3px 8px; }
   .sec-row {
     display: flex; align-items: center; gap: 8px;
     padding: 8px 6px; font-size: 13px; border-radius: 4px;
-    cursor: pointer; border-left: 3px solid transparent;
-    touch-action: manipulation;
+    cursor: pointer; border-left: 3px solid transparent; touch-action: manipulation;
   }
   .sec-row.active { background: var(--info-bg); border-left-color: var(--accent); }
   .sec-row:hover { background: var(--panel-2); }
@@ -83,50 +78,34 @@
   .sec-row .name { flex: 1; }
   .sec-row .meta { font-size: 10px; color: var(--text-tert); font-family: ui-monospace, monospace; }
 
-  #cutlist {
+  .list-output {
     font-size: 11px; font-family: ui-monospace, monospace;
     background: var(--panel-2); padding: 10px; border-radius: 8px;
-    max-height: 240px; overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    max-height: 320px; overflow-y: auto;
+    -webkit-overflow-scrolling: touch; line-height: 1.6; white-space: pre-wrap;
   }
-  #cutlist .header { color: var(--text-sec); margin-bottom: 6px; }
-  #cutlist .group { color: var(--text-sec); font-weight: 600; margin-top: 6px; }
-
-  .editor-grid {
-    display: grid; grid-template-columns: 100px 1fr 56px;
-    gap: 10px 10px; align-items: center; margin-top: 10px;
+  .list-output .header { color: var(--text-sec); margin-bottom: 6px; font-weight: 600; }
+  .list-output .group { color: var(--text-sec); font-weight: 600; margin-top: 8px; border-bottom: 1px dashed var(--border); padding-bottom: 2px; }
+  .list-output .splice-tag { color: var(--splice); font-weight: 600; }
+  .list-output .oversize-tag { color: var(--oversize); font-weight: 600; }
+  .ship-note {
+    background: var(--info-bg); border-radius: 6px; padding: 8px;
+    font-size: 11px; color: var(--text-sec); line-height: 1.5; margin-top: 8px;
   }
-  .editor-grid label { font-size: 12px; color: var(--text-sec); }
-  .editor-grid span.val { font-size: 12px; text-align: right; font-family: ui-monospace, monospace; }
-  .editor-grid input[type=range] {
-    width: 100%;
-    touch-action: manipulation;
-    -webkit-appearance: none;
-    appearance: none;
-    height: 30px;
-    background: transparent;
-  }
-  .editor-grid input[type=range]::-webkit-slider-runnable-track {
-    height: 4px; background: var(--border); border-radius: 2px;
-  }
-  .editor-grid input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none; appearance: none;
-    width: 24px; height: 24px; border-radius: 50%;
-    background: var(--accent); cursor: pointer;
-    margin-top: -10px;
-    border: 2px solid white;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-  }
-  .editor-grid h4 { grid-column: span 3; margin: 10px 0 2px; font-size: 12px; font-weight: 600; color: var(--text-sec); }
+  .ship-note b { color: var(--text); }
 
   .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 6px; touch-action: manipulation; }
   .checkbox-row input { width: 20px; height: 20px; }
+
+  .tab-row { display: flex; gap: 0; margin-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .tab-row button { border-radius: 0; border: none; border-bottom: 2px solid transparent; padding: 6px 10px; font-size: 12px; background: transparent; }
+  .tab-row button.active { background: transparent; color: var(--accent); border-bottom-color: var(--accent); }
 </style>
 </head>
 <body>
 
-<h1>VanIQ Builder v13</h1>
-<div class="sub">Transit 350 148" wheelbase, high roof · From rear: driver=right, passenger=left</div>
+<h1>VanIQ Builder v16</h1>
+<div class="sub">Transit 350 148" HR · Stronger profile wins at interfaces · Garage step at z=20"</div>
 
 <div class="view-buttons">
   <button data-v="iso">Iso</button>
@@ -147,11 +126,6 @@
       </div>
       <div id="info" class="overlay"></div>
     </div>
-
-    <div class="panel" id="editor-panel">
-      <h3>Editor</h3>
-      <div id="section-editor" style="color: var(--text-tert); font-size: 13px;">Tap a section above to edit it.</div>
-    </div>
   </div>
 
   <div>
@@ -166,10 +140,21 @@
       <label class="checkbox-row"><input type="checkbox" id="show-wheelwells" checked> Wheel wells</label>
       <label class="checkbox-row"><input type="checkbox" id="show-floor" checked> Floor + labels</label>
       <label class="checkbox-row"><input type="checkbox" id="color-by-section" checked> Color by section</label>
+      <label class="checkbox-row"><input type="checkbox" id="color-by-profile"> Color by profile</label>
     </div>
     <div class="panel">
-      <h3>Cut list</h3>
-      <div id="cutlist"></div>
+      <h3><span>Order list</span><button class="copy-btn" id="copy-order">Copy</button></h3>
+      <div class="tab-row">
+        <button class="tab active" data-tab="order">For ordering</button>
+        <button class="tab" data-tab="cutlist">By length</button>
+      </div>
+      <div id="orderlist" class="list-output"></div>
+      <div class="ship-note">
+        <b>Shipping rules:</b><br>
+        • <b>94"</b> = hard ceiling (auto-splice)<br>
+        • <b>47"</b> = soft ceiling (UPS oversize surcharge above)<br>
+        • Cuts $0.50 each at supplier
+      </div>
     </div>
   </div>
 </div>
@@ -177,65 +162,69 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function(){
-  // ============================================================
-  // v13: editor bug fix
-  //   Previous versions re-rendered the entire editor panel inside
-  //   rebuild(), which destroyed the slider element mid-drag and
-  //   killed touch events. v13 splits the work:
-  //     - renderScene()   : redraws 3D geometry (called from sliders)
-  //     - renderEditor()  : only called on activeSection change
-  //     - renderSectionList() and renderCutList(): called by rebuild()
-  //   Sliders now only call renderScene() + renderCutList(),
-  //   never renderEditor().
-  // ============================================================
+  // v16:
+  //   - Profile auto-upgrade at interfaces: stronger profile wins when sticks share position
+  //   - Garage step stick: z=20", x=65, spans galley-to-workspace inner faces
+  //   - Profile rank: 1515 (rank 2) > 1515-lite (rank 1) > 1010 (rank 0)
 
-  const PROFILES = { '1515': { size: 1.5 }, '1010': { size: 1.0 } };
+  const HARD_CEILING = 94;
+  const SOFT_CEILING = 47;
+  const PROFILES = {
+    '1515':      { size: 1.5, label: '1515 (standard)', color: 0x6b6b6b, weightPerFt: 0.93, rank: 2 },
+    '1515-lite': { size: 1.5, label: '1515-lite',       color: 0xa8a8a8, weightPerFt: 0.74, rank: 1 },
+    '1010':      { size: 1.0, label: '1010',            color: 0xc9a227, weightPerFt: 0.39, rank: 0 }
+  };
   const INCH_TO_M = 0.0254;
   const M = (i) => i * INCH_TO_M;
   const SHELL = { L: 120, W: 78, H: 81, counterZ: 37 };
   const WHEELWELL = { xStart: 18, length: 30, depth: 9, height: 17 };
-  const SHIPPING_LIMIT = 96;
+  const STEP_Z = 20;
 
   const sections = [
     { id: 'electrical', label: 'Electrical (rear, driver)', color: 0xD4537E, profile: '1515',
       length: 65, depth: 15.5, height: 37, anchor: 'rear_driver', doors: 3, wheelWellAware: true, floorMounted: true },
     { id: 'plumbing', label: 'Plumbing (rear, passenger)', color: 0x1D9E75, profile: '1515',
       length: 65, depth: 15.5, height: 37, anchor: 'rear_passenger', doors: 3, wheelWellAware: true, floorMounted: true },
-    { id: 'bed_rails', label: 'Bed rails (garage)', color: 0xD85A30, profile: '1515', crossCount: 4 },
-    { id: 'galley', label: 'Galley (passenger, fwd)', color: 0x378ADD, profile: '1515',
+    { id: 'bed_rails', label: 'Bed rails + step (garage)', color: 0xD85A30, profile: '1515', crossCount: 4 },
+    { id: 'galley', label: 'Galley (passenger, fwd)', color: 0x378ADD, profile: '1515-lite',
       length: 38, depth: 20, height: 37, anchor: 'forward_of_plumbing', doors: 2, floorMounted: true },
-    { id: 'workspace', label: 'Workspace (driver, fwd)', color: 0xB47CE0, profile: '1515',
+    { id: 'workspace', label: 'Workspace (driver, fwd)', color: 0xB47CE0, profile: '1515-lite',
       length: 55, depth: 20, height: 37, anchor: 'forward_of_electrical', floorMounted: true,
       bays: [
         { type: 'doors',   length: 16, doors: 1 },
         { type: 'drawers', length: 17, drawerRunners: 4 },
         { type: 'fridge',  length: 22 }
       ] },
-    { id: 'upper', label: 'Upper cabinet (driver) — 1010', color: 0xC9A227, profile: '1010',
+    { id: 'upper', label: 'Upper cabinet (driver)', color: 0xC9A227, profile: '1010',
       length: 108, depth: 10, height: 10, anchor: 'ceiling_driver', doors: 6 }
   ];
 
   let activeSection = null;
-  const view = { shell: true, counter: true, floor: true, wheelwells: true, colorBySection: true };
+  let currentTab = 'order';
+  const view = { shell: true, counter: true, floor: true, wheelwells: true, colorBySection: true, colorByProfile: false };
 
   const TOL = 0.1;
   let allSticks = [];
   let stickIdCounter = 1;
 
+  // Position-based merging (ignores profile when matching; stronger profile wins)
   function addStick(profile, axis, length, x0, y0, z0, sectionId, role){
     if (length <= 0) return null;
     for (const s of allSticks){
-      if (s.profile !== profile) continue;
       if (s.axis !== axis) continue;
       if (Math.abs(s.length - length) > TOL) continue;
       if (Math.abs(s.x0 - x0) > TOL) continue;
       if (Math.abs(s.y0 - y0) > TOL) continue;
       if (Math.abs(s.z0 - z0) > TOL) continue;
+      // Position match — merge. Upgrade profile if new one is stronger.
+      if (PROFILES[profile].rank > PROFILES[s.profile].rank){
+        s.profile = profile;
+      }
       s.sections.add(sectionId);
       if (!s.roles.includes(role)) s.roles.push(role);
       return s;
     }
-    const stick = { id: 'k' + (stickIdCounter++), profile, axis, length, x0, y0, z0, sections: new Set([sectionId]), roles: [role] };
+    const stick = { id: 'k' + (stickIdCounter++), profile, axis, length, x0, y0, z0, sections: new Set([sectionId]), roles: [role], spliced: false, oversize: false };
     allSticks.push(stick);
     return stick;
   }
@@ -396,6 +385,25 @@
     const n = sec.crossCount;
     if (n === 1) addStick(sec.profile, 'y', span, x0, yStart, railZ, sec.id, 'bed cross rail');
     else { for (let i = 0; i < n; i++){ const t = i/(n-1); const x = x0 + t*(Lx - EX); addStick(sec.profile, 'y', span, x, yStart, railZ, sec.id, 'bed cross rail'); } }
+
+    // GARAGE STEP STICK: at z=20", at x=65 (front-of-garage edge), spanning galley-to-workspace inner faces
+    // The galley/workspace inner faces are the same Y range as plumbing/electrical inner faces (the garage spans the same Y)
+    const stepX = x1 - EX; // align with the last bed rail at x=65
+    const stepZ = STEP_Z;
+    addStick(sec.profile, 'y', span, stepX, yStart, stepZ, sec.id, 'garage step support (z=20")');
+  }
+
+  function autoSplice(){
+    allSticks.forEach(s => {
+      if (s.length > HARD_CEILING){
+        s.spliced = true;
+        s.spliceCount = 2;
+        s.spliceLength = s.length / 2;
+        if (s.spliceLength > SOFT_CEILING) s.oversize = true;
+      } else if (s.length > SOFT_CEILING){
+        s.oversize = true;
+      }
+    });
   }
 
   function regenerateAllSticks(){
@@ -410,6 +418,7 @@
     });
     const bed = sections.find(s => s.id === 'bed_rails');
     if (bed) generateBedRails(bed);
+    autoSplice();
   }
 
   const canvas = document.getElementById('c');
@@ -418,8 +427,7 @@
   let cw = wrap.clientWidth, ch = wrap.clientHeight;
   const camera = new THREE.PerspectiveCamera(45, cw/ch, 0.1, 50);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setSize(cw, ch, false);
+  renderer.setPixelRatio(window.devicePixelRatio); renderer.setSize(cw, ch, false);
   scene.add(new THREE.AmbientLight(0xffffff, 0.78));
   const dir = new THREE.DirectionalLight(0xffffff, 0.55); dir.position.set(3, 5, 4); scene.add(dir);
   const world = new THREE.Group(); scene.add(world);
@@ -442,7 +450,9 @@
       else { sx = sz_; sy = sz_; sz = s.length; }
       const geo = new THREE.BoxGeometry(M(sx), M(sy), M(sz));
       let material = matNeutral;
-      if (view.colorBySection){
+      if (view.colorByProfile){
+        material = mat(PROFILES[s.profile].color);
+      } else if (view.colorBySection){
         const primaryId = [...s.sections][0];
         const sec = sections.find(x => x.id === primaryId);
         if (sec) material = mat(sec.color);
@@ -531,13 +541,11 @@
   }
   updateCamera();
 
-  // ============================================================
-  // Touch / pointer controls — canvas only
-  // ============================================================
   const touches = {};
   let lastDist = 0, lastMidX = 0, lastMidY = 0;
   function touchDist(){
-    const ks = Object.keys(touches); if (ks.length < 2) return 0;
+    const ks = Object.keys(touches).filter(k => !k.includes('_moved'));
+    if (ks.length < 2) return 0;
     const a = touches[ks[0]], b = touches[ks[1]];
     return Math.hypot(a.x - b.x, a.y - b.y);
   }
@@ -545,7 +553,7 @@
   canvas.addEventListener('pointerdown', (e) => {
     canvas.setPointerCapture(e.pointerId);
     touches[e.pointerId] = { x: e.clientX, y: e.clientY };
-    if (Object.keys(touches).length === 2){ lastDist = touchDist(); }
+    if (Object.keys(touches).filter(k => !k.includes('_moved')).length === 2){ lastDist = touchDist(); }
     lastMidX = e.clientX; lastMidY = e.clientY;
   });
   canvas.addEventListener('pointerup', (e) => {
@@ -555,13 +563,12 @@
     if (Object.keys(touches).length === 0 && wasShortTap) tryHover(e);
   });
   canvas.addEventListener('pointercancel', (e) => {
-    delete touches[e.pointerId];
-    delete touches[e.pointerId+'_moved'];
+    delete touches[e.pointerId]; delete touches[e.pointerId+'_moved'];
   });
   canvas.addEventListener('pointermove', (e) => {
     if (!(e.pointerId in touches)) { tryHover(e); return; }
     touches[e.pointerId] = { x: e.clientX, y: e.clientY };
-    touches[e.pointerId+'_moved'] = true; // mark as drag, not tap
+    touches[e.pointerId+'_moved'] = true;
     const ks = Object.keys(touches).filter(k => !k.includes('_moved'));
     if (ks.length === 1 && camUpAxis === 'z'){
       const dx = e.clientX - lastMidX, dy = e.clientY - lastMidY;
@@ -604,8 +611,11 @@
       const stick = allSticks.find(s => s.id === id);
       if (stick){
         const secNames = [...stick.sections].map(sid => sections.find(s => s.id === sid)?.label || sid).join(', ');
+        let tags = '';
+        if (stick.spliced) tags += `<br><span style="color:var(--splice);">⚡ Auto-splice: ships as 2× ${stick.spliceLength.toFixed(1)}"</span>`;
+        if (stick.oversize && !stick.spliced) tags += `<br><span style="color:var(--oversize);">⚠ Oversize (>47"): UPS surcharge applies</span>`;
         info.style.display = 'block';
-        info.innerHTML = `<b>${stick.profile} · ${stick.length.toFixed(1)}" · ${stick.axis.toUpperCase()}</b><br>${stick.roles.join(', ')}<br><i>${secNames}</i>`;
+        info.innerHTML = `<b>${PROFILES[stick.profile].label} · ${stick.length.toFixed(1)}" · ${stick.axis.toUpperCase()}</b>${tags}<br>${stick.roles.join(', ')}<br><i>${secNames}</i>`;
       }
     } else { info.style.display = 'none'; }
   }
@@ -625,12 +635,6 @@
     });
   });
 
-  // ============================================================
-  // SEPARATED RENDER FUNCTIONS — key v13 fix:
-  //   renderScene() = redraw 3D only, NEVER touches editor DOM
-  //   sliders call renderScene() + renderCutList() only
-  //   renderEditor() is called ONLY when activeSection changes
-  // ============================================================
   function renderScene(){
     regenerateAllSticks();
     while (world.children.length) world.remove(world.children[0]);
@@ -644,135 +648,156 @@
       const n = allSticks.filter(k => k.sections.has(s.id)).length;
       const sh = allSticks.filter(k => k.sections.has(s.id) && k.sections.size > 1).length;
       const cls = (s.id === activeSection) ? 'active' : '';
+      const profileLabel = PROFILES[s.profile].label;
       return `<div class="sec-row ${cls}" data-id="${s.id}">
         <div class="swatch" style="background:#${s.color.toString(16).padStart(6,'0')}"></div>
         <span class="name">${s.label}</span>
-        <span class="meta">${s.profile} · ${n}${sh?` (${sh}↔)`:''}</span>
+        <span class="meta">${profileLabel} · ${n}${sh?` (${sh}↔)`:''}</span>
       </div>`;
     }).join('');
     el.querySelectorAll('.sec-row').forEach(r => r.addEventListener('click', () => {
       activeSection = (activeSection === r.dataset.id) ? null : r.dataset.id;
-      renderScene();          // redraw with highlighting
-      renderSectionList();    // update which row is active
-      renderEditor();         // rebuild editor for new section
+      renderScene();
+      renderSectionList();
     }));
   }
 
-  // Helper: bind a slider so it only updates scene + cutlist + the val span
-  // — does NOT call renderEditor() (which would destroy the slider)
-  function bindSlider(inputId, outId, suffix, onChange){
-    const input = document.getElementById(inputId);
-    const out = document.getElementById(outId);
-    if (!input) return;
-    const handler = () => {
-      const v = onChange(input.value);
-      if (out) out.textContent = (suffix === null ? v : v + suffix);
-      renderScene();
-      renderCutList();
-      renderSectionList();
-    };
-    input.addEventListener('input', handler);
-    input.addEventListener('change', handler);
-  }
-
-  function renderEditor(){
-    const el = document.getElementById('section-editor');
-    if (!activeSection){
-      el.innerHTML = '<div style="color: var(--text-tert); font-size:13px;">Tap a section to edit it.</div>';
-      return;
-    }
-    const sec = sections.find(s => s.id === activeSection);
-    if (!sec){ el.innerHTML = ''; return; }
-
-    if (sec.id === 'bed_rails'){
-      el.innerHTML = `<div style="font-weight:600; margin-bottom:4px;">${sec.label}</div>
-        <div style="font-size:12px; color:var(--text-sec); margin-bottom:8px;">Cross rails span between plumbing and electrical.</div>
-        <div class="editor-grid">
-          <label>Cross sticks</label>
-          <input type="range" id="ed-cc" min="2" max="10" step="1" value="${sec.crossCount}">
-          <span class="val" id="ed-cc-out">${sec.crossCount}</span>
-        </div>`;
-      bindSlider('ed-cc', 'ed-cc-out', '', v => { sec.crossCount = parseInt(v); return sec.crossCount; });
-      return;
-    }
-
-    if (sec.bays){
-      const bayLabels = ['Closet (rear)', 'Drawers (middle)', 'Fridge (front)'];
-      el.innerHTML = `<div style="font-weight:600; margin-bottom:4px;">${sec.label}</div>
-        <div style="font-size:12px; color:var(--text-sec); margin-bottom:8px;">Closet (rear) → drawers (middle) → fridge (front)</div>
-        <div class="editor-grid">
-          <label>Length</label>
-          <input type="range" id="ed-l" min="30" max="80" step="0.5" value="${sec.length}">
-          <span class="val" id="ed-l-out">${sec.length}"</span>
-          <label>Depth</label>
-          <input type="range" id="ed-d" min="10" max="30" step="0.5" value="${sec.depth}">
-          <span class="val" id="ed-d-out">${sec.depth}"</span>
-          <h4>Bay lengths</h4>
-          <label>${bayLabels[0]}</label>
-          <input type="range" id="ed-b0" min="6" max="40" step="0.5" value="${sec.bays[0].length}">
-          <span class="val" id="ed-b0-out">${sec.bays[0].length}"</span>
-          <label>${bayLabels[1]}</label>
-          <input type="range" id="ed-b1" min="6" max="40" step="0.5" value="${sec.bays[1].length}">
-          <span class="val" id="ed-b1-out">${sec.bays[1].length}"</span>
-          <label>${bayLabels[2]}</label>
-          <input type="range" id="ed-b2" min="10" max="40" step="0.5" value="${sec.bays[2].length}">
-          <span class="val" id="ed-b2-out">${sec.bays[2].length}"</span>
-          <label>Drawer runners</label>
-          <input type="range" id="ed-dr" min="2" max="8" step="1" value="${sec.bays[1].drawerRunners}">
-          <span class="val" id="ed-dr-out">${sec.bays[1].drawerRunners}</span>
-        </div>`;
-      bindSlider('ed-l', 'ed-l-out', '"', v => { sec.length = parseFloat(v); return sec.length; });
-      bindSlider('ed-d', 'ed-d-out', '"', v => { sec.depth = parseFloat(v); return sec.depth; });
-      bindSlider('ed-b0', 'ed-b0-out', '"', v => { sec.bays[0].length = parseFloat(v); return sec.bays[0].length; });
-      bindSlider('ed-b1', 'ed-b1-out', '"', v => { sec.bays[1].length = parseFloat(v); return sec.bays[1].length; });
-      bindSlider('ed-b2', 'ed-b2-out', '"', v => { sec.bays[2].length = parseFloat(v); return sec.bays[2].length; });
-      bindSlider('ed-dr', 'ed-dr-out', '', v => { sec.bays[1].drawerRunners = parseInt(v); return sec.bays[1].drawerRunners; });
-      return;
-    }
-
-    el.innerHTML = `<div style="font-weight:600; margin-bottom:4px;">${sec.label}</div>
-      <div style="font-size:12px; color:var(--text-sec); margin-bottom:8px;">${sec.floorMounted?'Floor-mounted: bottom Y-sticks only at corners.':'Ceiling-mounted: full bottom Y-sticks.'}</div>
-      <div class="editor-grid">
-        <label>Length</label>
-        <input type="range" id="ed-l" min="12" max="120" step="0.5" value="${sec.length}">
-        <span class="val" id="ed-l-out">${sec.length}"</span>
-        <label>Depth</label>
-        <input type="range" id="ed-d" min="8" max="30" step="0.5" value="${sec.depth}">
-        <span class="val" id="ed-d-out">${sec.depth}"</span>
-        <label>Height</label>
-        <input type="range" id="ed-h" min="8" max="50" step="0.5" value="${sec.height}">
-        <span class="val" id="ed-h-out">${sec.height}"</span>
-        <label>Doors</label>
-        <input type="range" id="ed-doors" min="1" max="8" step="1" value="${sec.doors||2}">
-        <span class="val" id="ed-doors-out">${sec.doors||2}</span>
-      </div>
-      ${sec.wheelWellAware?'<div style="font-size:12px; color:#1D9E75; margin-top:8px;">✓ Wheel well aware</div>':''}`;
-    bindSlider('ed-l', 'ed-l-out', '"', v => { sec.length = parseFloat(v); return sec.length; });
-    bindSlider('ed-d', 'ed-d-out', '"', v => { sec.depth = parseFloat(v); return sec.depth; });
-    bindSlider('ed-h', 'ed-h-out', '"', v => { sec.height = parseFloat(v); return sec.height; });
-    bindSlider('ed-doors', 'ed-doors-out', '', v => { sec.doors = parseInt(v); return sec.doors; });
-  }
-
-  function renderCutList(){
-    const out = document.getElementById('cutlist');
-    const t1515 = {}, t1010 = {};
+  function getShippablePieces(){
+    const pieces = [];
     allSticks.forEach(s => {
-      const key = `${s.length.toFixed(1)}" · ${s.axis.toUpperCase()}`;
-      if (s.profile === '1515') t1515[key] = (t1515[key]||0) + 1;
-      else t1010[key] = (t1010[key]||0) + 1;
+      if (s.spliced){
+        for (let i = 0; i < s.spliceCount; i++){
+          pieces.push({ profile: s.profile, length: s.spliceLength, spliced: true, originalLength: s.length, oversize: s.spliceLength > SOFT_CEILING, axis: s.axis });
+        }
+      } else {
+        pieces.push({ profile: s.profile, length: s.length, spliced: false, oversize: s.oversize, axis: s.axis });
+      }
     });
-    const total = allSticks.length;
-    const linfeet = Math.round(allSticks.reduce((a,s) => a + s.length, 0) / 12);
-    const shared = allSticks.filter(s => s.sections.size > 1).length;
-    const max1515 = Math.max(0, ...allSticks.filter(s => s.profile === '1515').map(s => s.length));
-    const max1010 = Math.max(0, ...allSticks.filter(s => s.profile === '1010').map(s => s.length));
-    const shipWarn = (max1515 > SHIPPING_LIMIT || max1010 > SHIPPING_LIMIT) ? `<div style="color: var(--danger); margin-top:4px;">⚠ longest exceeds ${SHIPPING_LIMIT}" shipping limit</div>` : '';
-    const fmt = (t, title) => {
-      const lines = Object.entries(t).sort((a,b) => parseFloat(b[0]) - parseFloat(a[0])).map(([k,v]) => String(v).padStart(2,' ') + '× ' + k);
-      return lines.length ? `<div class="group">— ${title} —</div>${lines.join('<br>')}` : '';
-    };
-    out.innerHTML = `<div class="header">${total} sticks · ${linfeet} ft · ${shared} shared · max 1515: ${max1515.toFixed(1)}", max 1010: ${max1010.toFixed(1)}"</div>${shipWarn}` + fmt(t1515, '1515') + fmt(t1010, '1010');
+    return pieces;
   }
+
+  function renderOrderList(){
+    const out = document.getElementById('orderlist');
+    const pieces = getShippablePieces();
+
+    if (currentTab === 'order'){
+      const groups = {};
+      pieces.forEach(p => {
+        const lenKey = (Math.round(p.length * 2) / 2).toFixed(1);
+        const key = `${p.profile}|${lenKey}|${p.spliced ? 's' + p.originalLength.toFixed(1) : ''}`;
+        if (!groups[key]) groups[key] = { profile: p.profile, length: parseFloat(lenKey), spliced: p.spliced, originalLength: p.originalLength, oversize: p.oversize, count: 0 };
+        groups[key].count += 1;
+      });
+      const sorted = Object.values(groups).sort((a, b) => {
+        const pOrder = ['1515', '1515-lite', '1010'];
+        if (a.profile !== b.profile) return pOrder.indexOf(a.profile) - pOrder.indexOf(b.profile);
+        return b.length - a.length;
+      });
+
+      const totalPieces = sorted.reduce((sum, g) => sum + g.count, 0);
+      const linfeet = (sorted.reduce((sum, g) => sum + g.count * g.length, 0) / 12).toFixed(1);
+      const splicedSticks = allSticks.filter(s => s.spliced).length;
+      const oversizePieces = pieces.filter(p => p.oversize).length;
+      const within47 = pieces.filter(p => p.length <= SOFT_CEILING).length;
+
+      let html = `<div class="header">${totalPieces} pieces · ${linfeet} ft · ${splicedSticks} spliced</div>`;
+      html += `<div class="header">${within47}/${totalPieces} fit ≤47" · ${oversizePieces} oversize (48"-94")</div>`;
+
+      const byProfile = {};
+      sorted.forEach(g => {
+        if (!byProfile[g.profile]) byProfile[g.profile] = [];
+        byProfile[g.profile].push(g);
+      });
+
+      ['1515', '1515-lite', '1010'].forEach(prof => {
+        const list = byProfile[prof];
+        if (!list || list.length === 0) return;
+        const total = list.reduce((sum, g) => sum + g.count, 0);
+        const ft = (list.reduce((sum, g) => sum + g.count * g.length, 0) / 12).toFixed(1);
+        const wt = (list.reduce((sum, g) => sum + g.count * g.length * PROFILES[prof].weightPerFt / 12, 0)).toFixed(1);
+        html += `<div class="group">${PROFILES[prof].label} — ${total} pieces · ${ft} ft · ~${wt} lb</div>`;
+        list.forEach(g => {
+          let tags = '';
+          if (g.spliced) tags += ` <span class="splice-tag">[splice from ${g.originalLength.toFixed(1)}"]</span>`;
+          if (g.oversize) tags += ` <span class="oversize-tag">⚠ oversize</span>`;
+          html += `${String(g.count).padStart(3, ' ')}× @ ${g.length.toFixed(1)}"${tags}\n`;
+        });
+      });
+      out.innerHTML = html;
+    } else {
+      const byProfile = {};
+      allSticks.forEach(s => {
+        if (!byProfile[s.profile]) byProfile[s.profile] = {};
+        const key = `${s.length.toFixed(1)}|${s.axis}`;
+        if (!byProfile[s.profile][key]) byProfile[s.profile][key] = { length: s.length, axis: s.axis, count: 0, spliced: s.spliced, oversize: s.oversize };
+        byProfile[s.profile][key].count += 1;
+      });
+
+      const totalSticks = allSticks.length;
+      let html = `<div class="header">${totalSticks} logical sticks (model view)</div>`;
+
+      ['1515', '1515-lite', '1010'].forEach(prof => {
+        if (!byProfile[prof]) return;
+        const list = Object.values(byProfile[prof]).sort((a, b) => b.length - a.length);
+        const total = list.reduce((sum, g) => sum + g.count, 0);
+        html += `<div class="group">${PROFILES[prof].label} — ${total} sticks</div>`;
+        list.forEach(g => {
+          let tags = '';
+          if (g.spliced) tags += ` <span class="splice-tag">⚡ splice to 2× ${(g.length/2).toFixed(1)}"</span>`;
+          else if (g.oversize) tags += ` <span class="oversize-tag">⚠ oversize</span>`;
+          html += `${String(g.count).padStart(3, ' ')}× ${g.length.toFixed(1)}" · ${g.axis.toUpperCase()}${tags}\n`;
+        });
+      });
+      out.innerHTML = html;
+    }
+  }
+
+  document.querySelectorAll('.tab').forEach(b => {
+    b.addEventListener('click', () => {
+      currentTab = b.dataset.tab;
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      renderOrderList();
+    });
+  });
+
+  document.getElementById('copy-order').addEventListener('click', () => {
+    const pieces = getShippablePieces();
+    const groups = {};
+    pieces.forEach(p => {
+      const lenKey = (Math.round(p.length * 2) / 2).toFixed(1);
+      const key = `${p.profile}|${lenKey}`;
+      if (!groups[key]) groups[key] = { profile: p.profile, length: parseFloat(lenKey), count: 0, spliced: p.spliced, originalLength: p.originalLength, oversize: p.oversize };
+      groups[key].count += 1;
+    });
+    const sorted = Object.values(groups).sort((a, b) => {
+      const pOrder = ['1515', '1515-lite', '1010'];
+      if (a.profile !== b.profile) return pOrder.indexOf(a.profile) - pOrder.indexOf(b.profile);
+      return b.length - a.length;
+    });
+
+    let text = `VanIQ Build - Cut List\n${'='.repeat(40)}\n\n`;
+    ['1515', '1515-lite', '1010'].forEach(prof => {
+      const list = sorted.filter(g => g.profile === prof);
+      if (list.length === 0) return;
+      text += `${PROFILES[prof].label}\n${'-'.repeat(20)}\n`;
+      list.forEach(g => {
+        const splice = g.spliced ? `  [from ${g.originalLength.toFixed(1)}" splice]` : '';
+        const over = g.oversize ? `  [OVERSIZE]` : '';
+        text += `  ${String(g.count).padStart(3, ' ')} x ${g.length.toFixed(2)}"${splice}${over}\n`;
+      });
+      text += `\n`;
+    });
+    text += `Shipping notes:\n  - All pieces <= 94" (hard ceiling)\n  - Pieces marked OVERSIZE are 48"-94" (UPS surcharge)\n  - Please cut at $0.50/cut\n`;
+
+    if (navigator.clipboard){
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copy-order');
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+      });
+    }
+  });
 
   ['shell','counter','floor','wheelwells'].forEach(k => {
     document.getElementById('show-' + k).addEventListener('change', e => {
@@ -782,6 +807,12 @@
   });
   document.getElementById('color-by-section').addEventListener('change', e => {
     view.colorBySection = e.target.checked;
+    if (e.target.checked) { view.colorByProfile = false; document.getElementById('color-by-profile').checked = false; }
+    renderScene();
+  });
+  document.getElementById('color-by-profile').addEventListener('change', e => {
+    view.colorByProfile = e.target.checked;
+    if (e.target.checked) { view.colorBySection = false; document.getElementById('color-by-section').checked = false; }
     renderScene();
   });
 
@@ -791,13 +822,9 @@
     camera.aspect = cw/ch; camera.updateProjectionMatrix();
   });
 
-  // ============================================================
-  // Initial render
-  // ============================================================
   renderScene();
   renderSectionList();
-  renderEditor();
-  renderCutList();
+  renderOrderList();
   document.querySelector('button[data-v="iso"]').classList.add('active');
   function loop(){ renderer.render(scene, camera); requestAnimationFrame(loop); }
   loop();
