@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>VanIQ Builder v13 — Transit 350 148" HR</title>
+<style>
+  :root {
+    --bg: #faf9f5;
+    --panel: #ffffff;
+    --panel-2: #f0eee8;
+    --border: #e2dfd6;
+    --text: #2c2c2c;
+    --text-sec: #6c6c6c;
+    --text-tert: #999;
+    --accent: #d97757;
+    --info-bg: #e0e9f5;
+    --danger: #c5392b;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+    background: var(--bg); color: var(--text);
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body { padding: 12px; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { font-size: 12px; color: var(--text-sec); margin-bottom: 12px; }
+
+  .view-buttons { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  button {
+    padding: 8px 14px; font-size: 14px; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); cursor: pointer; touch-action: manipulation;
+    -webkit-user-select: none; user-select: none;
+  }
+  button:active { background: var(--panel-2); }
+  button.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 12px;
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  #canvas-wrap {
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 10px; height: 60vh; min-height: 380px;
+    position: relative; overflow: hidden;
+    touch-action: none;
+  }
+  #c { display: block; width: 100%; height: 100%; }
+  .overlay {
+    position: absolute; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 12px; font-size: 11px;
+    color: var(--text-sec); line-height: 1.5;
+  }
+  #legend { bottom: 12px; left: 12px; }
+  #info { top: 12px; right: 12px; max-width: 260px; display: none; }
+  #info b { color: var(--text); }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px; margin-bottom: 10px;
+  }
+  .panel h3 { font-size: 12px; color: var(--text-sec); margin: 0 0 8px; font-weight: 600; }
+  .sec-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 6px; font-size: 13px; border-radius: 4px;
+    cursor: pointer; border-left: 3px solid transparent;
+    touch-action: manipulation;
+  }
+  .sec-row.active { background: var(--info-bg); border-left-color: var(--accent); }
+  .sec-row:hover { background: var(--panel-2); }
+  .swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .sec-row .name { flex: 1; }
+  .sec-row .meta { font-size: 10px; color: var(--text-tert); font-family: ui-monospace, monospace; }
+
+  #cutlist {
+    font-size: 11px; font-family: ui-monospace, monospace;
+    background: var(--panel-2); padding: 10px; border-radius: 8px;
+    max-height: 240px; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #cutlist .header { color: var(--text-sec); margin-bottom: 6px; }
+  #cutlist .group { color: var(--text-sec); font-weight: 600; margin-top: 6px; }
+
+  .editor-grid {
+    display: grid; grid-template-columns: 100px 1fr 56px;
+    gap: 10px 10px; align-items: center; margin-top: 10px;
+  }
+  .editor-grid label { font-size: 12px; color: var(--text-sec); }
+  .editor-grid span.val { font-size: 12px; text-align: right; font-family: ui-monospace, monospace; }
+  .editor-grid input[type=range] {
+    width: 100%;
+    touch-action: manipulation;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 30px;
+    background: transparent;
+  }
+  .editor-grid input[type=range]::-webkit-slider-runnable-track {
+    height: 4px; background: var(--border); border-radius: 2px;
+  }
+  .editor-grid input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--accent); cursor: pointer;
+    margin-top: -10px;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .editor-grid h4 { grid-column: span 3; margin: 10px 0 2px; font-size: 12px; font-weight: 600; color: var(--text-sec); }
+
+  .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 6px; touch-action: manipulation; }
+  .checkbox-row input { width: 20px; height: 20px; }
+</style>
+</head>
+<body>
+
+<h1>VanIQ Builder v13</h1>
+<div class="sub">Transit 350 148" wheelbase, high roof · From rear: driver=right, passenger=left</div>
+
+<div class="view-buttons">
+  <button data-v="iso">Iso</button>
+  <button data-v="top">Top</button>
+  <button data-v="rear">From rear</button>
+  <button data-v="front">From front</button>
+  <button data-v="drv">Driver side</button>
+  <button data-v="pass">Pass side</button>
+</div>
+
+<div class="layout">
+  <div>
+    <div id="canvas-wrap">
+      <canvas id="c"></canvas>
+      <div id="legend" class="overlay">
+        +X forward · +Y driver(right) · +Z up<br>
+        Drag to orbit · Pinch to zoom · Tap stick for info
+      </div>
+      <div id="info" class="overlay"></div>
+    </div>
+
+    <div class="panel" id="editor-panel">
+      <h3>Editor</h3>
+      <div id="section-editor" style="color: var(--text-tert); font-size: 13px;">Tap a section above to edit it.</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="panel">
+      <h3>Sections</h3>
+      <div id="sections"></div>
+    </div>
+    <div class="panel">
+      <h3>Display</h3>
+      <label class="checkbox-row"><input type="checkbox" id="show-shell" checked> Shell wireframe</label>
+      <label class="checkbox-row"><input type="checkbox" id="show-counter" checked> 37" counter plane</label>
+      <label class="checkbox-row"><input type="checkbox" id="show-wheelwells" checked> Wheel wells</label>
+      <label class="checkbox-row"><input type="checkbox" id="show-floor" checked> Floor + labels</label>
+      <label class="checkbox-row"><input type="checkbox" id="color-by-section" checked> Color by section</label>
+    </div>
+    <div class="panel">
+      <h3>Cut list</h3>
+      <div id="cutlist"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  // ============================================================
+  // v13: editor bug fix
+  //   Previous versions re-rendered the entire editor panel inside
+  //   rebuild(), which destroyed the slider element mid-drag and
+  //   killed touch events. v13 splits the work:
+  //     - renderScene()   : redraws 3D geometry (called from sliders)
+  //     - renderEditor()  : only called on activeSection change
+  //     - renderSectionList() and renderCutList(): called by rebuild()
+  //   Sliders now only call renderScene() + renderCutList(),
+  //   never renderEditor().
+  // ============================================================
+
+  const PROFILES = { '1515': { size: 1.5 }, '1010': { size: 1.0 } };
+  const INCH_TO_M = 0.0254;
+  const M = (i) => i * INCH_TO_M;
+  const SHELL = { L: 120, W: 78, H: 81, counterZ: 37 };
+  const WHEELWELL = { xStart: 18, length: 30, depth: 9, height: 17 };
+  const SHIPPING_LIMIT = 96;
+
+  const sections = [
+    { id: 'electrical', label: 'Electrical (rear, driver)', color: 0xD4537E, profile: '1515',
+      length: 65, depth: 15.5, height: 37, anchor: 'rear_driver', doors: 3, wheelWellAware: true, floorMounted: true },
+    { id: 'plumbing', label: 'Plumbing (rear, passenger)', color: 0x1D9E75, profile: '1515',
+      length: 65, depth: 15.5, height: 37, anchor: 'rear_passenger', doors: 3, wheelWellAware: true, floorMounted: true },
+    { id: 'bed_rails', label: 'Bed rails (garage)', color: 0xD85A30, profile: '1515', crossCount: 4 },
+    { id: 'galley', label: 'Galley (passenger, fwd)', color: 0x378ADD, profile: '1515',
+      length: 38, depth: 20, height: 37, anchor: 'forward_of_plumbing', doors: 2, floorMounted: true },
+    { id: 'workspace', label: 'Workspace (driver, fwd)', color: 0xB47CE0, profile: '1515',
+      length: 55, depth: 20, height: 37, anchor: 'forward_of_electrical', floorMounted: true,
+      bays: [
+        { type: 'doors',   length: 16, doors: 1 },
+        { type: 'drawers', length: 17, drawerRunners: 4 },
+        { type: 'fridge',  length: 22 }
+      ] },
+    { id: 'upper', label: 'Upper cabinet (driver) — 1010', color: 0xC9A227, profile: '1010',
+      length: 108, depth: 10, height: 10, anchor: 'ceiling_driver', doors: 6 }
+  ];
+
+  let activeSection = null;
+  const view = { shell: true, counter: true, floor: true, wheelwells: true, colorBySection: true };
+
+  const TOL = 0.1;
+  let allSticks = [];
+  let stickIdCounter = 1;
+
+  function addStick(profile, axis, length, x0, y0, z0, sectionId, role){
+    if (length <= 0) return null;
+    for (const s of allSticks){
+      if (s.profile !== profile) continue;
+      if (s.axis !== axis) continue;
+      if (Math.abs(s.length - length) > TOL) continue;
+      if (Math.abs(s.x0 - x0) > TOL) continue;
+      if (Math.abs(s.y0 - y0) > TOL) continue;
+      if (Math.abs(s.z0 - z0) > TOL) continue;
+      s.sections.add(sectionId);
+      if (!s.roles.includes(role)) s.roles.push(role);
+      return s;
+    }
+    const stick = { id: 'k' + (stickIdCounter++), profile, axis, length, x0, y0, z0, sections: new Set([sectionId]), roles: [role] };
+    allSticks.push(stick);
+    return stick;
+  }
+
+  function getWheelWellOverlap(sec){
+    if (!sec.wheelWellAware) return null;
+    const b = sec._bounds; if (!b) return null;
+    const wwX0 = WHEELWELL.xStart, wwX1 = WHEELWELL.xStart + WHEELWELL.length;
+    const ix0 = Math.max(b.x0, wwX0), ix1 = Math.min(b.x1, wwX1);
+    if (ix1 <= ix0) return null;
+    return { x0: ix0, x1: ix1 };
+  }
+
+  function genDoorCabinet(sec){
+    const EX = PROFILES[sec.profile].size;
+    const b = sec._bounds;
+    const { x0, x1, y0, y1, z0, z1 } = b;
+    const Lx = x1 - x0, Ly = y1 - y0, Lz = z1 - z0;
+    const isCeiling = sec.anchor === 'ceiling_driver' || sec.anchor === 'ceiling_passenger';
+    const backIsHighY = (sec.anchor === 'rear_driver' || sec.anchor === 'forward_of_electrical' || sec.anchor === 'ceiling_driver');
+    const backY  = backIsHighY ? (y1 - EX) : y0;
+    const frontY = backIsHighY ? y0 : (y1 - EX);
+    const ww = getWheelWellOverlap(sec);
+    const floorMounted = sec.floorMounted && !isCeiling;
+
+    const doors = sec.doors || 2;
+    const totalV = doors + 1;
+    const vXs = [];
+    if (totalV === 2){ vXs.push(x0, x1 - EX); }
+    else { for (let i = 0; i < totalV; i++){ vXs.push(x0 + i / (totalV - 1) * (Lx - EX)); } }
+
+    const legLen = Lz - 2*EX;
+    vXs.forEach((vx, idx) => {
+      const role = (idx === 0 || idx === vXs.length - 1) ? 'corner leg' : 'door divider';
+      addStick(sec.profile, 'z', legLen, vx, frontY, z0 + EX, sec.id, role + ' (front)');
+      addStick(sec.profile, 'z', legLen, vx, backY,  z0 + EX, sec.id, role + ' (back)');
+    });
+
+    const topZ = z1 - EX;
+    addStick(sec.profile, 'x', Lx, x0, frontY, topZ, sec.id, 'top front rail');
+    addStick(sec.profile, 'x', Lx, x0, backY,  topZ, sec.id, 'top back rail');
+    vXs.forEach((vx) => addStick(sec.profile, 'y', Ly - 2*EX, vx, y0 + EX, topZ, sec.id, 'top Y-rail'));
+
+    addStick(sec.profile, 'x', Lx, x0, frontY, z0, sec.id, 'bottom front rail');
+    if (ww){
+      const seg1Len = ww.x0 - x0, seg2Len = x1 - ww.x1;
+      if (seg1Len > EX) addStick(sec.profile, 'x', seg1Len, x0, backY, z0, sec.id, 'bottom back (rear of WW)');
+      if (seg2Len > EX) addStick(sec.profile, 'x', seg2Len, ww.x1, backY, z0, sec.id, 'bottom back (fwd of WW)');
+      const aboveZ = WHEELWELL.height + 1;
+      addStick(sec.profile, 'x', ww.x1 - ww.x0, ww.x0, backY, aboveZ, sec.id, 'above-WW back rail');
+    } else {
+      addStick(sec.profile, 'x', Lx, x0, backY, z0, sec.id, 'bottom back rail');
+    }
+    vXs.forEach((vx, idx) => {
+      const isCorner = (idx === 0 || idx === vXs.length - 1);
+      if (floorMounted && !isCorner) return;
+      addStick(sec.profile, 'y', Ly - 2*EX, vx, y0 + EX, z0, sec.id, isCorner ? 'bottom corner Y-rail' : 'bottom Y-rail');
+    });
+
+    if (!isCeiling && Lz > 20){
+      const mz = z0 + Lz/2 - EX/2;
+      addStick(sec.profile, 'x', Lx, x0, backY, mz, sec.id, 'mid back rail');
+      vXs.forEach((vx, idx) => {
+        if (idx === 0 || idx === vXs.length - 1) return;
+        addStick(sec.profile, 'y', Ly - 2*EX, vx, y0 + EX, mz, sec.id, 'mid cross');
+      });
+    }
+  }
+
+  function genWorkspaceBays(sec){
+    const EX = PROFILES[sec.profile].size;
+    const b = sec._bounds;
+    const { x0, x1, y0, y1, z0, z1 } = b;
+    const Lx = x1 - x0, Ly = y1 - y0, Lz = z1 - z0;
+    const backIsHighY = (sec.anchor === 'forward_of_electrical');
+    const backY  = backIsHighY ? (y1 - EX) : y0;
+    const frontY = backIsHighY ? y0 : (y1 - EX);
+    const legLen = Lz - 2*EX;
+    const topZ = z1 - EX;
+    const floorMounted = sec.floorMounted;
+
+    const bayEdgesX = [x0];
+    let cursorX = x0;
+    sec.bays.forEach(bay => { cursorX += bay.length; bayEdgesX.push(Math.min(cursorX, x1)); });
+    bayEdgesX[bayEdgesX.length - 1] = x1 - EX;
+
+    bayEdgesX.forEach((vx, idx) => {
+      const role = (idx === 0 || idx === bayEdgesX.length - 1) ? 'corner leg' : 'bay divider';
+      addStick(sec.profile, 'z', legLen, vx, frontY, z0 + EX, sec.id, role + ' (front)');
+      addStick(sec.profile, 'z', legLen, vx, backY,  z0 + EX, sec.id, role + ' (back)');
+    });
+
+    addStick(sec.profile, 'x', Lx, x0, frontY, topZ, sec.id, 'top front rail');
+    addStick(sec.profile, 'x', Lx, x0, backY,  topZ, sec.id, 'top back rail');
+    bayEdgesX.forEach(vx => addStick(sec.profile, 'y', Ly - 2*EX, vx, y0 + EX, topZ, sec.id, 'top Y-rail'));
+
+    addStick(sec.profile, 'x', Lx, x0, frontY, z0, sec.id, 'bottom front rail');
+    addStick(sec.profile, 'x', Lx, x0, backY,  z0, sec.id, 'bottom back rail');
+    bayEdgesX.forEach((vx, idx) => {
+      const isCorner = (idx === 0 || idx === bayEdgesX.length - 1);
+      if (floorMounted && !isCorner) return;
+      addStick(sec.profile, 'y', Ly - 2*EX, vx, y0 + EX, z0, sec.id, isCorner ? 'bottom corner Y-rail' : 'bottom Y-rail');
+    });
+
+    sec.bays.forEach((bay, idx) => {
+      const bayX0 = bayEdgesX[idx];
+      const bayX1 = bayEdgesX[idx + 1];
+      const bayLen = bayX1 - bayX0;
+      if (bay.type === 'drawers'){
+        const n = bay.drawerRunners || 3;
+        for (let i = 1; i <= n; i++){
+          const t = i / (n + 1);
+          const rz = z0 + t * Lz - EX/2;
+          addStick(sec.profile, 'x', bayLen, bayX0, frontY, rz, sec.id, `drawer runner ${i} (front)`);
+          addStick(sec.profile, 'x', bayLen, bayX0, backY,  rz, sec.id, `drawer runner ${i} (back)`);
+        }
+      } else if (bay.type === 'doors'){
+        const doors = bay.doors || 1;
+        const intDividers = doors - 1;
+        for (let i = 1; i <= intDividers; i++){
+          const t = i / (intDividers + 1);
+          const vx = bayX0 + t * bayLen - EX/2;
+          addStick(sec.profile, 'z', legLen, vx, frontY, z0 + EX, sec.id, 'door divider (front)');
+          addStick(sec.profile, 'z', legLen, vx, backY,  z0 + EX, sec.id, 'door divider (back)');
+        }
+        const mz = z0 + Lz/2 - EX/2;
+        addStick(sec.profile, 'x', bayLen, bayX0, backY, mz, sec.id, 'mid back (bay)');
+      }
+    });
+  }
+
+  function getBounds(sec){
+    if (sec.anchor === 'rear_driver') return { x0: 0, x1: sec.length, y0: SHELL.W/2 - sec.depth, y1: SHELL.W/2, z0: 0, z1: sec.height };
+    if (sec.anchor === 'rear_passenger') return { x0: 0, x1: sec.length, y0: -SHELL.W/2, y1: -SHELL.W/2 + sec.depth, z0: 0, z1: sec.height };
+    if (sec.anchor === 'forward_of_electrical'){
+      const e = sections.find(s => s.id === 'electrical'); const eb = getBounds(e);
+      return { x0: eb.x1, x1: eb.x1 + sec.length, y0: SHELL.W/2 - sec.depth, y1: SHELL.W/2, z0: 0, z1: sec.height };
+    }
+    if (sec.anchor === 'forward_of_plumbing'){
+      const p = sections.find(s => s.id === 'plumbing'); const pb = getBounds(p);
+      return { x0: pb.x1, x1: pb.x1 + sec.length, y0: -SHELL.W/2, y1: -SHELL.W/2 + sec.depth, z0: 0, z1: sec.height };
+    }
+    if (sec.anchor === 'ceiling_driver'){
+      const z1 = SHELL.H, z0 = z1 - sec.height;
+      return { x0: 0, x1: sec.length, y0: SHELL.W/2 - sec.depth, y1: SHELL.W/2, z0, z1 };
+    }
+    return null;
+  }
+
+  function generateBedRails(sec){
+    const p = sections.find(s => s.id === 'plumbing'), e = sections.find(s => s.id === 'electrical');
+    if (!p || !e) return;
+    const pb = getBounds(p), eb = getBounds(e);
+    const yStart = pb.y1, yEnd = eb.y0, span = yEnd - yStart;
+    const x0 = 0, x1 = Math.min(pb.x1, eb.x1), Lx = x1 - x0;
+    const EX = PROFILES[sec.profile].size;
+    const railZ = SHELL.counterZ - EX;
+    const n = sec.crossCount;
+    if (n === 1) addStick(sec.profile, 'y', span, x0, yStart, railZ, sec.id, 'bed cross rail');
+    else { for (let i = 0; i < n; i++){ const t = i/(n-1); const x = x0 + t*(Lx - EX); addStick(sec.profile, 'y', span, x, yStart, railZ, sec.id, 'bed cross rail'); } }
+  }
+
+  function regenerateAllSticks(){
+    allSticks = []; stickIdCounter = 1;
+    sections.forEach(sec => {
+      if (sec.id === 'bed_rails') return;
+      if (!sec.anchor) return;
+      sec._bounds = getBounds(sec);
+      if (!sec._bounds) return;
+      if (sec.bays) genWorkspaceBays(sec);
+      else genDoorCabinet(sec);
+    });
+    const bed = sections.find(s => s.id === 'bed_rails');
+    if (bed) generateBedRails(bed);
+  }
+
+  const canvas = document.getElementById('c');
+  const wrap = document.getElementById('canvas-wrap');
+  const scene = new THREE.Scene();
+  let cw = wrap.clientWidth, ch = wrap.clientHeight;
+  const camera = new THREE.PerspectiveCamera(45, cw/ch, 0.1, 50);
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(cw, ch, false);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.78));
+  const dir = new THREE.DirectionalLight(0xffffff, 0.55); dir.position.set(3, 5, 4); scene.add(dir);
+  const world = new THREE.Group(); scene.add(world);
+
+  const matCache = {};
+  function mat(color, opacity){
+    const key = color + '_' + (opacity || 1);
+    if (!matCache[key]) matCache[key] = new THREE.MeshLambertMaterial({ color, transparent: opacity < 1, opacity: opacity || 1 });
+    return matCache[key];
+  }
+  const matNeutral = new THREE.MeshLambertMaterial({ color: 0x9a9893 });
+
+  function buildSticksGroup(){
+    const group = new THREE.Group();
+    allSticks.forEach(s => {
+      const sz_ = PROFILES[s.profile].size;
+      let sx, sy, sz;
+      if (s.axis === 'x') { sx = s.length; sy = sz_; sz = sz_; }
+      else if (s.axis === 'y') { sx = sz_; sy = s.length; sz = sz_; }
+      else { sx = sz_; sy = sz_; sz = s.length; }
+      const geo = new THREE.BoxGeometry(M(sx), M(sy), M(sz));
+      let material = matNeutral;
+      if (view.colorBySection){
+        const primaryId = [...s.sections][0];
+        const sec = sections.find(x => x.id === primaryId);
+        if (sec) material = mat(sec.color);
+      }
+      if (activeSection){
+        if (s.sections.has(activeSection)) material = mat(sections.find(x => x.id === activeSection).color);
+        else material = mat(0x666666, 0.2);
+      }
+      const mesh = new THREE.Mesh(geo, material);
+      mesh.position.set(M(s.x0 + sx/2), M(s.y0 + sy/2), M(s.z0 + sz/2));
+      mesh.userData = { stickId: s.id };
+      group.add(mesh);
+    });
+    return group;
+  }
+
+  function makeLabel(text, color){
+    const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.fillRect(0,0,256,64);
+    ctx.fillStyle = color; ctx.font = 'bold 30px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(text, 128, 32);
+    const tex = new THREE.CanvasTexture(c);
+    const m = new THREE.SpriteMaterial({ map: tex, transparent: true });
+    const sp = new THREE.Sprite(m); sp.scale.set(0.75, 0.18, 1);
+    return sp;
+  }
+
+  function buildShellGroup(){
+    const group = new THREE.Group();
+    if (view.shell){
+      const geo = new THREE.BoxGeometry(M(SHELL.L), M(SHELL.W), M(SHELL.H));
+      const edges = new THREE.EdgesGeometry(geo);
+      const lines = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x888780, transparent: true, opacity: 0.5 }));
+      lines.position.set(M(SHELL.L/2), 0, M(SHELL.H/2)); group.add(lines);
+    }
+    if (view.floor){
+      const fg = new THREE.PlaneGeometry(M(SHELL.L), M(SHELL.W));
+      const fm = new THREE.MeshBasicMaterial({ color: 0xB4B2A9, transparent: true, opacity: 0.18, side: THREE.DoubleSide });
+      const f = new THREE.Mesh(fg, fm); f.position.set(M(SHELL.L/2), 0, 0.001); group.add(f);
+      const labDrv = makeLabel('DRIVER (right)', '#D4537E'); labDrv.position.set(M(SHELL.L/2), M(SHELL.W/2 - 4), 0.03); group.add(labDrv);
+      const labPass = makeLabel('PASSENGER (left)', '#1D9E75'); labPass.position.set(M(SHELL.L/2), M(-SHELL.W/2 + 4), 0.03); group.add(labPass);
+      const labRear = makeLabel('REAR', '#888780'); labRear.position.set(M(6), 0, 0.03); group.add(labRear);
+      const labFront = makeLabel('FRONT', '#888780'); labFront.position.set(M(SHELL.L - 6), 0, 0.03); group.add(labFront);
+    }
+    if (view.counter){
+      const cg = new THREE.PlaneGeometry(M(SHELL.L), M(SHELL.W));
+      const cm = new THREE.MeshBasicMaterial({ color: 0x378ADD, transparent: true, opacity: 0.05, side: THREE.DoubleSide });
+      const c = new THREE.Mesh(cg, cm); c.position.set(M(SHELL.L/2), 0, M(SHELL.counterZ)); group.add(c);
+    }
+    if (view.wheelwells){
+      [-1, 1].forEach(side => {
+        const y = side * (SHELL.W/2 - WHEELWELL.depth/2);
+        const geo = new THREE.BoxGeometry(M(WHEELWELL.length), M(WHEELWELL.depth), M(WHEELWELL.height));
+        const edges = new THREE.EdgesGeometry(geo);
+        const ww = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xD4537E, transparent: true, opacity: 0.8 }));
+        ww.position.set(M(WHEELWELL.xStart + WHEELWELL.length/2), M(y), M(WHEELWELL.height/2)); group.add(ww);
+        const fillGeo = new THREE.BoxGeometry(M(WHEELWELL.length), M(WHEELWELL.depth), M(WHEELWELL.height));
+        const fillMat = new THREE.MeshBasicMaterial({ color: 0xD4537E, transparent: true, opacity: 0.12 });
+        const wwFill = new THREE.Mesh(fillGeo, fillMat);
+        wwFill.position.set(M(WHEELWELL.xStart + WHEELWELL.length/2), M(y), M(WHEELWELL.height/2)); group.add(wwFill);
+      });
+    }
+    const len = 0.3;
+    group.add(new THREE.ArrowHelper(new THREE.Vector3(1,0,0), new THREE.Vector3(0,0,0), len, 0xD4537E, 0.06, 0.04));
+    group.add(new THREE.ArrowHelper(new THREE.Vector3(0,1,0), new THREE.Vector3(0,0,0), len, 0x1D9E75, 0.06, 0.04));
+    group.add(new THREE.ArrowHelper(new THREE.Vector3(0,0,1), new THREE.Vector3(0,0,0), len, 0x378ADD, 0.06, 0.04));
+    return group;
+  }
+
+  let camTheta = -Math.PI*0.6, camPhi = Math.PI*0.42, camRadius = 7;
+  const target = new THREE.Vector3(M(SHELL.L/2), 0, M(SHELL.H/3));
+  let camUpAxis = 'z';
+  function updateCamera(){
+    if (camUpAxis === 'x'){
+      camera.position.set(target.x, target.y, target.z + camRadius);
+      camera.up.set(1, 0, 0); camera.lookAt(target);
+    } else {
+      const x = camRadius * Math.sin(camPhi) * Math.cos(camTheta);
+      const y = camRadius * Math.sin(camPhi) * Math.sin(camTheta);
+      const z = camRadius * Math.cos(camPhi);
+      camera.position.set(target.x + x, target.y + y, target.z + z);
+      camera.up.set(0, 0, 1); camera.lookAt(target);
+    }
+  }
+  updateCamera();
+
+  // ============================================================
+  // Touch / pointer controls — canvas only
+  // ============================================================
+  const touches = {};
+  let lastDist = 0, lastMidX = 0, lastMidY = 0;
+  function touchDist(){
+    const ks = Object.keys(touches); if (ks.length < 2) return 0;
+    const a = touches[ks[0]], b = touches[ks[1]];
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  canvas.addEventListener('pointerdown', (e) => {
+    canvas.setPointerCapture(e.pointerId);
+    touches[e.pointerId] = { x: e.clientX, y: e.clientY };
+    if (Object.keys(touches).length === 2){ lastDist = touchDist(); }
+    lastMidX = e.clientX; lastMidY = e.clientY;
+  });
+  canvas.addEventListener('pointerup', (e) => {
+    const wasShortTap = !touches[e.pointerId+'_moved'];
+    delete touches[e.pointerId];
+    delete touches[e.pointerId+'_moved'];
+    if (Object.keys(touches).length === 0 && wasShortTap) tryHover(e);
+  });
+  canvas.addEventListener('pointercancel', (e) => {
+    delete touches[e.pointerId];
+    delete touches[e.pointerId+'_moved'];
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!(e.pointerId in touches)) { tryHover(e); return; }
+    touches[e.pointerId] = { x: e.clientX, y: e.clientY };
+    touches[e.pointerId+'_moved'] = true; // mark as drag, not tap
+    const ks = Object.keys(touches).filter(k => !k.includes('_moved'));
+    if (ks.length === 1 && camUpAxis === 'z'){
+      const dx = e.clientX - lastMidX, dy = e.clientY - lastMidY;
+      camTheta -= dx * 0.006;
+      camPhi   -= dy * 0.006;
+      camPhi = Math.max(0.12, Math.min(Math.PI - 0.12, camPhi));
+      lastMidX = e.clientX; lastMidY = e.clientY;
+      updateCamera();
+    } else if (ks.length === 2){
+      const d = touchDist();
+      if (lastDist > 0){
+        const ratio = lastDist / d;
+        camRadius *= ratio;
+        camRadius = Math.max(2.2, Math.min(14, camRadius));
+        updateCamera();
+      }
+      lastDist = d;
+    }
+  });
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    camRadius *= (1 + e.deltaY * 0.001);
+    camRadius = Math.max(2.2, Math.min(14, camRadius));
+    updateCamera();
+  }, { passive: false });
+
+  const raycaster = new THREE.Raycaster();
+  const mouseV = new THREE.Vector2();
+  function tryHover(e){
+    const rect = canvas.getBoundingClientRect();
+    mouseV.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    mouseV.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(mouseV, camera);
+    const meshes = [];
+    world.traverse(o => { if (o.isMesh && o.userData && o.userData.stickId) meshes.push(o); });
+    const hits = raycaster.intersectObjects(meshes, false);
+    const info = document.getElementById('info');
+    if (hits.length){
+      const id = hits[0].object.userData.stickId;
+      const stick = allSticks.find(s => s.id === id);
+      if (stick){
+        const secNames = [...stick.sections].map(sid => sections.find(s => s.id === sid)?.label || sid).join(', ');
+        info.style.display = 'block';
+        info.innerHTML = `<b>${stick.profile} · ${stick.length.toFixed(1)}" · ${stick.axis.toUpperCase()}</b><br>${stick.roles.join(', ')}<br><i>${secNames}</i>`;
+      }
+    } else { info.style.display = 'none'; }
+  }
+
+  document.querySelectorAll('button[data-v]').forEach(b => {
+    b.addEventListener('click', () => {
+      const v = b.dataset.v; camUpAxis = 'z';
+      if (v === 'iso')   { camTheta = -Math.PI*0.6; camPhi = Math.PI*0.42; camRadius = 7; }
+      if (v === 'top')   { camUpAxis = 'x'; camRadius = 4; }
+      if (v === 'rear')  { camTheta = Math.PI; camPhi = Math.PI/2; camRadius = 7; }
+      if (v === 'front') { camTheta = 0; camPhi = Math.PI/2; camRadius = 7; }
+      if (v === 'drv')   { camTheta = Math.PI/2; camPhi = Math.PI/2; camRadius = 7; }
+      if (v === 'pass')  { camTheta = -Math.PI/2; camPhi = Math.PI/2; camRadius = 7; }
+      updateCamera();
+      document.querySelectorAll('button[data-v]').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+    });
+  });
+
+  // ============================================================
+  // SEPARATED RENDER FUNCTIONS — key v13 fix:
+  //   renderScene() = redraw 3D only, NEVER touches editor DOM
+  //   sliders call renderScene() + renderCutList() only
+  //   renderEditor() is called ONLY when activeSection changes
+  // ============================================================
+  function renderScene(){
+    regenerateAllSticks();
+    while (world.children.length) world.remove(world.children[0]);
+    world.add(buildShellGroup());
+    world.add(buildSticksGroup());
+  }
+
+  function renderSectionList(){
+    const el = document.getElementById('sections');
+    el.innerHTML = sections.map(s => {
+      const n = allSticks.filter(k => k.sections.has(s.id)).length;
+      const sh = allSticks.filter(k => k.sections.has(s.id) && k.sections.size > 1).length;
+      const cls = (s.id === activeSection) ? 'active' : '';
+      return `<div class="sec-row ${cls}" data-id="${s.id}">
+        <div class="swatch" style="background:#${s.color.toString(16).padStart(6,'0')}"></div>
+        <span class="name">${s.label}</span>
+        <span class="meta">${s.profile} · ${n}${sh?` (${sh}↔)`:''}</span>
+      </div>`;
+    }).join('');
+    el.querySelectorAll('.sec-row').forEach(r => r.addEventListener('click', () => {
+      activeSection = (activeSection === r.dataset.id) ? null : r.dataset.id;
+      renderScene();          // redraw with highlighting
+      renderSectionList();    // update which row is active
+      renderEditor();         // rebuild editor for new section
+    }));
+  }
+
+  // Helper: bind a slider so it only updates scene + cutlist + the val span
+  // — does NOT call renderEditor() (which would destroy the slider)
+  function bindSlider(inputId, outId, suffix, onChange){
+    const input = document.getElementById(inputId);
+    const out = document.getElementById(outId);
+    if (!input) return;
+    const handler = () => {
+      const v = onChange(input.value);
+      if (out) out.textContent = (suffix === null ? v : v + suffix);
+      renderScene();
+      renderCutList();
+      renderSectionList();
+    };
+    input.addEventListener('input', handler);
+    input.addEventListener('change', handler);
+  }
+
+  function renderEditor(){
+    const el = document.getElementById('section-editor');
+    if (!activeSection){
+      el.innerHTML = '<div style="color: var(--text-tert); font-size:13px;">Tap a section to edit it.</div>';
+      return;
+    }
+    const sec = sections.find(s => s.id === activeSection);
+    if (!sec){ el.innerHTML = ''; return; }
+
+    if (sec.id === 'bed_rails'){
+      el.innerHTML = `<div style="font-weight:600; margin-bottom:4px;">${sec.label}</div>
+        <div style="font-size:12px; color:var(--text-sec); margin-bottom:8px;">Cross rails span between plumbing and electrical.</div>
+        <div class="editor-grid">
+          <label>Cross sticks</label>
+          <input type="range" id="ed-cc" min="2" max="10" step="1" value="${sec.crossCount}">
+          <span class="val" id="ed-cc-out">${sec.crossCount}</span>
+        </div>`;
+      bindSlider('ed-cc', 'ed-cc-out', '', v => { sec.crossCount = parseInt(v); return sec.crossCount; });
+      return;
+    }
+
+    if (sec.bays){
+      const bayLabels = ['Closet (rear)', 'Drawers (middle)', 'Fridge (front)'];
+      el.innerHTML = `<div style="font-weight:600; margin-bottom:4px;">${sec.label}</div>
+        <div style="font-size:12px; color:var(--text-sec); margin-bottom:8px;">Closet (rear) → drawers (middle) → fridge (front)</div>
+        <div class="editor-grid">
+          <label>Length</label>
+          <input type="range" id="ed-l" min="30" max="80" step="0.5" value="${sec.length}">
+          <span class="val" id="ed-l-out">${sec.length}"</span>
+          <label>Depth</label>
+          <input type="range" id="ed-d" min="10" max="30" step="0.5" value="${sec.depth}">
+          <span class="val" id="ed-d-out">${sec.depth}"</span>
+          <h4>Bay lengths</h4>
+          <label>${bayLabels[0]}</label>
+          <input type="range" id="ed-b0" min="6" max="40" step="0.5" value="${sec.bays[0].length}">
+          <span class="val" id="ed-b0-out">${sec.bays[0].length}"</span>
+          <label>${bayLabels[1]}</label>
+          <input type="range" id="ed-b1" min="6" max="40" step="0.5" value="${sec.bays[1].length}">
+          <span class="val" id="ed-b1-out">${sec.bays[1].length}"</span>
+          <label>${bayLabels[2]}</label>
+          <input type="range" id="ed-b2" min="10" max="40" step="0.5" value="${sec.bays[2].length}">
+          <span class="val" id="ed-b2-out">${sec.bays[2].length}"</span>
+          <label>Drawer runners</label>
+          <input type="range" id="ed-dr" min="2" max="8" step="1" value="${sec.bays[1].drawerRunners}">
+          <span class="val" id="ed-dr-out">${sec.bays[1].drawerRunners}</span>
+        </div>`;
+      bindSlider('ed-l', 'ed-l-out', '"', v => { sec.length = parseFloat(v); return sec.length; });
+      bindSlider('ed-d', 'ed-d-out', '"', v => { sec.depth = parseFloat(v); return sec.depth; });
+      bindSlider('ed-b0', 'ed-b0-out', '"', v => { sec.bays[0].length = parseFloat(v); return sec.bays[0].length; });
+      bindSlider('ed-b1', 'ed-b1-out', '"', v => { sec.bays[1].length = parseFloat(v); return sec.bays[1].length; });
+      bindSlider('ed-b2', 'ed-b2-out', '"', v => { sec.bays[2].length = parseFloat(v); return sec.bays[2].length; });
+      bindSlider('ed-dr', 'ed-dr-out', '', v => { sec.bays[1].drawerRunners = parseInt(v); return sec.bays[1].drawerRunners; });
+      return;
+    }
+
+    el.innerHTML = `<div style="font-weight:600; margin-bottom:4px;">${sec.label}</div>
+      <div style="font-size:12px; color:var(--text-sec); margin-bottom:8px;">${sec.floorMounted?'Floor-mounted: bottom Y-sticks only at corners.':'Ceiling-mounted: full bottom Y-sticks.'}</div>
+      <div class="editor-grid">
+        <label>Length</label>
+        <input type="range" id="ed-l" min="12" max="120" step="0.5" value="${sec.length}">
+        <span class="val" id="ed-l-out">${sec.length}"</span>
+        <label>Depth</label>
+        <input type="range" id="ed-d" min="8" max="30" step="0.5" value="${sec.depth}">
+        <span class="val" id="ed-d-out">${sec.depth}"</span>
+        <label>Height</label>
+        <input type="range" id="ed-h" min="8" max="50" step="0.5" value="${sec.height}">
+        <span class="val" id="ed-h-out">${sec.height}"</span>
+        <label>Doors</label>
+        <input type="range" id="ed-doors" min="1" max="8" step="1" value="${sec.doors||2}">
+        <span class="val" id="ed-doors-out">${sec.doors||2}</span>
+      </div>
+      ${sec.wheelWellAware?'<div style="font-size:12px; color:#1D9E75; margin-top:8px;">✓ Wheel well aware</div>':''}`;
+    bindSlider('ed-l', 'ed-l-out', '"', v => { sec.length = parseFloat(v); return sec.length; });
+    bindSlider('ed-d', 'ed-d-out', '"', v => { sec.depth = parseFloat(v); return sec.depth; });
+    bindSlider('ed-h', 'ed-h-out', '"', v => { sec.height = parseFloat(v); return sec.height; });
+    bindSlider('ed-doors', 'ed-doors-out', '', v => { sec.doors = parseInt(v); return sec.doors; });
+  }
+
+  function renderCutList(){
+    const out = document.getElementById('cutlist');
+    const t1515 = {}, t1010 = {};
+    allSticks.forEach(s => {
+      const key = `${s.length.toFixed(1)}" · ${s.axis.toUpperCase()}`;
+      if (s.profile === '1515') t1515[key] = (t1515[key]||0) + 1;
+      else t1010[key] = (t1010[key]||0) + 1;
+    });
+    const total = allSticks.length;
+    const linfeet = Math.round(allSticks.reduce((a,s) => a + s.length, 0) / 12);
+    const shared = allSticks.filter(s => s.sections.size > 1).length;
+    const max1515 = Math.max(0, ...allSticks.filter(s => s.profile === '1515').map(s => s.length));
+    const max1010 = Math.max(0, ...allSticks.filter(s => s.profile === '1010').map(s => s.length));
+    const shipWarn = (max1515 > SHIPPING_LIMIT || max1010 > SHIPPING_LIMIT) ? `<div style="color: var(--danger); margin-top:4px;">⚠ longest exceeds ${SHIPPING_LIMIT}" shipping limit</div>` : '';
+    const fmt = (t, title) => {
+      const lines = Object.entries(t).sort((a,b) => parseFloat(b[0]) - parseFloat(a[0])).map(([k,v]) => String(v).padStart(2,' ') + '× ' + k);
+      return lines.length ? `<div class="group">— ${title} —</div>${lines.join('<br>')}` : '';
+    };
+    out.innerHTML = `<div class="header">${total} sticks · ${linfeet} ft · ${shared} shared · max 1515: ${max1515.toFixed(1)}", max 1010: ${max1010.toFixed(1)}"</div>${shipWarn}` + fmt(t1515, '1515') + fmt(t1010, '1010');
+  }
+
+  ['shell','counter','floor','wheelwells'].forEach(k => {
+    document.getElementById('show-' + k).addEventListener('change', e => {
+      view[k] = e.target.checked;
+      renderScene();
+    });
+  });
+  document.getElementById('color-by-section').addEventListener('change', e => {
+    view.colorBySection = e.target.checked;
+    renderScene();
+  });
+
+  window.addEventListener('resize', () => {
+    cw = wrap.clientWidth; ch = wrap.clientHeight;
+    renderer.setSize(cw, ch, false);
+    camera.aspect = cw/ch; camera.updateProjectionMatrix();
+  });
+
+  // ============================================================
+  // Initial render
+  // ============================================================
+  renderScene();
+  renderSectionList();
+  renderEditor();
+  renderCutList();
+  document.querySelector('button[data-v="iso"]').classList.add('active');
+  function loop(){ renderer.render(scene, camera); requestAnimationFrame(loop); }
+  loop();
+})();
+</script>
+
+</body>
+</html>
