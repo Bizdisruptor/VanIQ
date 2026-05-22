@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>VanIQ Builder v17</title>
+<title>VanIQ Builder v19</title>
 <style>
   :root {
     --bg: #faf9f5; --panel: #ffffff; --panel-2: #f0eee8;
@@ -84,12 +84,100 @@
   .tab-row { display: flex; gap: 0; margin-bottom: 8px; border-bottom: 1px solid var(--border); }
   .tab-row button { border-radius: 0; border: none; border-bottom: 2px solid transparent; padding: 6px 10px; font-size: 12px; background: transparent; }
   .tab-row button.active { background: transparent; color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* 2D floor plan dimension overlay (only shown in top view) */
+  #plan-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    display: none;
+  }
+  #plan-overlay.active { display: block; }
+  #plan-overlay svg { width: 100%; height: 100%; }
+  #plan-overlay .dim-line { stroke: var(--accent); stroke-width: 1; fill: none; }
+  #plan-overlay .dim-text {
+    fill: var(--text); font-family: ui-monospace, monospace;
+    font-size: 11px; font-weight: 600;
+    paint-order: stroke; stroke: rgba(255,255,255,0.92); stroke-width: 3;
+  }
+  #plan-overlay .dim-text.small { font-size: 9px; }
+  #plan-overlay .sec-label {
+    fill: var(--text); font-family: -apple-system, sans-serif;
+    font-size: 12px; font-weight: 600;
+    paint-order: stroke; stroke: rgba(255,255,255,0.92); stroke-width: 3;
+  }
+
+  /* Full-replace floor plan view (separate from 3D top view) */
+  #floor-plan-view {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: white;
+    display: none;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #floor-plan-view.active { display: block; }
+  #floor-plan-view svg {
+    width: 100%; height: 100%;
+    display: block;
+  }
+  #floor-plan-view .fp-bg { fill: #fafafa; }
+  #floor-plan-view .fp-van { fill: none; stroke: #444; stroke-width: 2; }
+  #floor-plan-view .fp-cabinet { fill-opacity: 0.18; stroke-width: 1.5; }
+  #floor-plan-view .fp-ww { fill: #D4537E; fill-opacity: 0.22; stroke: #D4537E; stroke-width: 1; }
+  #floor-plan-view .fp-bed { fill: #D85A30; fill-opacity: 0.08; stroke: #D85A30; stroke-width: 1; stroke-dasharray: 5 3; }
+  #floor-plan-view .fp-dim-line { stroke: #d97757; stroke-width: 1; fill: none; }
+  #floor-plan-view .fp-dim-tick { stroke: #d97757; stroke-width: 1; }
+  #floor-plan-view .fp-dim-text {
+    fill: #d97757; font-family: ui-monospace, monospace; font-size: 11px; font-weight: 600;
+    paint-order: stroke; stroke: white; stroke-width: 3;
+  }
+  #floor-plan-view .fp-scale-line { stroke: #666; stroke-width: 1; }
+  #floor-plan-view .fp-scale-tick { stroke: #666; stroke-width: 1; }
+  #floor-plan-view .fp-scale-text {
+    fill: #333; font-family: ui-monospace, monospace; font-size: 10px;
+  }
+  #floor-plan-view .fp-scale-label {
+    fill: #333; font-family: ui-monospace, monospace; font-size: 11px; font-weight: 600;
+  }
+  #floor-plan-view .fp-centerline {
+    stroke: #888; stroke-width: 1; stroke-dasharray: 4 4;
+  }
+  #floor-plan-view .fp-cabinet-label {
+    fill: #2c2c2c; font-family: -apple-system, sans-serif;
+    font-size: 13px; font-weight: 600; text-anchor: middle;
+    paint-order: stroke; stroke: white; stroke-width: 3;
+  }
+  #floor-plan-view .fp-cabinet-dim {
+    fill: #555; font-family: ui-monospace, monospace; font-size: 10px;
+    text-anchor: middle;
+    paint-order: stroke; stroke: white; stroke-width: 3;
+  }
+  #floor-plan-view .fp-aisle-text {
+    fill: #1D9E75; font-family: ui-monospace, monospace; font-size: 12px;
+    text-anchor: middle; font-weight: 600;
+    paint-order: stroke; stroke: white; stroke-width: 3;
+  }
+  #floor-plan-view .fp-title {
+    fill: #2c2c2c; font-family: -apple-system, sans-serif;
+    font-size: 14px; font-weight: 700;
+  }
+  #floor-plan-view .fp-subtitle {
+    fill: #6c6c6c; font-family: -apple-system, sans-serif;
+    font-size: 11px;
+  }
+    font-size: 11px; font-family: ui-monospace, monospace;
+    background: var(--panel-2); padding: 10px; border-radius: 8px;
+    max-height: 400px; overflow-y: auto;
+    -webkit-overflow-scrolling: touch; line-height: 1.6;
+    white-space: pre;
+  }
+  .spec-sheet .heading { color: var(--text); font-weight: 600; margin-top: 6px; }
+  .spec-sheet .sub-heading { color: var(--text-sec); font-weight: 600; }
 </style>
 </head>
 <body>
 
-<h1>VanIQ Builder v17</h1>
-<div class="sub">Shared edges at section interfaces · Continuous back rails · Drawer rails fixed</div>
+<h1>VanIQ Builder v19</h1>
+<div class="sub">Floor plan tab · Shared edges · Drawer rails on dividers · Spec sheet</div>
 
 <div class="view-buttons">
   <button data-v="iso">Iso</button>
@@ -98,12 +186,15 @@
   <button data-v="front">From front</button>
   <button data-v="drv">Driver side</button>
   <button data-v="pass">Pass side</button>
+  <button data-v="floorplan">Floor plan</button>
 </div>
 
 <div class="layout">
   <div>
     <div id="canvas-wrap">
       <canvas id="c"></canvas>
+      <div id="plan-overlay"></div>
+      <div id="floor-plan-view"></div>
       <div id="legend" class="overlay">
         +X forward · +Y driver(right) · +Z up<br>
         Drag to orbit · Pinch to zoom · Tap stick for info
@@ -125,6 +216,10 @@
       <label class="checkbox-row"><input type="checkbox" id="show-floor" checked> Floor + labels</label>
       <label class="checkbox-row"><input type="checkbox" id="color-by-section" checked> Color by section</label>
       <label class="checkbox-row"><input type="checkbox" id="color-by-profile"> Color by profile</label>
+    </div>
+    <div class="panel">
+      <h3><span>Spec sheet</span><button class="copy-btn" id="copy-spec">Copy</button></h3>
+      <div id="spec-sheet" class="spec-sheet"></div>
     </div>
     <div class="panel">
       <h3><span>Order list</span><button class="copy-btn" id="copy-order">Copy</button></h3>
@@ -665,7 +760,26 @@
 
   document.querySelectorAll('button[data-v]').forEach(b => {
     b.addEventListener('click', () => {
-      const v = b.dataset.v; camUpAxis = 'z';
+      const v = b.dataset.v;
+      const fpView = document.getElementById('floor-plan-view');
+      const canvas3D = document.getElementById('c');
+
+      if (v === 'floorplan'){
+        // Show 2D floor plan, hide 3D canvas
+        fpView.classList.add('active');
+        canvas3D.style.display = 'none';
+        document.getElementById('plan-overlay').classList.remove('active');
+        renderFloorPlan();
+        document.querySelectorAll('button[data-v]').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        return;
+      }
+
+      // Any other view: hide floor plan, show 3D canvas
+      fpView.classList.remove('active');
+      canvas3D.style.display = 'block';
+
+      camUpAxis = 'z';
       if (v === 'iso')   { camTheta = -Math.PI*0.6; camPhi = Math.PI*0.42; camRadius = 7; }
       if (v === 'top')   { camUpAxis = 'x'; camRadius = 4; }
       if (v === 'rear')  { camTheta = Math.PI; camPhi = Math.PI/2; camRadius = 7; }
@@ -673,16 +787,469 @@
       if (v === 'drv')   { camTheta = Math.PI/2; camPhi = Math.PI/2; camRadius = 7; }
       if (v === 'pass')  { camTheta = -Math.PI/2; camPhi = Math.PI/2; camRadius = 7; }
       updateCamera();
+      renderPlanOverlay();
       document.querySelectorAll('button[data-v]').forEach(x => x.classList.remove('active'));
       b.classList.add('active');
     });
   });
+
+  // FLOOR PLAN VIEW — full-replace 2D drawing for physical measurement reference
+  // Three coordinate references on one drawing:
+  //   A. Wall-relative dimension lines (orange arrows from each wall to cabinet edges)
+  //   B. X-axis scale across top: 0 (rear) → 120 (front)
+  //   C. Y-axis scale on side: centerline = 0, +39 to driver wall, -39 to passenger wall
+  function renderFloorPlan(){
+    const el = document.getElementById('floor-plan-view');
+
+    // SVG drawing coordinate system: 1 inch = 5 pixels
+    const SCALE = 5;
+    const VAN_W_PX = SHELL.W * SCALE;  // 78 * 5 = 390
+    const VAN_L_PX = SHELL.L * SCALE;  // 120 * 5 = 600
+
+    // Margins for scale rulers and dimension lines
+    const MARGIN_TOP = 80;     // X-axis scale + title
+    const MARGIN_LEFT = 90;    // Y-axis scale + dimension labels
+    const MARGIN_RIGHT = 100;  // dimension labels for driver side
+    const MARGIN_BOTTOM = 70;  // wall-relative dimensions below
+
+    // Total SVG dimensions
+    const SVG_W = VAN_W_PX + MARGIN_LEFT + MARGIN_RIGHT;
+    const SVG_H = VAN_L_PX + MARGIN_TOP + MARGIN_BOTTOM;
+
+    // Orientation on the drawing:
+    //   - REAR of van at TOP (Y=0 in SVG space, X=0 in van space)
+    //   - FRONT of van at BOTTOM (Y=VAN_L_PX, X=120 in van space)
+    //   - PASSENGER (-Y in van = left in real life) at LEFT of drawing
+    //   - DRIVER (+Y in van = right) at RIGHT of drawing
+    //
+    // Helper: convert van (x_inches, y_inches) → svg (px, px)
+    // van x=0 (rear) → svg y=MARGIN_TOP
+    // van x=120 (front) → svg y=MARGIN_TOP + VAN_L_PX
+    // van y=-39 (passenger wall) → svg x=MARGIN_LEFT
+    // van y=+39 (driver wall) → svg x=MARGIN_LEFT + VAN_W_PX
+    const VAN_X0_PX = MARGIN_LEFT;        // passenger wall on screen
+    const VAN_X1_PX = MARGIN_LEFT + VAN_W_PX;  // driver wall on screen
+    const VAN_Y0_PX = MARGIN_TOP;         // rear wall on screen
+    const VAN_Y1_PX = MARGIN_TOP + VAN_L_PX;   // front wall on screen
+
+    function vx(yInches){ return MARGIN_LEFT + (yInches + SHELL.W/2) * SCALE; }
+    function vy(xInches){ return MARGIN_TOP + xInches * SCALE; }
+
+    let svg = `<svg viewBox="0 0 ${SVG_W} ${SVG_H}" xmlns="http://www.w3.org/2000/svg">`;
+
+    // Background
+    svg += `<rect x="0" y="0" width="${SVG_W}" height="${SVG_H}" class="fp-bg"/>`;
+
+    // Title
+    svg += `<text x="${MARGIN_LEFT}" y="20" class="fp-title">Floor Plan — Transit 350 148" HR</text>`;
+    svg += `<text x="${MARGIN_LEFT}" y="36" class="fp-subtitle">Scale: 1" = ${SCALE}px · For physical verification in van</text>`;
+
+    // ===== X-AXIS SCALE (across top) — van length 0 (rear) to 120 (front) =====
+    // Position: just above the van rectangle. Tick at every 12" (1 ft).
+    const xScaleY = VAN_Y0_PX - 12;
+    svg += `<line x1="${VAN_X0_PX - 6}" y1="${xScaleY}" x2="${VAN_X1_PX + 6}" y2="${xScaleY}" class="fp-scale-line"/>`;
+    // The X-axis "rear → front" runs vertically on the drawing (top to bottom),
+    // so this top scale shows van-Y (width). We need ANOTHER scale on the left edge for van-X.
+    // Actually let me re-think. The user wants:
+    //   Scale running front (0) to back (120) — this is the van length axis (van X).
+    //   Centerline = 0, driver=+, passenger=- — this is the van width axis (van Y).
+    // On a top-down drawing where rear=top of page and front=bottom of page:
+    //   Van X (length) axis runs VERTICALLY (top to bottom of page)
+    //   Van Y (width) axis runs HORIZONTALLY (left to right of page)
+    // So the length scale (0-120) should be on the LEFT or RIGHT EDGE running vertically.
+    // And the width scale (-39 to +39 with 0 = centerline) on TOP or BOTTOM running horizontally.
+
+    // Top-edge horizontal scale: van Y (width), centerline = 0
+    // Tick at -39, -30, -20, -10, 0, +10, +20, +30, +39
+    const widthTicks = [-39, -30, -20, -10, 0, 10, 20, 30, 39];
+    widthTicks.forEach(t => {
+      const tx = vx(t);
+      svg += `<line x1="${tx}" y1="${xScaleY - 4}" x2="${tx}" y2="${xScaleY + 4}" class="fp-scale-tick"/>`;
+      const label = (t === 0) ? '0 (CL)' : (t > 0 ? '+' + t : t);
+      svg += `<text x="${tx}" y="${xScaleY - 8}" class="fp-scale-text" text-anchor="middle">${label}</text>`;
+    });
+    svg += `<text x="${(VAN_X0_PX + VAN_X1_PX) / 2}" y="${xScaleY - 26}" class="fp-scale-label" text-anchor="middle">← Passenger ←  Width (Y, centerline = 0)  → Driver →</text>`;
+
+    // Left-edge vertical scale: van X (length), 0 (rear) to 120 (front)
+    const yScaleX = VAN_X0_PX - 24;
+    svg += `<line x1="${yScaleX}" y1="${VAN_Y0_PX - 6}" x2="${yScaleX}" y2="${VAN_Y1_PX + 6}" class="fp-scale-line"/>`;
+    const lengthTicks = [0, 12, 18, 24, 36, 48, 60, 65, 72, 84, 96, 103, 108, 120];
+    lengthTicks.forEach(t => {
+      const ty = vy(t);
+      svg += `<line x1="${yScaleX - 4}" y1="${ty}" x2="${yScaleX + 4}" y2="${ty}" class="fp-scale-tick"/>`;
+      svg += `<text x="${yScaleX - 8}" y="${ty + 3}" class="fp-scale-text" text-anchor="end">${t}"</text>`;
+    });
+    svg += `<text x="${yScaleX - 60}" y="${(VAN_Y0_PX + VAN_Y1_PX) / 2}" class="fp-scale-label" text-anchor="middle" transform="rotate(-90 ${yScaleX - 60} ${(VAN_Y0_PX + VAN_Y1_PX) / 2})">↑ Rear (0)  Length (X)  Front (120) ↓</text>`;
+
+    // ===== VAN OUTLINE =====
+    svg += `<rect x="${VAN_X0_PX}" y="${VAN_Y0_PX}" width="${VAN_W_PX}" height="${VAN_L_PX}" class="fp-van"/>`;
+
+    // Centerline (van Y=0, vertical dashed line down the middle of the van)
+    const clX = vx(0);
+    svg += `<line x1="${clX}" y1="${VAN_Y0_PX}" x2="${clX}" y2="${VAN_Y1_PX}" class="fp-centerline"/>`;
+
+    // Wall labels
+    svg += `<text x="${VAN_X0_PX - 4}" y="${VAN_Y0_PX - 2}" class="fp-subtitle" text-anchor="end">PASSENGER WALL</text>`;
+    svg += `<text x="${VAN_X1_PX + 4}" y="${VAN_Y0_PX - 2}" class="fp-subtitle">DRIVER WALL</text>`;
+    svg += `<text x="${VAN_X0_PX + VAN_W_PX/2}" y="${VAN_Y0_PX - 50}" class="fp-subtitle" text-anchor="middle" style="font-size:13px;font-weight:600;">REAR (rear doors)</text>`;
+    svg += `<text x="${VAN_X0_PX + VAN_W_PX/2}" y="${VAN_Y1_PX + 18}" class="fp-subtitle" text-anchor="middle" style="font-size:13px;font-weight:600;">FRONT (behind cab)</text>`;
+
+    // ===== CABINET FOOTPRINTS =====
+    sections.forEach(s => {
+      if (!s.anchor) return;
+      const b = getBounds(s);
+      if (!b) return;
+      const colorHex = '#' + s.color.toString(16).padStart(6, '0');
+      const px = vx(b.y0);
+      const py = vy(b.x0);
+      const pw = (b.y1 - b.y0) * SCALE;
+      const ph = (b.x1 - b.x0) * SCALE;
+      svg += `<rect x="${px}" y="${py}" width="${pw}" height="${ph}" fill="${colorHex}" class="fp-cabinet" stroke="${colorHex}"/>`;
+
+      // Section name + footprint dimensions in the center of the cabinet
+      const cx = px + pw / 2;
+      const cy = py + ph / 2;
+      const name = s.label.split('(')[0].trim();
+      svg += `<text x="${cx}" y="${cy - 4}" class="fp-cabinet-label">${name}</text>`;
+      svg += `<text x="${cx}" y="${cy + 12}" class="fp-cabinet-dim">${b.x1 - b.x0}" × ${(b.y1 - b.y0).toFixed(1)}"</text>`;
+    });
+
+    // ===== BED RAILS / GARAGE AREA =====
+    const plumbing = getBounds(sections.find(s => s.id === 'plumbing'));
+    const electrical = getBounds(sections.find(s => s.id === 'electrical'));
+    if (plumbing && electrical){
+      const garageX = vx(plumbing.y1);
+      const garageY = vy(0);
+      const garageW = (electrical.y0 - plumbing.y1) * SCALE;
+      const garageH = Math.min(plumbing.x1, electrical.x1) * SCALE;
+      svg += `<rect x="${garageX}" y="${garageY}" width="${garageW}" height="${garageH}" class="fp-bed"/>`;
+      svg += `<text x="${garageX + garageW/2}" y="${garageY + garageH/2 - 4}" class="fp-cabinet-label" style="fill:#a04a20;">Garage / Bed</text>`;
+      svg += `<text x="${garageX + garageW/2}" y="${garageY + garageH/2 + 12}" class="fp-cabinet-dim">${Math.min(plumbing.x1, electrical.x1)}" × ${(electrical.y0 - plumbing.y1).toFixed(1)}"</text>`;
+    }
+
+    // ===== WHEEL WELLS =====
+    [-1, 1].forEach(side => {
+      const yLow = (side < 0) ? -SHELL.W/2 : SHELL.W/2 - WHEELWELL.depth;
+      const yHigh = yLow + WHEELWELL.depth;
+      const wwX = vx(yLow);
+      const wwY = vy(WHEELWELL.xStart);
+      const wwW = WHEELWELL.depth * SCALE;
+      const wwH = WHEELWELL.length * SCALE;
+      svg += `<rect x="${wwX}" y="${wwY}" width="${wwW}" height="${wwH}" class="fp-ww"/>`;
+      svg += `<text x="${wwX + wwW/2}" y="${wwY + wwH/2 + 3}" class="fp-cabinet-dim" style="fill:#a02050;">WW</text>`;
+    });
+
+    // ===== AISLE WIDTH LABELS (between cabinets) =====
+    // Rear aisle (x=0 to x=65): cabinets are 15.5" each side, aisle = 47"
+    const rearAisleX = vx(0);
+    const rearAisleY = vy(32.5);
+    svg += `<text x="${rearAisleX}" y="${rearAisleY}" class="fp-aisle-text">AISLE: 47"</text>`;
+    // Forward aisle (x=65 to x=120): cabinets are 20" each side, aisle = 38"
+    const fwdAisleX = vx(0);
+    const fwdAisleY = vy(84);
+    svg += `<text x="${fwdAisleX}" y="${fwdAisleY}" class="fp-aisle-text">AISLE: 38"</text>`;
+
+    // ===== WALL-RELATIVE DIMENSION LINES =====
+    // Pattern: line from wall to cabinet edge, with a tick at each end and the measurement in the middle.
+
+    // Dimension line helper: orange arrow with measurement label
+    // For horizontal dimensions (Y axis - across the van width)
+    function dimH(yPx, x1Px, x2Px, label, labelOffset){
+      const offset = labelOffset || 0;
+      svg += `<line x1="${x1Px}" y1="${yPx}" x2="${x2Px}" y2="${yPx}" class="fp-dim-line"/>`;
+      svg += `<line x1="${x1Px}" y1="${yPx - 4}" x2="${x1Px}" y2="${yPx + 4}" class="fp-dim-tick"/>`;
+      svg += `<line x1="${x2Px}" y1="${yPx - 4}" x2="${x2Px}" y2="${yPx + 4}" class="fp-dim-tick"/>`;
+      svg += `<text x="${(x1Px + x2Px) / 2}" y="${yPx - 4 + offset}" class="fp-dim-text" text-anchor="middle">${label}</text>`;
+    }
+    // For vertical dimensions (X axis - along the van length)
+    function dimV(xPx, y1Px, y2Px, label){
+      svg += `<line x1="${xPx}" y1="${y1Px}" x2="${xPx}" y2="${y2Px}" class="fp-dim-line"/>`;
+      svg += `<line x1="${xPx - 4}" y1="${y1Px}" x2="${xPx + 4}" y2="${y1Px}" class="fp-dim-tick"/>`;
+      svg += `<line x1="${xPx - 4}" y1="${y2Px}" x2="${xPx + 4}" y2="${y2Px}" class="fp-dim-tick"/>`;
+      svg += `<text x="${xPx + 6}" y="${(y1Px + y2Px) / 2 + 4}" class="fp-dim-text">${label}</text>`;
+    }
+
+    // Below the van: passenger-wall-to-edge and edge-to-driver-wall dimensions
+    // At rear cabinets (x=32.5, middle of plumbing/electrical depth zone)
+    const dimY_rear = VAN_Y1_PX + 28;  // below the van
+    // For the FORWARD section (where the cabinets are deeper at 20"):
+    const galley = getBounds(sections.find(s => s.id === 'galley'));
+    const workspace = getBounds(sections.find(s => s.id === 'workspace'));
+    if (plumbing && electrical){
+      // Wall-relative dimensions at the REAR cabinet zone (use middle of cabinet depth zone)
+      // Show as a horizontal dimension band below the rear half
+      const yRearBand = vy(35);  // middle of rear cabinet zone, x ≈ 32.5"
+      // From passenger wall to plumbing inner edge
+      dimH(yRearBand, vx(-39), vx(plumbing.y1), '15.5"', 0);
+      // Aisle width
+      dimH(yRearBand, vx(plumbing.y1), vx(electrical.y0), '47"', 0);
+      // From electrical inner edge to driver wall
+      dimH(yRearBand, vx(electrical.y0), vx(39), '15.5"', 0);
+    }
+    if (galley && workspace){
+      const yFwdBand = vy(85);  // middle of forward cabinet zone, x ≈ 84"
+      dimH(yFwdBand, vx(-39), vx(galley.y1), '20"', 0);
+      dimH(yFwdBand, vx(galley.y1), vx(workspace.y0), '38"', 0);
+      dimH(yFwdBand, vx(workspace.y0), vx(39), '20"', 0);
+    }
+
+    // Vertical dimensions (along van length)
+    // On the right side of the drawing, just outside van: showing key X distances from REAR wall
+    const dimX_right = VAN_X1_PX + 20;
+    // Rear wall to rear cabinet front edge (=65)
+    dimV(dimX_right, vy(0), vy(65), '65" (rear cabinets)');
+    // Rear cabinet front to van front (=55)
+    dimV(dimX_right + 50, vy(65), vy(120), '55" (forward zone)');
+    // Wheel well: rear to WW start
+    dimV(dimX_right, vy(0), vy(18), '18" to WW');
+    // WW start to WW end
+    dimV(dimX_right, vy(18), vy(48), '30" WW');
+
+    svg += `</svg>`;
+    el.innerHTML = svg;
+  }
 
   function renderScene(){
     regenerateAllSticks();
     while (world.children.length) world.remove(world.children[0]);
     world.add(buildShellGroup());
     world.add(buildSticksGroup());
+  }
+
+  // 2D floor plan dimension overlay — shown only in Top view
+  // Coordinate mapping: canvas X = van X (length, 0..120)
+  //                     canvas Y = van Y inverted (driver +Y at right, passenger -Y at left)
+  // But in top view the camera is looking DOWN from above, so:
+  //   canvas X axis ~ van Y (width)
+  //   canvas Y axis ~ van X (length)  - and we need to know orientation
+  // To keep things simple we generate an SVG that uses van coordinates directly and
+  // applies a transform to match the canvas pixel positions of the 3D rendered plan.
+  function renderPlanOverlay(){
+    const ov = document.getElementById('plan-overlay');
+    if (camUpAxis !== 'x'){ ov.classList.remove('active'); ov.innerHTML = ''; return; }
+    ov.classList.add('active');
+
+    // We render directly in pixel space using the same projection as the camera (top-down).
+    // For top view, camera.up = (1,0,0) means van's +X (length) points UP on screen.
+    // Looking down +Z, with up = +X: screen-right = -Y (passenger), screen-left = +Y? Actually:
+    //   camera up vector +X, looking -Z. Right-hand rule: screen-right = up × forward = +X × -Z = +Y (driver right).
+    //   So driver (+Y) appears on screen RIGHT, passenger (-Y) on screen LEFT.
+    //   Van length (+X = front) appears on screen UP.
+    // We'll project a few known points using the camera to get pixel coords, then build the SVG.
+
+    const W = cw, H = ch;
+    function project(vx, vy, vz){
+      const v = new THREE.Vector3(M(vx), M(vy), M(vz));
+      v.project(camera);
+      // v.x, v.y in NDC (-1..1). Y is up.
+      return {
+        x: (v.x + 1) / 2 * W,
+        y: (1 - v.y) / 2 * H
+      };
+    }
+
+    // Compute pixel positions of the four van corners (z=0 floor plane)
+    const corners = {
+      rearPass:  project(0, -SHELL.W/2, 0),
+      rearDrv:   project(0, SHELL.W/2, 0),
+      frontPass: project(SHELL.L, -SHELL.W/2, 0),
+      frontDrv:  project(SHELL.L, SHELL.W/2, 0)
+    };
+
+    // Section footprint rectangles
+    const sectionFootprints = [];
+    sections.forEach(s => {
+      if (!s.anchor) return;
+      const b = getBounds(s);
+      if (!b) return;
+      const c1 = project(b.x0, b.y0, 0);
+      const c2 = project(b.x1, b.y1, 0);
+      sectionFootprints.push({
+        section: s, b: b,
+        x: Math.min(c1.x, c2.x),
+        y: Math.min(c1.y, c2.y),
+        w: Math.abs(c2.x - c1.x),
+        h: Math.abs(c2.y - c1.y)
+      });
+    });
+
+    // Wheel well rectangles
+    const wwPass = {
+      c1: project(WHEELWELL.xStart, -SHELL.W/2, 0),
+      c2: project(WHEELWELL.xStart + WHEELWELL.length, -SHELL.W/2 + WHEELWELL.depth, 0)
+    };
+    const wwDrv = {
+      c1: project(WHEELWELL.xStart, SHELL.W/2 - WHEELWELL.depth, 0),
+      c2: project(WHEELWELL.xStart + WHEELWELL.length, SHELL.W/2, 0)
+    };
+
+    // Bed rails footprint
+    const bedRailFootprint = (() => {
+      const p = sections.find(s => s.id === 'plumbing');
+      const e = sections.find(s => s.id === 'electrical');
+      if (!p || !e) return null;
+      const pb = getBounds(p), eb = getBounds(e);
+      const c1 = project(0, pb.y1, 0);
+      const c2 = project(Math.min(pb.x1, eb.x1), eb.y0, 0);
+      return {
+        x: Math.min(c1.x, c2.x),
+        y: Math.min(c1.y, c2.y),
+        w: Math.abs(c2.x - c1.x),
+        h: Math.abs(c2.y - c1.y)
+      };
+    })();
+
+    // Build SVG
+    let svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">`;
+
+    // Section footprint outlines and labels
+    sectionFootprints.forEach(fp => {
+      const colorHex = '#' + fp.section.color.toString(16).padStart(6, '0');
+      svg += `<rect x="${fp.x}" y="${fp.y}" width="${fp.w}" height="${fp.h}" fill="${colorHex}" fill-opacity="0.12" stroke="${colorHex}" stroke-width="1.5"/>`;
+      // Label centered in footprint
+      const cx = fp.x + fp.w / 2;
+      const cy = fp.y + fp.h / 2;
+      const dimLabel = `${fp.b.x1 - fp.b.x0}" × ${(fp.b.y1 - fp.b.y0).toFixed(1)}"`;
+      svg += `<text x="${cx}" y="${cy - 6}" class="sec-label" text-anchor="middle">${fp.section.label.split('(')[0].trim()}</text>`;
+      svg += `<text x="${cx}" y="${cy + 10}" class="dim-text small" text-anchor="middle">${dimLabel}</text>`;
+    });
+
+    // Bed rails footprint
+    if (bedRailFootprint){
+      const cx = bedRailFootprint.x + bedRailFootprint.w / 2;
+      const cy = bedRailFootprint.y + bedRailFootprint.h / 2;
+      svg += `<rect x="${bedRailFootprint.x}" y="${bedRailFootprint.y}" width="${bedRailFootprint.w}" height="${bedRailFootprint.h}" fill="#D85A30" fill-opacity="0.08" stroke="#D85A30" stroke-width="1" stroke-dasharray="4 3"/>`;
+      svg += `<text x="${cx}" y="${cy - 4}" class="sec-label" text-anchor="middle">Garage / Bed</text>`;
+      svg += `<text x="${cx}" y="${cy + 12}" class="dim-text small" text-anchor="middle">65" × 47"</text>`;
+    }
+
+    // Wheel well outlines (red)
+    [wwPass, wwDrv].forEach(ww => {
+      const x = Math.min(ww.c1.x, ww.c2.x);
+      const y = Math.min(ww.c1.y, ww.c2.y);
+      const w = Math.abs(ww.c2.x - ww.c1.x);
+      const h = Math.abs(ww.c2.y - ww.c1.y);
+      svg += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#D4537E" fill-opacity="0.18" stroke="#D4537E" stroke-width="1"/>`;
+      svg += `<text x="${x + w/2}" y="${y + h/2 + 4}" class="dim-text small" text-anchor="middle">WW 30×9</text>`;
+    });
+
+    // Van shell outline
+    svg += `<rect x="${Math.min(corners.rearPass.x, corners.frontDrv.x)}" y="${Math.min(corners.rearPass.y, corners.frontDrv.y)}" width="${Math.abs(corners.frontDrv.x - corners.rearPass.x)}" height="${Math.abs(corners.frontDrv.y - corners.rearPass.y)}" fill="none" stroke="#888780" stroke-width="2"/>`;
+
+    // Overall dimensions (outside the van outline)
+    const sx = Math.min(corners.rearPass.x, corners.rearDrv.x);
+    const sy = Math.min(corners.rearPass.y, corners.frontPass.y);
+    const vw = Math.abs(corners.rearDrv.x - corners.rearPass.x);
+    const vh = Math.abs(corners.frontPass.y - corners.rearPass.y);
+
+    // Width label (top of plan)
+    svg += `<text x="${sx + vw/2}" y="${sy - 8}" class="dim-text" text-anchor="middle">Width: 78"</text>`;
+    // Length label (left of plan)
+    svg += `<text x="${sx - 8}" y="${sy + vh/2}" class="dim-text" text-anchor="end" transform="rotate(-90 ${sx - 8} ${sy + vh/2})">Length: 120"</text>`;
+
+    // Aisle width annotations at key X positions
+    // Rear cabinet area aisle = 78 - 15.5*2 = 47"
+    // Forward cabinet area aisle = 78 - 20*2 = 38"
+    const rearAisleY = project(32.5, 0, 0);
+    const fwdAisleY = project(84, 0, 0);
+    svg += `<text x="${rearAisleY.x}" y="${rearAisleY.y}" class="dim-text" text-anchor="middle">Aisle: 47"</text>`;
+    svg += `<text x="${fwdAisleY.x}" y="${fwdAisleY.y}" class="dim-text" text-anchor="middle">Aisle: 38"</text>`;
+
+    // X-coordinate ticks: 0, 18, 48, 65, 103, 120
+    const ticks = [0, 18, 48, 65, 103, 120];
+    ticks.forEach(x => {
+      const p = project(x, -SHELL.W/2, 0);
+      const pTop = project(x, SHELL.W/2, 0);
+      svg += `<line x1="${p.x}" y1="${p.y}" x2="${p.x}" y2="${p.y + 8}" class="dim-line"/>`;
+      svg += `<text x="${p.x}" y="${p.y + 22}" class="dim-text small" text-anchor="middle">x=${x}"</text>`;
+    });
+
+    svg += `</svg>`;
+    ov.innerHTML = svg;
+  }
+
+  function renderSpecSheet(){
+    const el = document.getElementById('spec-sheet');
+    let lines = [];
+    lines.push(`VAN SHELL (Transit 350 148" HR)`);
+    lines.push(`================================`);
+    lines.push(`Interior length:    ${SHELL.L}"`);
+    lines.push(`Interior width:     ${SHELL.W}"`);
+    lines.push(`Interior height:    ${SHELL.H}"`);
+    lines.push(`Counter plane (z):  ${SHELL.counterZ}"`);
+    lines.push(``);
+    lines.push(`WHEEL WELLS (both sides)`);
+    lines.push(`------------------------`);
+    lines.push(`X start:  ${WHEELWELL.xStart}"`);
+    lines.push(`X end:    ${WHEELWELL.xStart + WHEELWELL.length}"`);
+    lines.push(`Length:   ${WHEELWELL.length}"`);
+    lines.push(`Depth:    ${WHEELWELL.depth}"`);
+    lines.push(`Height:   ${WHEELWELL.height}"`);
+    lines.push(``);
+    lines.push(`SECTION FOOTPRINTS`);
+    lines.push(`==================`);
+
+    sections.forEach(s => {
+      if (s.id === 'bed_rails') return;
+      if (!s.anchor) return;
+      const b = getBounds(s);
+      if (!b) return;
+      const side = (b.y0 < 0) ? 'passenger' : 'driver';
+      const yLow = b.y0.toFixed(1);
+      const yHigh = b.y1.toFixed(1);
+      lines.push(``);
+      lines.push(`${s.label}`);
+      lines.push(`  X:       ${b.x0}" to ${b.x1}"  (length ${b.x1 - b.x0}")`);
+      lines.push(`  Y:       ${yLow}" to ${yHigh}"  (depth ${(b.y1 - b.y0).toFixed(1)}")`);
+      lines.push(`  Z:       ${b.z0}" to ${b.z1}"  (height ${b.z1 - b.z0}")`);
+      lines.push(`  Side:    ${side} wall`);
+      lines.push(`  Profile: ${PROFILES[s.profile].label}`);
+      if (s.doors) lines.push(`  Doors:   ${s.doors}`);
+      if (s.bays){
+        lines.push(`  Bays:    ${s.bays.length}`);
+        let cursorX = b.x0;
+        s.bays.forEach((bay, i) => {
+          const x0 = cursorX;
+          const x1 = cursorX + bay.length;
+          lines.push(`    ${i+1}. ${bay.type} (${bay.length}") at x=${x0}–${x1}`);
+          if (bay.type === 'drawers') lines.push(`       ${bay.drawerCount} drawers, ${bay.drawerCount * 2} Y-axis slide rails`);
+          if (bay.type === 'doors')   lines.push(`       ${bay.doors} door(s)`);
+          cursorX = x1;
+        });
+      }
+    });
+
+    // Bed rails
+    const bed = sections.find(s => s.id === 'bed_rails');
+    if (bed){
+      const p = getBounds(sections.find(s => s.id === 'plumbing'));
+      const e = getBounds(sections.find(s => s.id === 'electrical'));
+      const span = e.y0 - p.y1;
+      lines.push(``);
+      lines.push(`${bed.label}`);
+      lines.push(`  X positions: 0, ~21.7, ~43.3, 65 (4 cross rails)`);
+      lines.push(`  Y span:      ${p.y1.toFixed(1)}" to ${e.y0.toFixed(1)}"  (width ${span.toFixed(1)}")`);
+      lines.push(`  Z (bed):     ${SHELL.counterZ - 1.5}" (top of rail at ${SHELL.counterZ}")`);
+      lines.push(`  Z (step):    ${STEP_Z}"  at x=65"`);
+      lines.push(`  Profile:     ${PROFILES[bed.profile].label}`);
+    }
+
+    lines.push(``);
+    lines.push(`AISLE WIDTHS`);
+    lines.push(`============`);
+    lines.push(`Rear (x=0 to 65):     78 - 15.5 - 15.5 = 47"`);
+    lines.push(`Forward (x=65 to 120): 78 - 20 - 20 = 38"`);
+    lines.push(``);
+    lines.push(`SHIPPING LIMITS`);
+    lines.push(`===============`);
+    lines.push(`Hard ceiling (auto-splice):   ${HARD_CEILING}"`);
+    lines.push(`Soft ceiling (UPS surcharge): ${SOFT_CEILING}"`);
+
+    el.innerHTML = lines.map(l => {
+      if (l.match(/^={3,}/)) return `<div class="sub-heading">${l}</div>`;
+      if (l.match(/^[A-Z][A-Z ]+$/) || l.match(/^[A-Z].*\(.*\)$/)) return `<div class="heading">${l}</div>`;
+      return l;
+    }).join('\n');
   }
 
   function renderSectionList(){
@@ -829,6 +1396,17 @@
     }
   });
 
+  document.getElementById('copy-spec').addEventListener('click', () => {
+    const text = document.getElementById('spec-sheet').innerText;
+    if (navigator.clipboard){
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copy-spec');
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+      });
+    }
+  });
+
   ['shell','counter','floor','wheelwells'].forEach(k => {
     document.getElementById('show-' + k).addEventListener('change', e => {
       view[k] = e.target.checked; renderScene();
@@ -849,11 +1427,13 @@
     cw = wrap.clientWidth; ch = wrap.clientHeight;
     renderer.setSize(cw, ch, false);
     camera.aspect = cw/ch; camera.updateProjectionMatrix();
+    renderPlanOverlay();
   });
 
   renderScene();
   renderSectionList();
   renderOrderList();
+  renderSpecSheet();
   document.querySelector('button[data-v="iso"]').classList.add('active');
   function loop(){ renderer.render(scene, camera); requestAnimationFrame(loop); }
   loop();
