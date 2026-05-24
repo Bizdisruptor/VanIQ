@@ -5,13 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>VanIQ Builder v19</title>
+<title>VanIQ Builder v24.0</title>
 <style>
   :root {
     --bg: #faf9f5; --panel: #ffffff; --panel-2: #f0eee8;
     --border: #e2dfd6; --text: #2c2c2c; --text-sec: #6c6c6c;
     --text-tert: #999; --accent: #d97757; --info-bg: #e0e9f5;
     --danger: #c5392b; --splice: #c08020; --oversize: #9c6d2c;
+    --fit-ok: #1D9E75; --fit-warn: #c08020; --fit-bad: #c5392b;
+    --equip-bg: #e8e0d0;
   }
   * { box-sizing: border-box; }
   html, body {
@@ -63,6 +65,7 @@
   .sec-row:hover { background: var(--panel-2); }
   .swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
   .sec-row .name { flex: 1; }
+  .sec-row .code { font-family: ui-monospace, monospace; font-weight: 600; color: var(--text); margin-right: 6px; min-width: 32px; }
   .sec-row .meta { font-size: 10px; color: var(--text-tert); font-family: ui-monospace, monospace; }
   .list-output {
     font-size: 11px; font-family: ui-monospace, monospace;
@@ -74,6 +77,14 @@
   .list-output .group { color: var(--text-sec); font-weight: 600; margin-top: 8px; border-bottom: 1px dashed var(--border); padding-bottom: 2px; }
   .list-output .splice-tag { color: var(--splice); font-weight: 600; }
   .list-output .oversize-tag { color: var(--oversize); font-weight: 600; }
+  .spec-sheet {
+    font-size: 11px; font-family: ui-monospace, monospace;
+    background: var(--panel-2); padding: 10px; border-radius: 8px;
+    max-height: 400px; overflow-y: auto;
+    -webkit-overflow-scrolling: touch; line-height: 1.6; white-space: pre;
+  }
+  .spec-sheet .heading { color: var(--text); font-weight: 600; margin-top: 6px; }
+  .spec-sheet .sub-heading { color: var(--text-sec); font-weight: 600; }
   .ship-note {
     background: var(--info-bg); border-radius: 6px; padding: 8px;
     font-size: 11px; color: var(--text-sec); line-height: 1.5; margin-top: 8px;
@@ -84,46 +95,30 @@
   .tab-row { display: flex; gap: 0; margin-bottom: 8px; border-bottom: 1px solid var(--border); }
   .tab-row button { border-radius: 0; border: none; border-bottom: 2px solid transparent; padding: 6px 10px; font-size: 12px; background: transparent; }
   .tab-row button.active { background: transparent; color: var(--accent); border-bottom-color: var(--accent); }
+  .naming-key {
+    font-size: 10px; font-family: ui-monospace, monospace;
+    background: var(--panel-2); padding: 6px 8px; border-radius: 4px;
+    line-height: 1.5; color: var(--text-sec);
+  }
+  .naming-key b { color: var(--text); }
 
-  /* 2D floor plan dimension overlay (only shown in top view) */
-  #plan-overlay {
-    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    pointer-events: none;
-    display: none;
-  }
-  #plan-overlay.active { display: block; }
-  #plan-overlay svg { width: 100%; height: 100%; }
-  #plan-overlay .dim-line { stroke: var(--accent); stroke-width: 1; fill: none; }
-  #plan-overlay .dim-text {
-    fill: var(--text); font-family: ui-monospace, monospace;
-    font-size: 11px; font-weight: 600;
-    paint-order: stroke; stroke: rgba(255,255,255,0.92); stroke-width: 3;
-  }
-  #plan-overlay .dim-text.small { font-size: 9px; }
-  #plan-overlay .sec-label {
-    fill: var(--text); font-family: -apple-system, sans-serif;
-    font-size: 12px; font-weight: 600;
-    paint-order: stroke; stroke: rgba(255,255,255,0.92); stroke-width: 3;
-  }
-
-  /* Full-replace floor plan view (separate from 3D top view) */
   #floor-plan-view {
     position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    background: white;
-    display: none;
-    overflow: auto;
+    background: white; display: none; overflow: auto;
     -webkit-overflow-scrolling: touch;
   }
   #floor-plan-view.active { display: block; }
-  #floor-plan-view svg {
-    width: 100%; height: 100%;
-    display: block;
-  }
+  #floor-plan-view svg { width: 100%; height: 100%; display: block; }
   #floor-plan-view .fp-bg { fill: #fafafa; }
   #floor-plan-view .fp-van { fill: none; stroke: #444; stroke-width: 2; }
   #floor-plan-view .fp-cabinet { fill-opacity: 0.18; stroke-width: 1.5; }
   #floor-plan-view .fp-ww { fill: #D4537E; fill-opacity: 0.22; stroke: #D4537E; stroke-width: 1; }
-  #floor-plan-view .fp-bed { fill: #D85A30; fill-opacity: 0.08; stroke: #D85A30; stroke-width: 1; stroke-dasharray: 5 3; }
+  #floor-plan-view .fp-bed { fill: #2F8FB3; fill-opacity: 0.08; stroke: #2F8FB3; stroke-width: 1; stroke-dasharray: 5 3; }
+  #floor-plan-view .fp-door { fill: #FFD580; fill-opacity: 0.3; stroke: #c08020; stroke-width: 1; stroke-dasharray: 3 2; }
+  #floor-plan-view .fp-heater { fill: #6c6c6c; fill-opacity: 0.5; stroke: #6c6c6c; stroke-width: 1; }
+  #floor-plan-view .fp-equip { fill: #6c6c6c; fill-opacity: 0.35; stroke: #6c6c6c; stroke-width: 1; }
+  #floor-plan-view .fp-equip-bad { fill: #c5392b; fill-opacity: 0.5; stroke: #c5392b; stroke-width: 1.5; }
+  #floor-plan-view .fp-equip-warn { fill: #c08020; fill-opacity: 0.45; stroke: #c08020; stroke-width: 1.5; }
   #floor-plan-view .fp-dim-line { stroke: #d97757; stroke-width: 1; fill: none; }
   #floor-plan-view .fp-dim-tick { stroke: #d97757; stroke-width: 1; }
   #floor-plan-view .fp-dim-text {
@@ -132,18 +127,17 @@
   }
   #floor-plan-view .fp-scale-line { stroke: #666; stroke-width: 1; }
   #floor-plan-view .fp-scale-tick { stroke: #666; stroke-width: 1; }
-  #floor-plan-view .fp-scale-text {
-    fill: #333; font-family: ui-monospace, monospace; font-size: 10px;
-  }
-  #floor-plan-view .fp-scale-label {
-    fill: #333; font-family: ui-monospace, monospace; font-size: 11px; font-weight: 600;
-  }
-  #floor-plan-view .fp-centerline {
-    stroke: #888; stroke-width: 1; stroke-dasharray: 4 4;
-  }
+  #floor-plan-view .fp-scale-text { fill: #333; font-family: ui-monospace, monospace; font-size: 10px; }
+  #floor-plan-view .fp-scale-label { fill: #333; font-family: ui-monospace, monospace; font-size: 11px; font-weight: 600; }
+  #floor-plan-view .fp-centerline { stroke: #888; stroke-width: 1; stroke-dasharray: 4 4; }
   #floor-plan-view .fp-cabinet-label {
     fill: #2c2c2c; font-family: -apple-system, sans-serif;
     font-size: 13px; font-weight: 600; text-anchor: middle;
+    paint-order: stroke; stroke: white; stroke-width: 3;
+  }
+  #floor-plan-view .fp-cabinet-code {
+    fill: #2c2c2c; font-family: ui-monospace, monospace;
+    font-size: 11px; font-weight: 700; text-anchor: middle;
     paint-order: stroke; stroke: white; stroke-width: 3;
   }
   #floor-plan-view .fp-cabinet-dim {
@@ -156,28 +150,97 @@
     text-anchor: middle; font-weight: 600;
     paint-order: stroke; stroke: white; stroke-width: 3;
   }
-  #floor-plan-view .fp-title {
-    fill: #2c2c2c; font-family: -apple-system, sans-serif;
-    font-size: 14px; font-weight: 700;
+  #floor-plan-view .fp-title { fill: #2c2c2c; font-family: -apple-system, sans-serif; font-size: 14px; font-weight: 700; }
+  #floor-plan-view .fp-subtitle { fill: #6c6c6c; font-family: -apple-system, sans-serif; font-size: 11px; }
+
+  /* ===== v24.0 additions ===== */
+  .section-picker {
+    position: relative; display: inline-block;
   }
-  #floor-plan-view .fp-subtitle {
-    fill: #6c6c6c; font-family: -apple-system, sans-serif;
-    font-size: 11px;
+  .section-picker-btn {
+    padding: 8px 14px; font-size: 14px; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); cursor: pointer;
   }
-    font-size: 11px; font-family: ui-monospace, monospace;
-    background: var(--panel-2); padding: 10px; border-radius: 8px;
-    max-height: 400px; overflow-y: auto;
-    -webkit-overflow-scrolling: touch; line-height: 1.6;
-    white-space: pre;
+  .section-picker-btn.active {
+    background: var(--accent); color: white; border-color: var(--accent);
   }
-  .spec-sheet .heading { color: var(--text); font-weight: 600; margin-top: 6px; }
-  .spec-sheet .sub-heading { color: var(--text-sec); font-weight: 600; }
+  .section-picker-menu {
+    position: absolute; top: 100%; left: 0; margin-top: 4px;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px; z-index: 100; min-width: 220px;
+    display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+  .section-picker-menu.open { display: block; }
+  .section-picker-menu .sec-opt {
+    padding: 8px 10px; font-size: 13px; cursor: pointer;
+    border-radius: 4px; display: flex; align-items: center; gap: 8px;
+  }
+  .section-picker-menu .sec-opt:hover { background: var(--panel-2); }
+  .section-picker-menu .sec-opt .swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .section-picker-menu .sec-opt .code { font-family: ui-monospace, monospace; font-weight: 600; min-width: 36px; }
+
+  /* Inventory tab */
+  #inventory-panel { max-height: 460px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .inv-row {
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px; margin-bottom: 6px; background: var(--panel);
+    font-size: 12px;
+  }
+  .inv-row.fit-ok { border-left: 3px solid var(--fit-ok); }
+  .inv-row.fit-warn { border-left: 3px solid var(--fit-warn); }
+  .inv-row.fit-bad { border-left: 3px solid var(--fit-bad); }
+  .inv-row-head { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .inv-row-name { font-weight: 600; color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .inv-row-section { font-family: ui-monospace, monospace; font-size: 10px; color: var(--text-sec); background: var(--panel-2); padding: 2px 5px; border-radius: 3px; }
+  .inv-row-status { font-size: 10px; padding: 2px 5px; border-radius: 3px; font-weight: 600; }
+  .inv-row-status.ok { color: var(--fit-ok); background: rgba(29,158,117,0.12); }
+  .inv-row-status.warn { color: var(--fit-warn); background: rgba(192,128,32,0.14); }
+  .inv-row-status.bad { color: var(--fit-bad); background: rgba(197,57,43,0.14); }
+  .inv-row-dims { font-family: ui-monospace, monospace; color: var(--text-sec); font-size: 10px; margin-top: 4px; }
+  .inv-row-mount { font-size: 10px; color: var(--text-tert); margin-top: 2px; }
+  .inv-row-actions { display: flex; gap: 4px; margin-top: 6px; }
+  .inv-row-actions button {
+    padding: 3px 8px; font-size: 10px; border-radius: 4px;
+  }
+  .inv-row-actions .vis-toggle.off { color: var(--text-tert); }
+  .inv-add-btn {
+    width: 100%; padding: 8px; font-size: 12px;
+    border: 1px dashed var(--border); border-radius: 6px;
+    background: transparent; color: var(--text-sec); margin-top: 6px;
+  }
+  .inv-form {
+    background: var(--panel-2); border-radius: 6px; padding: 10px;
+    margin-bottom: 8px; font-size: 11px;
+  }
+  .inv-form label { display: block; margin: 6px 0 2px; color: var(--text-sec); font-size: 10px; font-weight: 600; }
+  .inv-form input, .inv-form select {
+    width: 100%; padding: 5px 7px; font-size: 12px;
+    border: 1px solid var(--border); border-radius: 4px; background: white;
+    font-family: inherit;
+  }
+  .inv-form .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .inv-form .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .inv-form-actions { display: flex; gap: 6px; margin-top: 10px; }
+  .inv-form-actions button { flex: 1; padding: 6px; font-size: 11px; }
+  .inv-form-actions .primary { background: var(--accent); color: white; border-color: var(--accent); }
+  .inv-fitnote {
+    font-size: 10px; color: var(--text-sec); margin-top: 4px;
+    padding: 4px 6px; background: var(--panel-2); border-radius: 4px;
+    font-family: ui-monospace, monospace; line-height: 1.4;
+  }
+  .inv-fitnote.bad { color: var(--fit-bad); }
+  .inv-fitnote.warn { color: var(--fit-warn); }
+
+  /* Tab panel show/hide */
+  .right-panel { display: none; }
+  .right-panel.active { display: block; }
 </style>
 </head>
 <body>
 
-<h1>VanIQ Builder v19</h1>
-<div class="sub">Floor plan tab · Shared edges · Drawer rails on dividers · Spec sheet</div>
+<h1>VanIQ Builder v24.0</h1>
+<div class="sub">Inventory registry · per-section views · red reserved for fit issues</div>
 
 <div class="view-buttons">
   <button data-v="iso">Iso</button>
@@ -189,11 +252,21 @@
   <button data-v="floorplan">Floor plan</button>
 </div>
 
+<div class="view-buttons" id="tab-bar">
+  <button data-tab="master" class="active">Master</button>
+  <div class="section-picker">
+    <button class="section-picker-btn" id="section-picker-btn">Sections &#9662;</button>
+    <div class="section-picker-menu" id="section-picker-menu"></div>
+  </div>
+  <button data-tab="inventory">Inventory</button>
+  <button data-tab="spec">Spec</button>
+  <button data-tab="order">Order</button>
+</div>
+
 <div class="layout">
   <div>
     <div id="canvas-wrap">
       <canvas id="c"></canvas>
-      <div id="plan-overlay"></div>
       <div id="floor-plan-view"></div>
       <div id="legend" class="overlay">
         +X forward · +Y driver(right) · +Z up<br>
@@ -205,34 +278,77 @@
 
   <div>
     <div class="panel">
-      <h3>Sections</h3>
-      <div id="sections"></div>
-    </div>
-    <div class="panel">
-      <h3>Display</h3>
-      <label class="checkbox-row"><input type="checkbox" id="show-shell" checked> Shell wireframe</label>
-      <label class="checkbox-row"><input type="checkbox" id="show-counter" checked> 37" counter plane</label>
-      <label class="checkbox-row"><input type="checkbox" id="show-wheelwells" checked> Wheel wells</label>
-      <label class="checkbox-row"><input type="checkbox" id="show-floor" checked> Floor + labels</label>
-      <label class="checkbox-row"><input type="checkbox" id="color-by-section" checked> Color by section</label>
-      <label class="checkbox-row"><input type="checkbox" id="color-by-profile"> Color by profile</label>
-    </div>
-    <div class="panel">
-      <h3><span>Spec sheet</span><button class="copy-btn" id="copy-spec">Copy</button></h3>
-      <div id="spec-sheet" class="spec-sheet"></div>
-    </div>
-    <div class="panel">
-      <h3><span>Order list</span><button class="copy-btn" id="copy-order">Copy</button></h3>
-      <div class="tab-row">
-        <button class="tab active" data-tab="order">For ordering</button>
-        <button class="tab" data-tab="cutlist">By length</button>
+      <h3>Naming</h3>
+      <div class="naming-key">
+        <b>Stick code:</b> Section-Side-Level-Axis<br>
+        Example: <code>G-E-1-X</code> = Galley, Exterior wall, Level 1 (floor), X-axis<br>
+        <br>
+        <b>Sections:</b> DC=Driver Cab · PC=Pass Cab · WS=Workspace<br>
+        G=Galley · UC=Upper · GB=Garage/Bed · BT=Bike Tray<br>
+        <b>Side:</b> E=Exterior wall · I=Interior (aisle)<br>
+        <b>Level:</b> 1=floor · 2=toe-kick · 3=mid · 4=top · shelf=WS-A heater shelf<br>
+        <b>Axis:</b> X=length · Y=depth · Z=height (vertical leg)<br>
+        <b>Bays:</b> A=frontmost, B, C, D... going back
       </div>
-      <div id="orderlist" class="list-output"></div>
-      <div class="ship-note">
-        <b>Shipping rules:</b><br>
-        • <b>94"</b> = hard ceiling (auto-splice)<br>
-        • <b>47"</b> = soft ceiling (UPS oversize surcharge above)<br>
-        • Cuts $0.50 each at supplier
+    </div>
+
+    <!-- Master tab panel -->
+    <div class="right-panel active" data-panel="master">
+      <div class="panel"><h3>Sections</h3><div id="sections"></div></div>
+      <div class="panel">
+        <h3>Display</h3>
+        <label class="checkbox-row"><input type="checkbox" id="show-shell" checked> Shell wireframe</label>
+        <label class="checkbox-row"><input type="checkbox" id="show-counter" checked> 37" counter plane</label>
+        <label class="checkbox-row"><input type="checkbox" id="show-wheelwells" checked> Wheel wells</label>
+        <label class="checkbox-row"><input type="checkbox" id="show-floor" checked> Floor + labels</label>
+        <label class="checkbox-row"><input type="checkbox" id="show-door" checked> Sliding door zone</label>
+        <label class="checkbox-row"><input type="checkbox" id="show-equipment" checked> Equipment blocks</label>
+        <label class="checkbox-row"><input type="checkbox" id="color-by-section" checked> Color by section</label>
+        <label class="checkbox-row"><input type="checkbox" id="color-by-profile"> Color by profile</label>
+      </div>
+    </div>
+
+    <!-- Section tab panel (shown when a section is picked) -->
+    <div class="right-panel" data-panel="section">
+      <div class="panel">
+        <h3><span id="section-tab-title">Section</span></h3>
+        <div id="section-tab-info" style="font-size: 12px; line-height: 1.6;"></div>
+      </div>
+      <div class="panel">
+        <h3>Section inventory</h3>
+        <div id="section-inv-list" style="font-size: 12px;"></div>
+      </div>
+    </div>
+
+    <!-- Inventory tab panel -->
+    <div class="right-panel" data-panel="inventory">
+      <div class="panel">
+        <h3><span>Inventory registry</span><button class="copy-btn" id="reset-inv">Reset</button></h3>
+        <div id="inventory-panel"></div>
+        <button class="inv-add-btn" id="inv-add-btn">+ Add equipment</button>
+      </div>
+    </div>
+
+    <!-- Spec tab panel -->
+    <div class="right-panel" data-panel="spec">
+      <div class="panel">
+        <h3><span>Spec sheet</span><button class="copy-btn" id="copy-spec">Copy</button></h3>
+        <div id="spec-sheet" class="spec-sheet"></div>
+      </div>
+    </div>
+
+    <!-- Order tab panel -->
+    <div class="right-panel" data-panel="order">
+      <div class="panel">
+        <h3><span>Order list</span><button class="copy-btn" id="copy-order">Copy</button></h3>
+        <div class="tab-row">
+          <button class="tab active" data-tab="order">For ordering</button>
+          <button class="tab" data-tab="cutlist">By length</button>
+        </div>
+        <div id="orderlist" class="list-output"></div>
+        <div class="ship-note">
+          <b>Shipping:</b> 94" hard ceiling · 47" soft · $0.50/cut
+        </div>
       </div>
     </div>
   </div>
@@ -241,6 +357,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function(){
+  // v22 — naming scheme + Velit 4000 + heater shelf
   const HARD_CEILING = 94;
   const SOFT_CEILING = 47;
   const PROFILES = {
@@ -250,45 +367,155 @@
   };
   const INCH_TO_M = 0.0254;
   const M = (i) => i * INCH_TO_M;
-  const SHELL = { L: 120, W: 78, H: 81, counterZ: 37 };
+
+  const SHELL = { L: 132, W: 67, H: 81, counterZ: 37 };
   const WHEELWELL = { xStart: 18, length: 30, depth: 9, height: 17 };
   const STEP_Z = 20;
+  const TOE_KICK_HEIGHT = 3;
+  const SIDE_DOOR = { x0: 101, x1: 125, y: -SHELL.W/2 };
+  const TOILET = { width: 14.5, depth: 16.5, height: 16.9 };
 
-  // Cabinet pair definitions: which rear section abuts which forward section
-  // The interface X is the boundary line. The shared corner sticks are centered at that line.
+  // Velit 4000 heater: 14.6" L (Y-axis) × 5.5" W (X-axis) × 5.9" H (Z)
+  // Heater shelf: at z = 5.9 + 4 = 9.9" → use 10"
+  const VELIT = { x: 5.5, y: 14.6, z: 5.9, shelfZ: 10 };
+
+  // ===== v24.0: Equipment registry =====
+  // Each item: { id, name, sectionId, mountMode, x, y, z, dx, dy, dz,
+  //              clearance, visible, notes, parentSticks: [] }
+  // mountMode: 'freestanding-reference' | 'cutout' | 'sits-on' | 'mounted-to-sticks'
+  // x,y,z = item's anchor position (bottom-rear-pass corner in van coordinates)
+  // dx,dy,dz = item dimensions along van X, Y, Z axes
+  const MOUNT_MODES = {
+    'freestanding-reference': 'Free (reference only)',
+    'cutout':                 'Cutout (counter/panel)',
+    'sits-on':                'Sits on rail/floor',
+    'mounted-to-sticks':      'Mounted to sticks'
+  };
+
+  const SEED_INVENTORY = [
+    { id: 'velit',     name: 'Velit 4000 heater', sectionId: 'WS', mountMode: 'freestanding-reference',
+      // sits on heater shelf in WS-A
+      x: 124, y: 18.9, z: 10, dx: 5.5, dy: 14.6, dz: 5.9, clearance: 1, visible: true,
+      notes: 'On WS-A shelf at z=10' },
+    { id: 'toilet',    name: 'Cassette toilet', sectionId: 'G', mountMode: 'freestanding-reference',
+      // stored in G-B (rear galley bay), pulls forward to use
+      x: 65, y: -28, z: 0, dx: 16.5, dy: 14.5, dz: 16.9, clearance: 1, visible: true,
+      notes: 'Stored in G-B, pulls forward to use' },
+    { id: 'sink',      name: 'TEC sink', sectionId: 'G', mountMode: 'cutout',
+      // in G-A (front galley bay), top mount at counter z=37
+      x: 84, y: -31, z: 28, dx: 15.3, dy: 17.5, dz: 9, clearance: 0.5, visible: true,
+      notes: 'Top-mount cutout 16.5x14.2 in counter at z=37' },
+    { id: 'fridge',    name: 'Indel B DR130 fridge', sectionId: 'WS', mountMode: 'sits-on',
+      // WS-B is 22" wide at x=99 to x=121; fridge 20.7 W x 19.7 D x 29.7 H
+      x: 99.5, y: 13.8, z: 0, dx: 20.7, dy: 19.7, dz: 29.7, clearance: 1, visible: true,
+      notes: 'Drawer-style, pulls forward (no swing arc)' },
+    { id: 'fan-low',   name: 'AC Infinity S7 (low)', sectionId: 'DC', mountMode: 'mounted-to-sticks',
+      // mounted on DC back wall (driver wall), low for cool air in
+      x: 8, y: 32, z: 6, dx: 5.4, dy: 1, dz: 5.4, clearance: 0.5, visible: true,
+      notes: 'Battery convection - cool air intake' },
+    { id: 'fan-high',  name: 'AC Infinity S7 (high)', sectionId: 'DC', mountMode: 'mounted-to-sticks',
+      // mounted on DC back wall, high for warm air out
+      x: 8, y: 32, z: 30, dx: 5.4, dy: 1, dz: 5.4, clearance: 0.5, visible: true,
+      notes: 'Battery convection - warm air exhaust' },
+    { id: 'tank33',    name: 'NW 33gal water tank', sectionId: 'PC', mountMode: 'sits-on',
+      // 48 X x 13 Y x 20 Z, on floor, wraps WW (x=18-48)
+      x: 0, y: -33.5, z: 0, dx: 48, dy: 13, dz: 20, clearance: 0.5, visible: true,
+      notes: 'On floor, wraps WW. v25: contained-mode frame derivation' },
+    { id: 'wh-slim25', name: 'Isotemp Slim 25L water heater', sectionId: 'PC', mountMode: 'mounted-to-sticks',
+      // 30.9 TL x 11.25 W x 11.7 H, centered over tank, sits on 1515 rails at z=20
+      x: 8.5, y: -32, z: 20, dx: 30.9, dy: 11.25, dz: 11.7, clearance: 1, visible: true,
+      notes: 'On 2 1515 Y-rails at z=20 (top of tank). Feet at x=14.4 & x=33.5' },
+    { id: 'ef-hub',    name: 'EcoFlow Power Hub', sectionId: 'DC', mountMode: 'mounted-to-sticks',
+      // 18.9 W x 5.5 D x 11.8 H
+      x: 40, y: 27, z: 16, dx: 18.9, dy: 5.5, dz: 11.8, clearance: 1, visible: true,
+      notes: '3.6kVA inverter-charger' },
+    { id: 'ef-bat1',   name: 'EcoFlow 5kWh battery (bottom)', sectionId: 'DC', mountMode: 'sits-on',
+      // 19.7 L x 11.8 D x 10.2 H, 90 lb, stackable
+      x: 20, y: 18, z: 0, dx: 19.7, dy: 11.8, dz: 10.2, clearance: 0.5, visible: true,
+      notes: 'Bottom of stack' },
+    { id: 'ef-bat2',   name: 'EcoFlow 5kWh battery (top)', sectionId: 'DC', mountMode: 'sits-on',
+      // stacked on bat1: z = 10.2 (top of bat1)
+      x: 20, y: 18, z: 10.2, dx: 19.7, dy: 11.8, dz: 10.2, clearance: 0.5, visible: true,
+      notes: 'Top of stack' },
+    { id: 'ef-panel',  name: 'EcoFlow Smart Distribution Panel', sectionId: 'DC', mountMode: 'mounted-to-sticks',
+      // approximate 14 W x 4 D x 10 H (Spec not published, conservative)
+      x: 40, y: 27, z: 22, dx: 14, dy: 4, dz: 10, clearance: 1, visible: true,
+      notes: '6 AC + 12 DC circuits. Dims approximate' },
+    { id: 'bed-deck',  name: 'Bed deck (1/4 in hexa)', sectionId: 'GB', mountMode: 'sits-on',
+      // 60 X x 78 Y x 0.25 Z, top of GB cross-rails at z=37
+      // mattress center offset y=+0.75 due to capsule asymmetry, planning 78" usable
+      x: 0, y: -38.25, z: 37, dx: 60, dy: 78, dz: 0.25, clearance: 0, visible: true,
+      notes: '78" via Vanspeed capsules (driver +5.75, pass +4.25), 1/4 in hexa' }
+  ];
+
+  const INV_STORAGE_KEY = 'vaniq.inventory.v24';
+  let inventory = [];
+
+  function loadInventory(){
+    try {
+      const raw = localStorage.getItem(INV_STORAGE_KEY);
+      if (raw){
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0){
+          inventory = parsed;
+          return;
+        }
+      }
+    } catch (e) { console.warn('Inventory load failed', e); }
+    inventory = SEED_INVENTORY.map(it => Object.assign({}, it));
+  }
+
+  function saveInventory(){
+    try { localStorage.setItem(INV_STORAGE_KEY, JSON.stringify(inventory)); }
+    catch (e) { console.warn('Inventory save failed', e); }
+  }
+
+  function resetInventory(){
+    inventory = SEED_INVENTORY.map(it => Object.assign({}, it));
+    saveInventory();
+  }
+
+
   const INTERFACES = [
-    { rear: 'plumbing',  fwd: 'galley',    side: 'passenger' },
-    { rear: 'electrical', fwd: 'workspace', side: 'driver' }
+    { rear: 'PC', fwd: 'G',  side: 'passenger' },
+    { rear: 'DC', fwd: 'WS', side: 'driver' }
   ];
 
   const sections = [
-    { id: 'electrical', label: 'Electrical (rear, driver)', color: 0xD4537E, profile: '1515',
+    { id: 'DC', code: 'DC', label: 'Driver Cabinet (electrical, rear)', color: 0xD4537E, profile: '1515',
       length: 65, depth: 15.5, height: 37, anchor: 'rear_driver', doors: 3, wheelWellAware: true, floorMounted: true },
-    { id: 'plumbing', label: 'Plumbing (rear, passenger)', color: 0x1D9E75, profile: '1515',
+    { id: 'PC', code: 'PC', label: 'Passenger Cabinet (plumbing, rear)', color: 0x1D9E75, profile: '1515',
       length: 65, depth: 15.5, height: 37, anchor: 'rear_passenger', doors: 3, wheelWellAware: true, floorMounted: true },
-    { id: 'bed_rails', label: 'Bed rails + step (garage)', color: 0xD85A30, profile: '1515', crossCount: 4 },
-    { id: 'galley', label: 'Galley (passenger, fwd)', color: 0x378ADD, profile: '1515-lite',
-      length: 38, depth: 20, height: 37, anchor: 'forward_of_plumbing', doors: 2, floorMounted: true },
-    { id: 'workspace', label: 'Workspace (driver, fwd)', color: 0xB47CE0, profile: '1515-lite',
-      length: 55, depth: 20, height: 37, anchor: 'forward_of_electrical', floorMounted: true,
+    { id: 'GB', code: 'GB', label: 'Garage / Bed', color: 0x2F8FB3, profile: '1515', crossCount: 4 },
+    { id: 'G', code: 'G', label: 'Galley (passenger, fwd) — toilet + storage', color: 0x378ADD, profile: '1515-lite',
+      length: 35, depth: 20, height: 37, anchor: 'forward_of_plumbing', doors: 2, floorMounted: true, toeKick: true,
+      noMidLeg: true,
+      bayLabels: { 'A': 'storage (13" clear, front)', 'B': 'toilet (18.5" clear, rear)' }
+    },
+    // WORKSPACE: rear→front = closet (D) → drawers (C) → fridge (B) → heater (A)
+    // BUT bay codes A=front, so: WS-A=heater, WS-B=fridge, WS-C=drawers, WS-D=closet
+    { id: 'WS', code: 'WS', label: 'Workspace (driver, fwd)', color: 0xB47CE0, profile: '1515-lite',
+      length: 65, depth: 20, height: 37, anchor: 'forward_of_electrical', floorMounted: true,
       bays: [
-        { type: 'doors',   length: 16, doors: 1 },
-        { type: 'drawers', length: 17, drawerCount: 4 },
-        { type: 'fridge',  length: 22 }
+        // order in array = rear→front because that's how X coordinates grow
+        { type: 'doors',   length: 16, doors: 1, toeKick: true, code: 'WS-D', label: 'closet' },
+        { type: 'drawers', length: 17, drawerCount: 4, toeKick: true, code: 'WS-C', label: 'drawers' },
+        { type: 'fridge',  length: 22, toeKick: false, code: 'WS-B', label: 'fridge' },
+        { type: 'heater',  length: 8, toeKick: true, code: 'WS-A', label: 'heater + shelf' }
       ] },
-    { id: 'upper', label: 'Upper cabinet (driver)', color: 0xC9A227, profile: '1010',
-      length: 108, depth: 10, height: 10, anchor: 'ceiling_driver', doors: 6 }
+    { id: 'UC', code: 'UC', label: 'Upper Cabinet (driver ceiling)', color: 0xC9A227, profile: '1010',
+      length: 112, depth: 10, height: 14, anchor: 'ceiling_driver', doors: 6 }
   ];
 
   let activeSection = null;
+  let activeTab = 'master';  // 'master' | 'section' | 'inventory' | 'spec' | 'order'
   let currentTab = 'order';
-  const view = { shell: true, counter: true, floor: true, wheelwells: true, colorBySection: true, colorByProfile: false };
+  const view = { shell: true, counter: true, floor: true, wheelwells: true, door: true, equipment: true, colorBySection: true, colorByProfile: false };
 
   const TOL = 0.1;
   let allSticks = [];
   let stickIdCounter = 1;
 
-  // Position-based merge. Profile auto-upgrades to strongest.
   function addStick(profile, axis, length, x0, y0, z0, sectionId, role){
     if (length <= 0) return null;
     for (const s of allSticks){
@@ -307,22 +534,12 @@
     return stick;
   }
 
-  // Returns { rearSharedX, fwdSharedX } if this section has a shared boundary with another.
-  // The shared corner stick sits at x = boundaryX - EX/2 (centered on the line)
   function getSharedEdges(sec){
     const EX = PROFILES[sec.profile].size;
     const shared = { rearShared: null, fwdShared: null };
     INTERFACES.forEach(iface => {
-      if (iface.rear === sec.id){
-        // This is a rear section. Its FRONT edge is shared with the forward section.
-        const b = sec._bounds;
-        shared.fwdShared = b.x1 - EX/2; // centerline of the leg at the boundary
-      }
-      if (iface.fwd === sec.id){
-        // This is a forward section. Its REAR edge is shared with the rear section.
-        const b = sec._bounds;
-        shared.rearShared = b.x0 - EX/2; // centerline of the leg at the boundary
-      }
+      if (iface.rear === sec.id){ const b = sec._bounds; shared.fwdShared = b.x1 - EX/2; }
+      if (iface.fwd === sec.id){ const b = sec._bounds; shared.rearShared = b.x0 - EX/2; }
     });
     return shared;
   }
@@ -349,17 +566,12 @@
     const floorMounted = sec.floorMounted && !isCeiling;
     const shared = getSharedEdges(sec);
 
-    // Compute X positions for the verticals (corner legs + door dividers)
     const doors = sec.doors || 2;
-    const totalV = doors + 1;
+    const totalV = sec.noMidLeg ? 2 : (doors + 1);
     const vXs = [];
-
-    // Rear corner leg X
     const rearLegX = (shared.rearShared !== null) ? shared.rearShared : x0;
-    // Front corner leg X
     const fwdLegX = (shared.fwdShared !== null) ? shared.fwdShared : (x1 - EX);
 
-    // Distribute door dividers evenly between rearLegX and fwdLegX
     if (totalV === 2){ vXs.push(rearLegX, fwdLegX); }
     else {
       for (let i = 0; i < totalV; i++){
@@ -375,17 +587,24 @@
       addStick(sec.profile, 'z', legLen, vx, backY,  z0 + EX, sec.id, role + ' (back)');
     });
 
-    // X-rails span from the rear-leg-center to the fwd-leg-center
-    // (rail starts at rearLegX, ends at fwdLegX + EX, total length = fwdLegX + EX - rearLegX)
     const railStartX = rearLegX;
     const railLen = (fwdLegX + EX) - rearLegX;
-
     const topZ = z1 - EX;
+
     addStick(sec.profile, 'x', railLen, railStartX, frontY, topZ, sec.id, 'top front rail');
     addStick(sec.profile, 'x', railLen, railStartX, backY,  topZ, sec.id, 'top back rail');
     vXs.forEach((vx) => addStick(sec.profile, 'y', Ly - 2*EX, vx, y0 + EX, topZ, sec.id, 'top Y-rail'));
 
-    addStick(sec.profile, 'x', railLen, railStartX, frontY, z0, sec.id, 'bottom front rail');
+    // For sections without mid-leg (galley), add a mid Y-stick at the TOP level
+    // for sink support and PVC divider anchor (no Z-leg, just the Y rail).
+    if (sec.noMidLeg && !isCeiling){
+      const midX = (rearLegX + fwdLegX) / 2;
+      addStick(sec.profile, 'y', Ly - 2*EX, midX, y0 + EX, topZ, sec.id, 'sink support Y / PVC divider top');
+    }
+
+    if (!sec.toeKick){
+      addStick(sec.profile, 'x', railLen, railStartX, frontY, z0, sec.id, 'bottom front rail');
+    }
     if (ww){
       const seg1Len = ww.x0 - railStartX;
       const seg2Len = (railStartX + railLen) - ww.x1;
@@ -401,6 +620,17 @@
       if (floorMounted && !isCorner) return;
       addStick(sec.profile, 'y', Ly - 2*EX, vx, y0 + EX, z0, sec.id, isCorner ? 'bottom corner Y-rail' : 'bottom Y-rail');
     });
+
+    if (!isCeiling && sec.toeKick){
+      addStick(sec.profile, 'x', railLen, railStartX, frontY, TOE_KICK_HEIGHT, sec.id, 'toe kick rail');
+      vXs.forEach((vx) => {
+        addStick(sec.profile, 'y', Ly - 2*EX, vx, y0 + EX, TOE_KICK_HEIGHT, sec.id, 'toe kick Y-cross');
+      });
+      if (sec.noMidLeg){
+        const midX = (rearLegX + fwdLegX) / 2;
+        addStick(sec.profile, 'y', Ly - 2*EX, midX, y0 + EX, TOE_KICK_HEIGHT, sec.id, 'PVC divider anchor Y');
+      }
+    }
 
     if (!isCeiling && Lz > 20){
       const mz = z0 + Lz/2 - EX/2;
@@ -425,77 +655,132 @@
     const floorMounted = sec.floorMounted;
     const shared = getSharedEdges(sec);
 
-    // Bay-edge X positions, with shared edge at rear if applicable
     const rearLegX = (shared.rearShared !== null) ? shared.rearShared : x0;
     const fwdLegX = (shared.fwdShared !== null) ? shared.fwdShared : (x1 - EX);
 
-    // Build bayEdgesX: starts at rearLegX, then advances by each bay length, ends at fwdLegX
     const bayEdgesX = [rearLegX];
-    let cursorX = rearLegX + EX/2; // shift right to account for centered shared leg
+    let cursorX = rearLegX + EX/2;
     sec.bays.forEach(bay => {
       cursorX += bay.length;
       bayEdgesX.push(cursorX - EX/2);
     });
-    // Force last edge to fwdLegX
     bayEdgesX[bayEdgesX.length - 1] = fwdLegX;
 
+    const heaterBayIdx = sec.bays.findIndex(b => b.type === 'heater');
+    const hasHeaterAtFront = (heaterBayIdx === sec.bays.length - 1);
+    // If heater is the frontmost bay, the FRONT corner legs (at bayEdgesX[last]) only go to shelf height
+    const shortLegTop = VELIT.shelfZ; // z=10"
+    const shortLegLen = shortLegTop - (z0 + EX); // length from above floor to shelf
+
     bayEdgesX.forEach((vx, idx) => {
-      const role = (idx === 0 || idx === bayEdgesX.length - 1) ? 'corner leg' : 'bay divider';
-      addStick(sec.profile, 'z', legLen, vx, frontY, z0 + EX, sec.id, role + ' (front)');
-      addStick(sec.profile, 'z', legLen, vx, backY,  z0 + EX, sec.id, role + ' (back)');
+      const isFrontCorner = (idx === bayEdgesX.length - 1);
+      const isRearCorner = (idx === 0);
+      const role = (isRearCorner || isFrontCorner) ? 'corner leg' : 'bay divider';
+
+      // WS-A truncation: if this is the FRONT corner AND heater is the frontmost bay,
+      // the front legs only go up to the shelf (z=10), not full height
+      if (isFrontCorner && hasHeaterAtFront){
+        // Short legs (z=1.5 to z=10) supporting the shelf only
+        addStick(sec.profile, 'z', shortLegLen, vx, frontY, z0 + EX, sec.id, 'WS-A front foot (short, to shelf)');
+        addStick(sec.profile, 'z', shortLegLen, vx, backY,  z0 + EX, sec.id, 'WS-A back foot (short, to shelf)');
+      } else {
+        addStick(sec.profile, 'z', legLen, vx, frontY, z0 + EX, sec.id, role + ' (front)');
+        addStick(sec.profile, 'z', legLen, vx, backY,  z0 + EX, sec.id, role + ' (back)');
+      }
     });
 
     const railStartX = rearLegX;
     const railLen = (fwdLegX + EX) - rearLegX;
 
-    addStick(sec.profile, 'x', railLen, railStartX, frontY, topZ, sec.id, 'top front rail');
-    addStick(sec.profile, 'x', railLen, railStartX, backY,  topZ, sec.id, 'top back rail');
-    bayEdgesX.forEach(vx => addStick(sec.profile, 'y', Ly - 2*EX, vx, y0 + EX, topZ, sec.id, 'top Y-rail'));
+    // Top BACK rail: skip over heater bay too (full open above WS-A)
+    if (heaterBayIdx >= 0){
+      const heaterX0 = bayEdgesX[heaterBayIdx];
+      const heaterX1 = bayEdgesX[heaterBayIdx + 1];
+      const preLenBack = heaterX0 - railStartX;
+      if (preLenBack > EX) addStick(sec.profile, 'x', preLenBack, railStartX, backY, topZ, sec.id, 'top back rail (before heater)');
+      const postLenBack = (railStartX + railLen) - (heaterX1 + EX);
+      if (postLenBack > EX) addStick(sec.profile, 'x', postLenBack, heaterX1 + EX, backY, topZ, sec.id, 'top back rail (after heater)');
+    } else {
+      addStick(sec.profile, 'x', railLen, railStartX, backY, topZ, sec.id, 'top back rail');
+    }
+    // Top FRONT rail: skip over heater bay
+    if (heaterBayIdx >= 0){
+      const heaterX0 = bayEdgesX[heaterBayIdx];
+      const heaterX1 = bayEdgesX[heaterBayIdx + 1];
+      const preLen = heaterX0 - railStartX;
+      if (preLen > EX) addStick(sec.profile, 'x', preLen, railStartX, frontY, topZ, sec.id, 'top front rail (before heater)');
+      const postLen = (railStartX + railLen) - (heaterX1 + EX);
+      if (postLen > EX) addStick(sec.profile, 'x', postLen, heaterX1 + EX, frontY, topZ, sec.id, 'top front rail (after heater)');
+    } else {
+      addStick(sec.profile, 'x', railLen, railStartX, frontY, topZ, sec.id, 'top front rail');
+    }
+    bayEdgesX.forEach((vx, idx) => {
+      // Skip top Y-rail at the WS-A front corner (legs don't reach z=37 there if heater is at front)
+      const isFrontCorner = (idx === bayEdgesX.length - 1);
+      if (isFrontCorner && hasHeaterAtFront) return;
+      addStick(sec.profile, 'y', Ly - 2*EX, vx, y0 + EX, topZ, sec.id, 'top Y-rail');
+    });
 
-    addStick(sec.profile, 'x', railLen, railStartX, frontY, z0, sec.id, 'bottom front rail');
-    addStick(sec.profile, 'x', railLen, railStartX, backY,  z0, sec.id, 'bottom back rail');
+    addStick(sec.profile, 'x', railLen, railStartX, backY, z0, sec.id, 'bottom back rail');
     bayEdgesX.forEach((vx, idx) => {
       const isCorner = (idx === 0 || idx === bayEdgesX.length - 1);
       if (floorMounted && !isCorner) return;
       addStick(sec.profile, 'y', Ly - 2*EX, vx, y0 + EX, z0, sec.id, isCorner ? 'bottom corner Y-rail' : 'bottom Y-rail');
     });
 
-    // Mid back rail across full workspace at mid height
     const mz = z0 + Lz/2 - EX/2;
-    addStick(sec.profile, 'x', railLen, railStartX, backY, mz, sec.id, 'mid back rail');
+    // Mid back rail: skip over heater bay too
+    if (heaterBayIdx >= 0){
+      const heaterX0 = bayEdgesX[heaterBayIdx];
+      const heaterX1 = bayEdgesX[heaterBayIdx + 1];
+      const preLenMid = heaterX0 - railStartX;
+      if (preLenMid > EX) addStick(sec.profile, 'x', preLenMid, railStartX, backY, mz, sec.id, 'mid back rail (before heater)');
+      const postLenMid = (railStartX + railLen) - (heaterX1 + EX);
+      if (postLenMid > EX) addStick(sec.profile, 'x', postLenMid, heaterX1 + EX, backY, mz, sec.id, 'mid back rail (after heater)');
+    } else {
+      addStick(sec.profile, 'x', railLen, railStartX, backY, mz, sec.id, 'mid back rail');
+    }
 
-    // Per-bay internal structure
     sec.bays.forEach((bay, idx) => {
       const bayX0 = bayEdgesX[idx];
       const bayX1 = bayEdgesX[idx + 1];
-      const bayLen = bayX1 - bayX0;
+      const bayLen = (bayX1 + EX) - bayX0;
 
-      if (bay.type === 'drawers'){
-        // DRAWER RAILS: Y-axis sticks on the two bay dividers (sides of drawer bay)
-        // at each drawer's height. These are the drawer-slide mounting rails.
-        // Position: bayX0 (left divider) and bayX1 (right divider)
-        // Y span: full cabinet depth (Ly - 2*EX)
-        // Z heights: evenly distributed in cabinet height
-        const n = bay.drawerCount || 4;
-        for (let i = 1; i <= n; i++){
-          const t = i / (n + 1);
-          const rz = z0 + t * Lz - EX/2;
-          // Left divider rail
-          addStick(sec.profile, 'y', Ly - 2*EX, bayX0, y0 + EX, rz, sec.id, `drawer ${i} rail (left divider)`);
-          // Right divider rail
-          addStick(sec.profile, 'y', Ly - 2*EX, bayX1, y0 + EX, rz, sec.id, `drawer ${i} rail (right divider)`);
-        }
-      } else if (bay.type === 'doors'){
+      if (bay.toeKick){
+        addStick(sec.profile, 'x', bayLen, bayX0, frontY, TOE_KICK_HEIGHT, sec.id, `${bay.code || bay.type}: toe kick rail`);
+        addStick(sec.profile, 'y', Ly - 2*EX, bayX0, y0 + EX, TOE_KICK_HEIGHT, sec.id, 'toe kick Y-cross');
+        addStick(sec.profile, 'y', Ly - 2*EX, bayX1, y0 + EX, TOE_KICK_HEIGHT, sec.id, 'toe kick Y-cross');
+      } else {
+        addStick(sec.profile, 'x', bayLen, bayX0, frontY, z0, sec.id, `${bay.code || bay.type}: bottom front rail`);
+      }
+
+      if (bay.type === 'doors'){
         const doors = bay.doors || 1;
         const intDividers = doors - 1;
         for (let i = 1; i <= intDividers; i++){
           const t = i / (intDividers + 1);
-          const vx = bayX0 + t * bayLen - EX/2;
+          const vx = bayX0 + t * (bayX1 - bayX0) - EX/2;
           addStick(sec.profile, 'z', legLen, vx, frontY, z0 + EX, sec.id, 'door divider (front)');
           addStick(sec.profile, 'z', legLen, vx, backY,  z0 + EX, sec.id, 'door divider (back)');
         }
       }
-      // Fridge bay has no internal sticks (open)
+
+      // HEATER BAY: add shelf at z=10" and 2 support feet
+      // The shelf is structural — Y-axis rails on front and back at z=10
+      // Plus 2 short Z-legs at the FRONT face of WS-A (x=130 side), one at each Y side
+      if (bay.type === 'heater'){
+        // Shelf support rails at z=10": one front, one back, spanning the bay width
+        // These rails will support a flat shelf panel placed on top
+        addStick(sec.profile, 'x', bayLen, bayX0, frontY, VELIT.shelfZ, sec.id, 'WS-A heater shelf rail (front)');
+        addStick(sec.profile, 'x', bayLen, bayX0, backY, VELIT.shelfZ, sec.id, 'WS-A heater shelf rail (back)');
+        addStick(sec.profile, 'y', Ly - 2*EX, bayX0, y0 + EX, VELIT.shelfZ, sec.id, 'WS-A heater shelf Y-cross (rear)');
+        addStick(sec.profile, 'y', Ly - 2*EX, bayX1, y0 + EX, VELIT.shelfZ, sec.id, 'WS-A heater shelf Y-cross (front)');
+        // 2 support feet at the FRONT of WS-A (x = bayX1) — these are the existing front corner z-legs
+        // (the corner legs already added above go floor to top, which covers this).
+        // For the 2 "extra" support feet that hold up the shelf separate from corner legs:
+        // Actually the corner legs at bayX1 (front of WS-A) already pass through z=10 — they serve as the support feet.
+        // No extra sticks needed.
+      }
     });
   }
 
@@ -503,11 +788,11 @@
     if (sec.anchor === 'rear_driver') return { x0: 0, x1: sec.length, y0: SHELL.W/2 - sec.depth, y1: SHELL.W/2, z0: 0, z1: sec.height };
     if (sec.anchor === 'rear_passenger') return { x0: 0, x1: sec.length, y0: -SHELL.W/2, y1: -SHELL.W/2 + sec.depth, z0: 0, z1: sec.height };
     if (sec.anchor === 'forward_of_electrical'){
-      const e = sections.find(s => s.id === 'electrical'); const eb = getBounds(e);
+      const e = sections.find(s => s.id === 'DC'); const eb = getBounds(e);
       return { x0: eb.x1, x1: eb.x1 + sec.length, y0: SHELL.W/2 - sec.depth, y1: SHELL.W/2, z0: 0, z1: sec.height };
     }
     if (sec.anchor === 'forward_of_plumbing'){
-      const p = sections.find(s => s.id === 'plumbing'); const pb = getBounds(p);
+      const p = sections.find(s => s.id === 'PC'); const pb = getBounds(p);
       return { x0: pb.x1, x1: pb.x1 + sec.length, y0: -SHELL.W/2, y1: -SHELL.W/2 + sec.depth, z0: 0, z1: sec.height };
     }
     if (sec.anchor === 'ceiling_driver'){
@@ -518,7 +803,7 @@
   }
 
   function generateBedRails(sec){
-    const p = sections.find(s => s.id === 'plumbing'), e = sections.find(s => s.id === 'electrical');
+    const p = sections.find(s => s.id === 'PC'), e = sections.find(s => s.id === 'DC');
     if (!p || !e) return;
     const pb = getBounds(p), eb = getBounds(e);
     const yStart = pb.y1, yEnd = eb.y0, span = yEnd - yStart;
@@ -529,9 +814,17 @@
     if (n === 1) addStick(sec.profile, 'y', span, x0, yStart, railZ, sec.id, 'bed cross rail');
     else { for (let i = 0; i < n; i++){ const t = i/(n-1); const x = x0 + t*(Lx - EX); addStick(sec.profile, 'y', span, x, yStart, railZ, sec.id, 'bed cross rail'); } }
 
-    // Garage step support at z=20"
-    const stepX = x1 - EX;
-    addStick(sec.profile, 'y', span, stepX, yStart, STEP_Z, sec.id, 'garage step support (z=20")');
+    // Step support: galley/workspace inner faces at z=20"
+    const g = sections.find(s => s.id === 'G');
+    const w = sections.find(s => s.id === 'WS');
+    if (g && w){
+      const gb = getBounds(g), wb = getBounds(w);
+      const stepYStart = gb.y1;
+      const stepYEnd = wb.y0;
+      const stepSpan = stepYEnd - stepYStart;
+      const stepX = Math.min(pb.x1, eb.x1) - EX;
+      addStick(sec.profile, 'y', stepSpan, stepX, stepYStart, STEP_Z, sec.id, 'garage step support (z=20")');
+    }
   }
 
   function autoSplice(){
@@ -550,14 +843,14 @@
   function regenerateAllSticks(){
     allSticks = []; stickIdCounter = 1;
     sections.forEach(sec => {
-      if (sec.id === 'bed_rails') return;
+      if (sec.id === 'GB') return;
       if (!sec.anchor) return;
       sec._bounds = getBounds(sec);
       if (!sec._bounds) return;
       if (sec.bays) genWorkspaceBays(sec);
       else genDoorCabinet(sec);
     });
-    const bed = sections.find(s => s.id === 'bed_rails');
+    const bed = sections.find(s => s.id === 'GB');
     if (bed) generateBedRails(bed);
     autoSplice();
   }
@@ -635,10 +928,10 @@
       const fg = new THREE.PlaneGeometry(M(SHELL.L), M(SHELL.W));
       const fm = new THREE.MeshBasicMaterial({ color: 0xB4B2A9, transparent: true, opacity: 0.18, side: THREE.DoubleSide });
       const f = new THREE.Mesh(fg, fm); f.position.set(M(SHELL.L/2), 0, 0.001); group.add(f);
-      const labDrv = makeLabel('DRIVER (right)', '#D4537E'); labDrv.position.set(M(SHELL.L/2), M(SHELL.W/2 - 4), 0.03); group.add(labDrv);
-      const labPass = makeLabel('PASSENGER (left)', '#1D9E75'); labPass.position.set(M(SHELL.L/2), M(-SHELL.W/2 + 4), 0.03); group.add(labPass);
+      const labDrv = makeLabel('DRIVER (right) - D', '#D4537E'); labDrv.position.set(M(SHELL.L/2), M(SHELL.W/2 - 4), 0.03); group.add(labDrv);
+      const labPass = makeLabel('PASSENGER (left) - P', '#1D9E75'); labPass.position.set(M(SHELL.L/2), M(-SHELL.W/2 + 4), 0.03); group.add(labPass);
       const labRear = makeLabel('REAR', '#888780'); labRear.position.set(M(6), 0, 0.03); group.add(labRear);
-      const labFront = makeLabel('FRONT', '#888780'); labFront.position.set(M(SHELL.L - 6), 0, 0.03); group.add(labFront);
+      const labFront = makeLabel('FRONT (base line)', '#888780'); labFront.position.set(M(SHELL.L - 10), 0, 0.03); group.add(labFront);
     }
     if (view.counter){
       const cg = new THREE.PlaneGeometry(M(SHELL.L), M(SHELL.W));
@@ -658,6 +951,75 @@
         wwFill.position.set(M(WHEELWELL.xStart + WHEELWELL.length/2), M(y), M(WHEELWELL.height/2)); group.add(wwFill);
       });
     }
+    if (view.door){
+      const doorLen = SIDE_DOOR.x1 - SIDE_DOOR.x0;
+      const doorGeo = new THREE.BoxGeometry(M(doorLen), M(2), M(SHELL.H - 12));
+      const doorEdges = new THREE.EdgesGeometry(doorGeo);
+      const doorLines = new THREE.LineSegments(doorEdges, new THREE.LineBasicMaterial({ color: 0xc08020, transparent: true, opacity: 0.9 }));
+      doorLines.position.set(M((SIDE_DOOR.x0 + SIDE_DOOR.x1)/2), M(SIDE_DOOR.y), M((SHELL.H - 12)/2 + 4));
+      group.add(doorLines);
+    }
+    if (view.equipment){
+      // ===== v24.0: Equipment registry rendering =====
+      // Each visible inventory item rendered as a semi-transparent block.
+      // mount mode informs styling (cutout=very faint, others=normal).
+      inventory.forEach(item => {
+        if (!item.visible) return;
+        // Determine block color: use section color, fall back to neutral
+        const sec = sections.find(s => s.id === item.sectionId);
+        const sectionColor = sec ? sec.color : 0x6c6c6c;
+        const isReference = item.mountMode === 'freestanding-reference';
+        const isCutout = item.mountMode === 'cutout';
+        // Opacity: cutouts very faint (counter-mounted, visually subtle), references medium, real items more solid
+        const opacity = isCutout ? 0.25 : (isReference ? 0.55 : 0.50);
+
+        const geo = new THREE.BoxGeometry(M(item.dx), M(item.dy), M(item.dz));
+        const matEq = new THREE.MeshLambertMaterial({
+          color: sectionColor, transparent: true, opacity
+        });
+        const mesh = new THREE.Mesh(geo, matEq);
+        mesh.position.set(
+          M(item.x + item.dx/2),
+          M(item.y + item.dy/2),
+          M(item.z + item.dz/2)
+        );
+        group.add(mesh);
+
+        // Outline edges for clearer block boundaries
+        const edges = new THREE.EdgesGeometry(geo);
+        const lineMat = new THREE.LineBasicMaterial({
+          color: sectionColor, transparent: true, opacity: 0.85
+        });
+        const lines = new THREE.LineSegments(edges, lineMat);
+        lines.position.copy(mesh.position);
+        group.add(lines);
+
+        // Floating label
+        const colHex = '#' + sectionColor.toString(16).padStart(6, '0');
+        const lbl = makeLabel(item.name.length > 18 ? item.name.slice(0, 16) + '..' : item.name, colHex);
+        lbl.position.set(
+          M(item.x + item.dx/2),
+          M(item.y + item.dy/2),
+          M(item.z + item.dz + 1.5)
+        );
+        group.add(lbl);
+      });
+
+      // Heater shelf: still hardcoded — it's a structural panel, not equipment
+      // (counter-like horizontal plane in WS-A bay at z=10)
+      const wsB = getBounds(sections.find(s => s.id === 'WS'));
+      if (wsB){
+        const shelfX = wsB.x1 - 8;
+        const shelfY = wsB.y0 + 1.5;
+        const shelfW = 8;
+        const shelfD = 17;
+        const shelfGeo = new THREE.BoxGeometry(M(shelfW), M(shelfD), M(0.5));
+        const shelfMat = new THREE.MeshLambertMaterial({ color: 0xB47CE0, transparent: true, opacity: 0.4 });
+        const shelfMesh = new THREE.Mesh(shelfGeo, shelfMat);
+        shelfMesh.position.set(M(shelfX + shelfW/2), M(shelfY + shelfD/2), M(VELIT.shelfZ));
+        group.add(shelfMesh);
+      }
+    }
     const len = 0.3;
     group.add(new THREE.ArrowHelper(new THREE.Vector3(1,0,0), new THREE.Vector3(0,0,0), len, 0xD4537E, 0.06, 0.04));
     group.add(new THREE.ArrowHelper(new THREE.Vector3(0,1,0), new THREE.Vector3(0,0,0), len, 0x1D9E75, 0.06, 0.04));
@@ -665,7 +1027,7 @@
     return group;
   }
 
-  let camTheta = -Math.PI*0.6, camPhi = Math.PI*0.42, camRadius = 7;
+  let camTheta = -Math.PI*0.6, camPhi = Math.PI*0.42, camRadius = 8;
   const target = new THREE.Vector3(M(SHELL.L/2), 0, M(SHELL.H/3));
   let camUpAxis = 'z';
   function updateCamera(){
@@ -720,7 +1082,7 @@
       if (lastDist > 0){
         const ratio = lastDist / d;
         camRadius *= ratio;
-        camRadius = Math.max(2.2, Math.min(14, camRadius));
+        camRadius = Math.max(2.2, Math.min(16, camRadius));
         updateCamera();
       }
       lastDist = d;
@@ -729,12 +1091,93 @@
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
     camRadius *= (1 + e.deltaY * 0.001);
-    camRadius = Math.max(2.2, Math.min(14, camRadius));
+    camRadius = Math.max(2.2, Math.min(16, camRadius));
     updateCamera();
   }, { passive: false });
 
   const raycaster = new THREE.Raycaster();
   const mouseV = new THREE.Vector2();
+
+  // Section-Side-Level-Axis naming generator
+  // Returns the human-readable code for a stick: e.g., "G-E-1-X" or "WS-D-E-1-X"
+  function getStickCode(stick){
+    // Resolve primary section
+    const sectionIds = [...stick.sections];
+    const primarySec = sections.find(s => s.id === sectionIds[0]);
+    if (!primarySec) return '?';
+
+    const codes = sectionIds.map(sid => {
+      const sec = sections.find(s => s.id === sid);
+      return getStickCodeForSection(stick, sec);
+    });
+
+    // If shared between sections, show both with separator
+    if (codes.length > 1) return codes.join(' ↔ ');
+    return codes[0];
+  }
+
+  function getStickCodeForSection(stick, sec){
+    if (!sec) return '?';
+    const code = sec.code;
+    const b = sec._bounds;
+    if (!b) return code + '-?';
+
+    // Determine Side (E/I)
+    // E = Exterior (van wall side, away from centerline)
+    // I = Interior (aisle side, toward centerline)
+    // For sections on driver side (y>0): E is high Y (away from CL), I is low Y (toward CL)
+    // For sections on passenger side (y<0): E is low Y (away from CL), I is high Y (toward CL)
+    // For ceiling sections: same logic by Y
+    // For bed/garage: use 'C' (center)
+
+    let side = '';
+    if (stick.axis === 'x'){
+      // X-stick runs front-to-back along a wall — categorize by its Y position
+      const stickY = stick.y0 + PROFILES[stick.profile].size / 2;
+      const driverSide = stickY > 0;
+      const isAgainstWall = driverSide ?
+        Math.abs(stickY - (b.y1 - PROFILES[stick.profile].size/2)) < 1 :
+        Math.abs(stickY - b.y0) < 1;
+      side = isAgainstWall ? 'E' : 'I';
+    } else if (stick.axis === 'y'){
+      // Y-stick crosses front-to-back — categorize by its X position (front/rear)
+      const stickX = stick.x0;
+      if (Math.abs(stickX - b.x0) < 1) side = 'rear';
+      else if (Math.abs(stickX - (b.x1 - PROFILES[stick.profile].size)) < 1) side = 'fwd';
+      else side = 'mid';
+    } else { // z-axis (vertical leg)
+      const stickY = stick.y0 + PROFILES[stick.profile].size / 2;
+      const driverSide = stickY > 0;
+      const isAgainstWall = driverSide ?
+        Math.abs(stickY - (b.y1 - PROFILES[stick.profile].size/2)) < 1 :
+        Math.abs(stickY - b.y0) < 1;
+      const eOrI = isAgainstWall ? 'E' : 'I';
+      const stickX = stick.x0;
+      if (Math.abs(stickX - b.x0) < 1) side = eOrI + '.rear';
+      else if (Math.abs(stickX - (b.x1 - PROFILES[stick.profile].size)) < 1) side = eOrI + '.fwd';
+      else side = eOrI + '.mid';
+    }
+
+    // Determine Level (1=floor, 2=toe-kick, 3=mid, 4=top, etc.)
+    const stickZ = stick.z0;
+    let level = '?';
+    if (stick.axis === 'z'){
+      level = '?'; // z-legs span multiple levels; level not really meaningful
+    } else {
+      if (Math.abs(stickZ - b.z0) < 1) level = '1';        // floor
+      else if (Math.abs(stickZ - TOE_KICK_HEIGHT) < 1) level = '2';  // toe-kick
+      else if (Math.abs(stickZ - VELIT.shelfZ) < 1) level = 'shelf'; // heater shelf
+      else if (Math.abs(stickZ - (b.z0 + (b.z1 - b.z0)/2)) < 2) level = '3'; // mid
+      else if (Math.abs(stickZ - (b.z1 - PROFILES[stick.profile].size)) < 1) level = '4'; // top
+      else if (stickZ > WHEELWELL.height && stickZ < WHEELWELL.height + 3) level = 'WW+'; // above wheel well
+      else level = `z${stickZ.toFixed(0)}`;
+    }
+
+    const axis = stick.axis.toUpperCase();
+    if (stick.axis === 'z') return `${code}-${side}-${axis}`;
+    return `${code}-${side}-${level}-${axis}`;
+  }
+
   function tryHover(e){
     const rect = canvas.getBoundingClientRect();
     mouseV.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -748,153 +1191,59 @@
       const id = hits[0].object.userData.stickId;
       const stick = allSticks.find(s => s.id === id);
       if (stick){
-        const secNames = [...stick.sections].map(sid => sections.find(s => s.id === sid)?.label || sid).join(', ');
+        const stickCode = getStickCode(stick);
         let tags = '';
-        if (stick.spliced) tags += `<br><span style="color:var(--splice);">⚡ Auto-splice: ships as 2× ${stick.spliceLength.toFixed(1)}"</span>`;
-        if (stick.oversize && !stick.spliced) tags += `<br><span style="color:var(--oversize);">⚠ Oversize (>47"): UPS surcharge applies</span>`;
+        if (stick.spliced) tags += `<br><span style="color:var(--splice);">⚡ Splice 2× ${stick.spliceLength.toFixed(1)}"</span>`;
+        if (stick.oversize && !stick.spliced) tags += `<br><span style="color:var(--oversize);">⚠ Oversize</span>`;
         info.style.display = 'block';
-        info.innerHTML = `<b>${PROFILES[stick.profile].label} · ${stick.length.toFixed(1)}" · ${stick.axis.toUpperCase()}</b>${tags}<br>${stick.roles.join(', ')}<br><i>${secNames}</i>`;
+        info.innerHTML = `<b>${stickCode}</b><br>${PROFILES[stick.profile].label} · ${stick.length.toFixed(1)}"${tags}<br><i>${stick.roles.join(', ')}</i>`;
       }
     } else { info.style.display = 'none'; }
   }
 
-  document.querySelectorAll('button[data-v]').forEach(b => {
-    b.addEventListener('click', () => {
-      const v = b.dataset.v;
-      const fpView = document.getElementById('floor-plan-view');
-      const canvas3D = document.getElementById('c');
-
-      if (v === 'floorplan'){
-        // Show 2D floor plan, hide 3D canvas
-        fpView.classList.add('active');
-        canvas3D.style.display = 'none';
-        document.getElementById('plan-overlay').classList.remove('active');
-        renderFloorPlan();
-        document.querySelectorAll('button[data-v]').forEach(x => x.classList.remove('active'));
-        b.classList.add('active');
-        return;
-      }
-
-      // Any other view: hide floor plan, show 3D canvas
-      fpView.classList.remove('active');
-      canvas3D.style.display = 'block';
-
-      camUpAxis = 'z';
-      if (v === 'iso')   { camTheta = -Math.PI*0.6; camPhi = Math.PI*0.42; camRadius = 7; }
-      if (v === 'top')   { camUpAxis = 'x'; camRadius = 4; }
-      if (v === 'rear')  { camTheta = Math.PI; camPhi = Math.PI/2; camRadius = 7; }
-      if (v === 'front') { camTheta = 0; camPhi = Math.PI/2; camRadius = 7; }
-      if (v === 'drv')   { camTheta = Math.PI/2; camPhi = Math.PI/2; camRadius = 7; }
-      if (v === 'pass')  { camTheta = -Math.PI/2; camPhi = Math.PI/2; camRadius = 7; }
-      updateCamera();
-      renderPlanOverlay();
-      document.querySelectorAll('button[data-v]').forEach(x => x.classList.remove('active'));
-      b.classList.add('active');
-    });
-  });
-
-  // FLOOR PLAN VIEW — full-replace 2D drawing for physical measurement reference
-  // Three coordinate references on one drawing:
-  //   A. Wall-relative dimension lines (orange arrows from each wall to cabinet edges)
-  //   B. X-axis scale across top: 0 (rear) → 120 (front)
-  //   C. Y-axis scale on side: centerline = 0, +39 to driver wall, -39 to passenger wall
   function renderFloorPlan(){
     const el = document.getElementById('floor-plan-view');
-
-    // SVG drawing coordinate system: 1 inch = 5 pixels
     const SCALE = 5;
-    const VAN_W_PX = SHELL.W * SCALE;  // 78 * 5 = 390
-    const VAN_L_PX = SHELL.L * SCALE;  // 120 * 5 = 600
-
-    // Margins for scale rulers and dimension lines
-    const MARGIN_TOP = 80;     // X-axis scale + title
-    const MARGIN_LEFT = 90;    // Y-axis scale + dimension labels
-    const MARGIN_RIGHT = 100;  // dimension labels for driver side
-    const MARGIN_BOTTOM = 70;  // wall-relative dimensions below
-
-    // Total SVG dimensions
+    const VAN_W_PX = SHELL.W * SCALE;
+    const VAN_L_PX = SHELL.L * SCALE;
+    const MARGIN_TOP = 80, MARGIN_LEFT = 90, MARGIN_RIGHT = 120, MARGIN_BOTTOM = 70;
     const SVG_W = VAN_W_PX + MARGIN_LEFT + MARGIN_RIGHT;
     const SVG_H = VAN_L_PX + MARGIN_TOP + MARGIN_BOTTOM;
-
-    // Orientation on the drawing:
-    //   - REAR of van at TOP (Y=0 in SVG space, X=0 in van space)
-    //   - FRONT of van at BOTTOM (Y=VAN_L_PX, X=120 in van space)
-    //   - PASSENGER (-Y in van = left in real life) at LEFT of drawing
-    //   - DRIVER (+Y in van = right) at RIGHT of drawing
-    //
-    // Helper: convert van (x_inches, y_inches) → svg (px, px)
-    // van x=0 (rear) → svg y=MARGIN_TOP
-    // van x=120 (front) → svg y=MARGIN_TOP + VAN_L_PX
-    // van y=-39 (passenger wall) → svg x=MARGIN_LEFT
-    // van y=+39 (driver wall) → svg x=MARGIN_LEFT + VAN_W_PX
-    const VAN_X0_PX = MARGIN_LEFT;        // passenger wall on screen
-    const VAN_X1_PX = MARGIN_LEFT + VAN_W_PX;  // driver wall on screen
-    const VAN_Y0_PX = MARGIN_TOP;         // rear wall on screen
-    const VAN_Y1_PX = MARGIN_TOP + VAN_L_PX;   // front wall on screen
-
+    const VAN_X0_PX = MARGIN_LEFT, VAN_X1_PX = MARGIN_LEFT + VAN_W_PX;
+    const VAN_Y0_PX = MARGIN_TOP, VAN_Y1_PX = MARGIN_TOP + VAN_L_PX;
     function vx(yInches){ return MARGIN_LEFT + (yInches + SHELL.W/2) * SCALE; }
     function vy(xInches){ return MARGIN_TOP + xInches * SCALE; }
 
     let svg = `<svg viewBox="0 0 ${SVG_W} ${SVG_H}" xmlns="http://www.w3.org/2000/svg">`;
-
-    // Background
     svg += `<rect x="0" y="0" width="${SVG_W}" height="${SVG_H}" class="fp-bg"/>`;
+    svg += `<text x="${MARGIN_LEFT}" y="20" class="fp-title">Floor Plan — Transit 148" HR (real)</text>`;
+    svg += `<text x="${MARGIN_LEFT}" y="36" class="fp-subtitle">132"×67" · Scale 1"=${SCALE}px · Codes: DC/PC/WS/G/UC/GB</text>`;
 
-    // Title
-    svg += `<text x="${MARGIN_LEFT}" y="20" class="fp-title">Floor Plan — Transit 350 148" HR</text>`;
-    svg += `<text x="${MARGIN_LEFT}" y="36" class="fp-subtitle">Scale: 1" = ${SCALE}px · For physical verification in van</text>`;
-
-    // ===== X-AXIS SCALE (across top) — van length 0 (rear) to 120 (front) =====
-    // Position: just above the van rectangle. Tick at every 12" (1 ft).
     const xScaleY = VAN_Y0_PX - 12;
     svg += `<line x1="${VAN_X0_PX - 6}" y1="${xScaleY}" x2="${VAN_X1_PX + 6}" y2="${xScaleY}" class="fp-scale-line"/>`;
-    // The X-axis "rear → front" runs vertically on the drawing (top to bottom),
-    // so this top scale shows van-Y (width). We need ANOTHER scale on the left edge for van-X.
-    // Actually let me re-think. The user wants:
-    //   Scale running front (0) to back (120) — this is the van length axis (van X).
-    //   Centerline = 0, driver=+, passenger=- — this is the van width axis (van Y).
-    // On a top-down drawing where rear=top of page and front=bottom of page:
-    //   Van X (length) axis runs VERTICALLY (top to bottom of page)
-    //   Van Y (width) axis runs HORIZONTALLY (left to right of page)
-    // So the length scale (0-120) should be on the LEFT or RIGHT EDGE running vertically.
-    // And the width scale (-39 to +39 with 0 = centerline) on TOP or BOTTOM running horizontally.
-
-    // Top-edge horizontal scale: van Y (width), centerline = 0
-    // Tick at -39, -30, -20, -10, 0, +10, +20, +30, +39
-    const widthTicks = [-39, -30, -20, -10, 0, 10, 20, 30, 39];
-    widthTicks.forEach(t => {
+    [-33.5, -25, -15, -5, 0, 5, 15, 25, 33.5].forEach(t => {
       const tx = vx(t);
       svg += `<line x1="${tx}" y1="${xScaleY - 4}" x2="${tx}" y2="${xScaleY + 4}" class="fp-scale-tick"/>`;
       const label = (t === 0) ? '0 (CL)' : (t > 0 ? '+' + t : t);
       svg += `<text x="${tx}" y="${xScaleY - 8}" class="fp-scale-text" text-anchor="middle">${label}</text>`;
     });
-    svg += `<text x="${(VAN_X0_PX + VAN_X1_PX) / 2}" y="${xScaleY - 26}" class="fp-scale-label" text-anchor="middle">← Passenger ←  Width (Y, centerline = 0)  → Driver →</text>`;
+    svg += `<text x="${(VAN_X0_PX + VAN_X1_PX) / 2}" y="${xScaleY - 26}" class="fp-scale-label" text-anchor="middle">← P (Passenger) ←  Width Y (CL=0)  → D (Driver) →</text>`;
 
-    // Left-edge vertical scale: van X (length), 0 (rear) to 120 (front)
     const yScaleX = VAN_X0_PX - 24;
     svg += `<line x1="${yScaleX}" y1="${VAN_Y0_PX - 6}" x2="${yScaleX}" y2="${VAN_Y1_PX + 6}" class="fp-scale-line"/>`;
-    const lengthTicks = [0, 12, 18, 24, 36, 48, 60, 65, 72, 84, 96, 103, 108, 120];
-    lengthTicks.forEach(t => {
+    [0, 18, 48, 65, 100, 101, 125, 130, 132].forEach(t => {
       const ty = vy(t);
       svg += `<line x1="${yScaleX - 4}" y1="${ty}" x2="${yScaleX + 4}" y2="${ty}" class="fp-scale-tick"/>`;
       svg += `<text x="${yScaleX - 8}" y="${ty + 3}" class="fp-scale-text" text-anchor="end">${t}"</text>`;
     });
-    svg += `<text x="${yScaleX - 60}" y="${(VAN_Y0_PX + VAN_Y1_PX) / 2}" class="fp-scale-label" text-anchor="middle" transform="rotate(-90 ${yScaleX - 60} ${(VAN_Y0_PX + VAN_Y1_PX) / 2})">↑ Rear (0)  Length (X)  Front (120) ↓</text>`;
+    svg += `<text x="${yScaleX - 60}" y="${(VAN_Y0_PX + VAN_Y1_PX) / 2}" class="fp-scale-label" text-anchor="middle" transform="rotate(-90 ${yScaleX - 60} ${(VAN_Y0_PX + VAN_Y1_PX) / 2})">↑ Rear (0)  Length X  Front 132 ↓</text>`;
 
-    // ===== VAN OUTLINE =====
     svg += `<rect x="${VAN_X0_PX}" y="${VAN_Y0_PX}" width="${VAN_W_PX}" height="${VAN_L_PX}" class="fp-van"/>`;
-
-    // Centerline (van Y=0, vertical dashed line down the middle of the van)
     const clX = vx(0);
     svg += `<line x1="${clX}" y1="${VAN_Y0_PX}" x2="${clX}" y2="${VAN_Y1_PX}" class="fp-centerline"/>`;
+    svg += `<text x="${VAN_X0_PX - 4}" y="${VAN_Y0_PX - 2}" class="fp-subtitle" text-anchor="end">PASSENGER (P)</text>`;
+    svg += `<text x="${VAN_X1_PX + 4}" y="${VAN_Y0_PX - 2}" class="fp-subtitle">DRIVER (D)</text>`;
 
-    // Wall labels
-    svg += `<text x="${VAN_X0_PX - 4}" y="${VAN_Y0_PX - 2}" class="fp-subtitle" text-anchor="end">PASSENGER WALL</text>`;
-    svg += `<text x="${VAN_X1_PX + 4}" y="${VAN_Y0_PX - 2}" class="fp-subtitle">DRIVER WALL</text>`;
-    svg += `<text x="${VAN_X0_PX + VAN_W_PX/2}" y="${VAN_Y0_PX - 50}" class="fp-subtitle" text-anchor="middle" style="font-size:13px;font-weight:600;">REAR (rear doors)</text>`;
-    svg += `<text x="${VAN_X0_PX + VAN_W_PX/2}" y="${VAN_Y1_PX + 18}" class="fp-subtitle" text-anchor="middle" style="font-size:13px;font-weight:600;">FRONT (behind cab)</text>`;
-
-    // ===== CABINET FOOTPRINTS =====
     sections.forEach(s => {
       if (!s.anchor) return;
       const b = getBounds(s);
@@ -905,32 +1254,56 @@
       const pw = (b.y1 - b.y0) * SCALE;
       const ph = (b.x1 - b.x0) * SCALE;
       svg += `<rect x="${px}" y="${py}" width="${pw}" height="${ph}" fill="${colorHex}" class="fp-cabinet" stroke="${colorHex}"/>`;
-
-      // Section name + footprint dimensions in the center of the cabinet
       const cx = px + pw / 2;
       const cy = py + ph / 2;
-      const name = s.label.split('(')[0].trim();
-      svg += `<text x="${cx}" y="${cy - 4}" class="fp-cabinet-label">${name}</text>`;
-      svg += `<text x="${cx}" y="${cy + 12}" class="fp-cabinet-dim">${b.x1 - b.x0}" × ${(b.y1 - b.y0).toFixed(1)}"</text>`;
+      svg += `<text x="${cx}" y="${cy - 6}" class="fp-cabinet-code">${s.code}</text>`;
+      svg += `<text x="${cx}" y="${cy + 8}" class="fp-cabinet-dim">${b.x1 - b.x0}" × ${(b.y1 - b.y0).toFixed(1)}"</text>`;
+
+      // Draw bay subdivisions for WS
+      if (s.bays){
+        let cursorX = b.x0;
+        s.bays.forEach((bay, i) => {
+          const bayX0 = cursorX;
+          const bayX1 = cursorX + bay.length;
+          const bpy = vy(bayX0);
+          const bph = bay.length * SCALE;
+          svg += `<line x1="${px}" y1="${bpy}" x2="${px + pw}" y2="${bpy}" stroke="${colorHex}" stroke-width="0.5" stroke-dasharray="2 2" opacity="0.6"/>`;
+          svg += `<text x="${px + pw + 4}" y="${bpy + bph/2 + 3}" class="fp-cabinet-dim" style="text-anchor: start;">${bay.code || ''}</text>`;
+          cursorX = bayX1;
+        });
+      }
     });
 
-    // ===== BED RAILS / GARAGE AREA =====
-    const plumbing = getBounds(sections.find(s => s.id === 'plumbing'));
-    const electrical = getBounds(sections.find(s => s.id === 'electrical'));
+    const plumbing = getBounds(sections.find(s => s.id === 'PC'));
+    const electrical = getBounds(sections.find(s => s.id === 'DC'));
     if (plumbing && electrical){
       const garageX = vx(plumbing.y1);
       const garageY = vy(0);
       const garageW = (electrical.y0 - plumbing.y1) * SCALE;
       const garageH = Math.min(plumbing.x1, electrical.x1) * SCALE;
       svg += `<rect x="${garageX}" y="${garageY}" width="${garageW}" height="${garageH}" class="fp-bed"/>`;
-      svg += `<text x="${garageX + garageW/2}" y="${garageY + garageH/2 - 4}" class="fp-cabinet-label" style="fill:#a04a20;">Garage / Bed</text>`;
-      svg += `<text x="${garageX + garageW/2}" y="${garageY + garageH/2 + 12}" class="fp-cabinet-dim">${Math.min(plumbing.x1, electrical.x1)}" × ${(electrical.y0 - plumbing.y1).toFixed(1)}"</text>`;
+      svg += `<text x="${garageX + garageW/2}" y="${garageY + garageH/2 - 6}" class="fp-cabinet-code" style="fill:#1E6D8A;">GB</text>`;
+      svg += `<text x="${garageX + garageW/2}" y="${garageY + garageH/2 + 10}" class="fp-cabinet-dim">${Math.min(plumbing.x1, electrical.x1)}" × ${(electrical.y0 - plumbing.y1).toFixed(1)}"</text>`;
     }
 
-    // ===== WHEEL WELLS =====
+    const doorX = vx(-SHELL.W/2);
+    const doorY = vy(SIDE_DOOR.x0);
+    const doorW = 6 * SCALE;
+    const doorH = (SIDE_DOOR.x1 - SIDE_DOOR.x0) * SCALE;
+    svg += `<rect x="${doorX}" y="${doorY}" width="${doorW}" height="${doorH}" class="fp-door"/>`;
+    svg += `<text x="${doorX + doorW + 4}" y="${doorY + doorH/2 + 4}" class="fp-cabinet-dim" style="fill:#a07020;">DOOR ${SIDE_DOOR.x1 - SIDE_DOOR.x0}"</text>`;
+
+    // Velit heater footprint in WS-A (drawn as red box)
+    const wsB = getBounds(sections.find(s => s.id === 'WS'));
+    if (wsB){
+      const heaterX = vx(wsB.y1 - VELIT.y - 1);
+      const heaterY = vy(wsB.x1 - 8 + 1);
+      svg += `<rect x="${heaterX}" y="${heaterY}" width="${VELIT.y * SCALE}" height="${VELIT.x * SCALE}" class="fp-heater"/>`;
+      svg += `<text x="${heaterX + VELIT.y * SCALE / 2}" y="${heaterY + VELIT.x * SCALE / 2 + 3}" class="fp-cabinet-dim" style="fill: white; font-weight: 700;">Velit</text>`;
+    }
+
     [-1, 1].forEach(side => {
       const yLow = (side < 0) ? -SHELL.W/2 : SHELL.W/2 - WHEELWELL.depth;
-      const yHigh = yLow + WHEELWELL.depth;
       const wwX = vx(yLow);
       const wwY = vy(WHEELWELL.xStart);
       const wwW = WHEELWELL.depth * SCALE;
@@ -939,71 +1312,31 @@
       svg += `<text x="${wwX + wwW/2}" y="${wwY + wwH/2 + 3}" class="fp-cabinet-dim" style="fill:#a02050;">WW</text>`;
     });
 
-    // ===== AISLE WIDTH LABELS (between cabinets) =====
-    // Rear aisle (x=0 to x=65): cabinets are 15.5" each side, aisle = 47"
-    const rearAisleX = vx(0);
-    const rearAisleY = vy(32.5);
-    svg += `<text x="${rearAisleX}" y="${rearAisleY}" class="fp-aisle-text">AISLE: 47"</text>`;
-    // Forward aisle (x=65 to x=120): cabinets are 20" each side, aisle = 38"
-    const fwdAisleX = vx(0);
-    const fwdAisleY = vy(84);
-    svg += `<text x="${fwdAisleX}" y="${fwdAisleY}" class="fp-aisle-text">AISLE: 38"</text>`;
+    const rearAisleX = vx(0), rearAisleY = vy(32.5);
+    svg += `<text x="${rearAisleX}" y="${rearAisleY}" class="fp-aisle-text">AISLE: 36"</text>`;
+    const fwdAisleX = vx(0), fwdAisleY = vy(85);
+    svg += `<text x="${fwdAisleX}" y="${fwdAisleY}" class="fp-aisle-text">AISLE: 27"</text>`;
 
-    // ===== WALL-RELATIVE DIMENSION LINES =====
-    // Pattern: line from wall to cabinet edge, with a tick at each end and the measurement in the middle.
-
-    // Dimension line helper: orange arrow with measurement label
-    // For horizontal dimensions (Y axis - across the van width)
-    function dimH(yPx, x1Px, x2Px, label, labelOffset){
-      const offset = labelOffset || 0;
+    function dimH(yPx, x1Px, x2Px, label){
       svg += `<line x1="${x1Px}" y1="${yPx}" x2="${x2Px}" y2="${yPx}" class="fp-dim-line"/>`;
       svg += `<line x1="${x1Px}" y1="${yPx - 4}" x2="${x1Px}" y2="${yPx + 4}" class="fp-dim-tick"/>`;
       svg += `<line x1="${x2Px}" y1="${yPx - 4}" x2="${x2Px}" y2="${yPx + 4}" class="fp-dim-tick"/>`;
-      svg += `<text x="${(x1Px + x2Px) / 2}" y="${yPx - 4 + offset}" class="fp-dim-text" text-anchor="middle">${label}</text>`;
+      svg += `<text x="${(x1Px + x2Px) / 2}" y="${yPx - 4}" class="fp-dim-text" text-anchor="middle">${label}</text>`;
     }
-    // For vertical dimensions (X axis - along the van length)
-    function dimV(xPx, y1Px, y2Px, label){
-      svg += `<line x1="${xPx}" y1="${y1Px}" x2="${xPx}" y2="${y2Px}" class="fp-dim-line"/>`;
-      svg += `<line x1="${xPx - 4}" y1="${y1Px}" x2="${xPx + 4}" y2="${y1Px}" class="fp-dim-tick"/>`;
-      svg += `<line x1="${xPx - 4}" y1="${y2Px}" x2="${xPx + 4}" y2="${y2Px}" class="fp-dim-tick"/>`;
-      svg += `<text x="${xPx + 6}" y="${(y1Px + y2Px) / 2 + 4}" class="fp-dim-text">${label}</text>`;
-    }
-
-    // Below the van: passenger-wall-to-edge and edge-to-driver-wall dimensions
-    // At rear cabinets (x=32.5, middle of plumbing/electrical depth zone)
-    const dimY_rear = VAN_Y1_PX + 28;  // below the van
-    // For the FORWARD section (where the cabinets are deeper at 20"):
-    const galley = getBounds(sections.find(s => s.id === 'galley'));
-    const workspace = getBounds(sections.find(s => s.id === 'workspace'));
     if (plumbing && electrical){
-      // Wall-relative dimensions at the REAR cabinet zone (use middle of cabinet depth zone)
-      // Show as a horizontal dimension band below the rear half
-      const yRearBand = vy(35);  // middle of rear cabinet zone, x ≈ 32.5"
-      // From passenger wall to plumbing inner edge
-      dimH(yRearBand, vx(-39), vx(plumbing.y1), '15.5"', 0);
-      // Aisle width
-      dimH(yRearBand, vx(plumbing.y1), vx(electrical.y0), '47"', 0);
-      // From electrical inner edge to driver wall
-      dimH(yRearBand, vx(electrical.y0), vx(39), '15.5"', 0);
+      const yRearBand = vy(35);
+      dimH(yRearBand, vx(-SHELL.W/2), vx(plumbing.y1), '15.5"');
+      dimH(yRearBand, vx(plumbing.y1), vx(electrical.y0), '36"');
+      dimH(yRearBand, vx(electrical.y0), vx(SHELL.W/2), '15.5"');
     }
-    if (galley && workspace){
-      const yFwdBand = vy(85);  // middle of forward cabinet zone, x ≈ 84"
-      dimH(yFwdBand, vx(-39), vx(galley.y1), '20"', 0);
-      dimH(yFwdBand, vx(galley.y1), vx(workspace.y0), '38"', 0);
-      dimH(yFwdBand, vx(workspace.y0), vx(39), '20"', 0);
+    const galleyB = getBounds(sections.find(s => s.id === 'G'));
+    const workspaceB = getBounds(sections.find(s => s.id === 'WS'));
+    if (galleyB && workspaceB){
+      const yFwdBand = vy(85);
+      dimH(yFwdBand, vx(-SHELL.W/2), vx(galleyB.y1), '20"');
+      dimH(yFwdBand, vx(galleyB.y1), vx(workspaceB.y0), '27"');
+      dimH(yFwdBand, vx(workspaceB.y0), vx(SHELL.W/2), '20"');
     }
-
-    // Vertical dimensions (along van length)
-    // On the right side of the drawing, just outside van: showing key X distances from REAR wall
-    const dimX_right = VAN_X1_PX + 20;
-    // Rear wall to rear cabinet front edge (=65)
-    dimV(dimX_right, vy(0), vy(65), '65" (rear cabinets)');
-    // Rear cabinet front to van front (=55)
-    dimV(dimX_right + 50, vy(65), vy(120), '55" (forward zone)');
-    // Wheel well: rear to WW start
-    dimV(dimX_right, vy(0), vy(18), '18" to WW');
-    // WW start to WW end
-    dimV(dimX_right, vy(18), vy(48), '30" WW');
 
     svg += `</svg>`;
     el.innerHTML = svg;
@@ -1016,242 +1349,6 @@
     world.add(buildSticksGroup());
   }
 
-  // 2D floor plan dimension overlay — shown only in Top view
-  // Coordinate mapping: canvas X = van X (length, 0..120)
-  //                     canvas Y = van Y inverted (driver +Y at right, passenger -Y at left)
-  // But in top view the camera is looking DOWN from above, so:
-  //   canvas X axis ~ van Y (width)
-  //   canvas Y axis ~ van X (length)  - and we need to know orientation
-  // To keep things simple we generate an SVG that uses van coordinates directly and
-  // applies a transform to match the canvas pixel positions of the 3D rendered plan.
-  function renderPlanOverlay(){
-    const ov = document.getElementById('plan-overlay');
-    if (camUpAxis !== 'x'){ ov.classList.remove('active'); ov.innerHTML = ''; return; }
-    ov.classList.add('active');
-
-    // We render directly in pixel space using the same projection as the camera (top-down).
-    // For top view, camera.up = (1,0,0) means van's +X (length) points UP on screen.
-    // Looking down +Z, with up = +X: screen-right = -Y (passenger), screen-left = +Y? Actually:
-    //   camera up vector +X, looking -Z. Right-hand rule: screen-right = up × forward = +X × -Z = +Y (driver right).
-    //   So driver (+Y) appears on screen RIGHT, passenger (-Y) on screen LEFT.
-    //   Van length (+X = front) appears on screen UP.
-    // We'll project a few known points using the camera to get pixel coords, then build the SVG.
-
-    const W = cw, H = ch;
-    function project(vx, vy, vz){
-      const v = new THREE.Vector3(M(vx), M(vy), M(vz));
-      v.project(camera);
-      // v.x, v.y in NDC (-1..1). Y is up.
-      return {
-        x: (v.x + 1) / 2 * W,
-        y: (1 - v.y) / 2 * H
-      };
-    }
-
-    // Compute pixel positions of the four van corners (z=0 floor plane)
-    const corners = {
-      rearPass:  project(0, -SHELL.W/2, 0),
-      rearDrv:   project(0, SHELL.W/2, 0),
-      frontPass: project(SHELL.L, -SHELL.W/2, 0),
-      frontDrv:  project(SHELL.L, SHELL.W/2, 0)
-    };
-
-    // Section footprint rectangles
-    const sectionFootprints = [];
-    sections.forEach(s => {
-      if (!s.anchor) return;
-      const b = getBounds(s);
-      if (!b) return;
-      const c1 = project(b.x0, b.y0, 0);
-      const c2 = project(b.x1, b.y1, 0);
-      sectionFootprints.push({
-        section: s, b: b,
-        x: Math.min(c1.x, c2.x),
-        y: Math.min(c1.y, c2.y),
-        w: Math.abs(c2.x - c1.x),
-        h: Math.abs(c2.y - c1.y)
-      });
-    });
-
-    // Wheel well rectangles
-    const wwPass = {
-      c1: project(WHEELWELL.xStart, -SHELL.W/2, 0),
-      c2: project(WHEELWELL.xStart + WHEELWELL.length, -SHELL.W/2 + WHEELWELL.depth, 0)
-    };
-    const wwDrv = {
-      c1: project(WHEELWELL.xStart, SHELL.W/2 - WHEELWELL.depth, 0),
-      c2: project(WHEELWELL.xStart + WHEELWELL.length, SHELL.W/2, 0)
-    };
-
-    // Bed rails footprint
-    const bedRailFootprint = (() => {
-      const p = sections.find(s => s.id === 'plumbing');
-      const e = sections.find(s => s.id === 'electrical');
-      if (!p || !e) return null;
-      const pb = getBounds(p), eb = getBounds(e);
-      const c1 = project(0, pb.y1, 0);
-      const c2 = project(Math.min(pb.x1, eb.x1), eb.y0, 0);
-      return {
-        x: Math.min(c1.x, c2.x),
-        y: Math.min(c1.y, c2.y),
-        w: Math.abs(c2.x - c1.x),
-        h: Math.abs(c2.y - c1.y)
-      };
-    })();
-
-    // Build SVG
-    let svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">`;
-
-    // Section footprint outlines and labels
-    sectionFootprints.forEach(fp => {
-      const colorHex = '#' + fp.section.color.toString(16).padStart(6, '0');
-      svg += `<rect x="${fp.x}" y="${fp.y}" width="${fp.w}" height="${fp.h}" fill="${colorHex}" fill-opacity="0.12" stroke="${colorHex}" stroke-width="1.5"/>`;
-      // Label centered in footprint
-      const cx = fp.x + fp.w / 2;
-      const cy = fp.y + fp.h / 2;
-      const dimLabel = `${fp.b.x1 - fp.b.x0}" × ${(fp.b.y1 - fp.b.y0).toFixed(1)}"`;
-      svg += `<text x="${cx}" y="${cy - 6}" class="sec-label" text-anchor="middle">${fp.section.label.split('(')[0].trim()}</text>`;
-      svg += `<text x="${cx}" y="${cy + 10}" class="dim-text small" text-anchor="middle">${dimLabel}</text>`;
-    });
-
-    // Bed rails footprint
-    if (bedRailFootprint){
-      const cx = bedRailFootprint.x + bedRailFootprint.w / 2;
-      const cy = bedRailFootprint.y + bedRailFootprint.h / 2;
-      svg += `<rect x="${bedRailFootprint.x}" y="${bedRailFootprint.y}" width="${bedRailFootprint.w}" height="${bedRailFootprint.h}" fill="#D85A30" fill-opacity="0.08" stroke="#D85A30" stroke-width="1" stroke-dasharray="4 3"/>`;
-      svg += `<text x="${cx}" y="${cy - 4}" class="sec-label" text-anchor="middle">Garage / Bed</text>`;
-      svg += `<text x="${cx}" y="${cy + 12}" class="dim-text small" text-anchor="middle">65" × 47"</text>`;
-    }
-
-    // Wheel well outlines (red)
-    [wwPass, wwDrv].forEach(ww => {
-      const x = Math.min(ww.c1.x, ww.c2.x);
-      const y = Math.min(ww.c1.y, ww.c2.y);
-      const w = Math.abs(ww.c2.x - ww.c1.x);
-      const h = Math.abs(ww.c2.y - ww.c1.y);
-      svg += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#D4537E" fill-opacity="0.18" stroke="#D4537E" stroke-width="1"/>`;
-      svg += `<text x="${x + w/2}" y="${y + h/2 + 4}" class="dim-text small" text-anchor="middle">WW 30×9</text>`;
-    });
-
-    // Van shell outline
-    svg += `<rect x="${Math.min(corners.rearPass.x, corners.frontDrv.x)}" y="${Math.min(corners.rearPass.y, corners.frontDrv.y)}" width="${Math.abs(corners.frontDrv.x - corners.rearPass.x)}" height="${Math.abs(corners.frontDrv.y - corners.rearPass.y)}" fill="none" stroke="#888780" stroke-width="2"/>`;
-
-    // Overall dimensions (outside the van outline)
-    const sx = Math.min(corners.rearPass.x, corners.rearDrv.x);
-    const sy = Math.min(corners.rearPass.y, corners.frontPass.y);
-    const vw = Math.abs(corners.rearDrv.x - corners.rearPass.x);
-    const vh = Math.abs(corners.frontPass.y - corners.rearPass.y);
-
-    // Width label (top of plan)
-    svg += `<text x="${sx + vw/2}" y="${sy - 8}" class="dim-text" text-anchor="middle">Width: 78"</text>`;
-    // Length label (left of plan)
-    svg += `<text x="${sx - 8}" y="${sy + vh/2}" class="dim-text" text-anchor="end" transform="rotate(-90 ${sx - 8} ${sy + vh/2})">Length: 120"</text>`;
-
-    // Aisle width annotations at key X positions
-    // Rear cabinet area aisle = 78 - 15.5*2 = 47"
-    // Forward cabinet area aisle = 78 - 20*2 = 38"
-    const rearAisleY = project(32.5, 0, 0);
-    const fwdAisleY = project(84, 0, 0);
-    svg += `<text x="${rearAisleY.x}" y="${rearAisleY.y}" class="dim-text" text-anchor="middle">Aisle: 47"</text>`;
-    svg += `<text x="${fwdAisleY.x}" y="${fwdAisleY.y}" class="dim-text" text-anchor="middle">Aisle: 38"</text>`;
-
-    // X-coordinate ticks: 0, 18, 48, 65, 103, 120
-    const ticks = [0, 18, 48, 65, 103, 120];
-    ticks.forEach(x => {
-      const p = project(x, -SHELL.W/2, 0);
-      const pTop = project(x, SHELL.W/2, 0);
-      svg += `<line x1="${p.x}" y1="${p.y}" x2="${p.x}" y2="${p.y + 8}" class="dim-line"/>`;
-      svg += `<text x="${p.x}" y="${p.y + 22}" class="dim-text small" text-anchor="middle">x=${x}"</text>`;
-    });
-
-    svg += `</svg>`;
-    ov.innerHTML = svg;
-  }
-
-  function renderSpecSheet(){
-    const el = document.getElementById('spec-sheet');
-    let lines = [];
-    lines.push(`VAN SHELL (Transit 350 148" HR)`);
-    lines.push(`================================`);
-    lines.push(`Interior length:    ${SHELL.L}"`);
-    lines.push(`Interior width:     ${SHELL.W}"`);
-    lines.push(`Interior height:    ${SHELL.H}"`);
-    lines.push(`Counter plane (z):  ${SHELL.counterZ}"`);
-    lines.push(``);
-    lines.push(`WHEEL WELLS (both sides)`);
-    lines.push(`------------------------`);
-    lines.push(`X start:  ${WHEELWELL.xStart}"`);
-    lines.push(`X end:    ${WHEELWELL.xStart + WHEELWELL.length}"`);
-    lines.push(`Length:   ${WHEELWELL.length}"`);
-    lines.push(`Depth:    ${WHEELWELL.depth}"`);
-    lines.push(`Height:   ${WHEELWELL.height}"`);
-    lines.push(``);
-    lines.push(`SECTION FOOTPRINTS`);
-    lines.push(`==================`);
-
-    sections.forEach(s => {
-      if (s.id === 'bed_rails') return;
-      if (!s.anchor) return;
-      const b = getBounds(s);
-      if (!b) return;
-      const side = (b.y0 < 0) ? 'passenger' : 'driver';
-      const yLow = b.y0.toFixed(1);
-      const yHigh = b.y1.toFixed(1);
-      lines.push(``);
-      lines.push(`${s.label}`);
-      lines.push(`  X:       ${b.x0}" to ${b.x1}"  (length ${b.x1 - b.x0}")`);
-      lines.push(`  Y:       ${yLow}" to ${yHigh}"  (depth ${(b.y1 - b.y0).toFixed(1)}")`);
-      lines.push(`  Z:       ${b.z0}" to ${b.z1}"  (height ${b.z1 - b.z0}")`);
-      lines.push(`  Side:    ${side} wall`);
-      lines.push(`  Profile: ${PROFILES[s.profile].label}`);
-      if (s.doors) lines.push(`  Doors:   ${s.doors}`);
-      if (s.bays){
-        lines.push(`  Bays:    ${s.bays.length}`);
-        let cursorX = b.x0;
-        s.bays.forEach((bay, i) => {
-          const x0 = cursorX;
-          const x1 = cursorX + bay.length;
-          lines.push(`    ${i+1}. ${bay.type} (${bay.length}") at x=${x0}–${x1}`);
-          if (bay.type === 'drawers') lines.push(`       ${bay.drawerCount} drawers, ${bay.drawerCount * 2} Y-axis slide rails`);
-          if (bay.type === 'doors')   lines.push(`       ${bay.doors} door(s)`);
-          cursorX = x1;
-        });
-      }
-    });
-
-    // Bed rails
-    const bed = sections.find(s => s.id === 'bed_rails');
-    if (bed){
-      const p = getBounds(sections.find(s => s.id === 'plumbing'));
-      const e = getBounds(sections.find(s => s.id === 'electrical'));
-      const span = e.y0 - p.y1;
-      lines.push(``);
-      lines.push(`${bed.label}`);
-      lines.push(`  X positions: 0, ~21.7, ~43.3, 65 (4 cross rails)`);
-      lines.push(`  Y span:      ${p.y1.toFixed(1)}" to ${e.y0.toFixed(1)}"  (width ${span.toFixed(1)}")`);
-      lines.push(`  Z (bed):     ${SHELL.counterZ - 1.5}" (top of rail at ${SHELL.counterZ}")`);
-      lines.push(`  Z (step):    ${STEP_Z}"  at x=65"`);
-      lines.push(`  Profile:     ${PROFILES[bed.profile].label}`);
-    }
-
-    lines.push(``);
-    lines.push(`AISLE WIDTHS`);
-    lines.push(`============`);
-    lines.push(`Rear (x=0 to 65):     78 - 15.5 - 15.5 = 47"`);
-    lines.push(`Forward (x=65 to 120): 78 - 20 - 20 = 38"`);
-    lines.push(``);
-    lines.push(`SHIPPING LIMITS`);
-    lines.push(`===============`);
-    lines.push(`Hard ceiling (auto-splice):   ${HARD_CEILING}"`);
-    lines.push(`Soft ceiling (UPS surcharge): ${SOFT_CEILING}"`);
-
-    el.innerHTML = lines.map(l => {
-      if (l.match(/^={3,}/)) return `<div class="sub-heading">${l}</div>`;
-      if (l.match(/^[A-Z][A-Z ]+$/) || l.match(/^[A-Z].*\(.*\)$/)) return `<div class="heading">${l}</div>`;
-      return l;
-    }).join('\n');
-  }
-
   function renderSectionList(){
     const el = document.getElementById('sections');
     el.innerHTML = sections.map(s => {
@@ -1260,15 +1357,130 @@
       const cls = (s.id === activeSection) ? 'active' : '';
       return `<div class="sec-row ${cls}" data-id="${s.id}">
         <div class="swatch" style="background:#${s.color.toString(16).padStart(6,'0')}"></div>
+        <span class="code">${s.code}</span>
         <span class="name">${s.label}</span>
-        <span class="meta">${PROFILES[s.profile].label} · ${n}${sh?` (${sh}↔)`:''}</span>
+        <span class="meta">${n}${sh?` ↔${sh}`:''}</span>
       </div>`;
     }).join('');
     el.querySelectorAll('.sec-row').forEach(r => r.addEventListener('click', () => {
-      activeSection = (activeSection === r.dataset.id) ? null : r.dataset.id;
+      activeSection = r.dataset.id;
+      showPanel('section');
       renderScene();
-      renderSectionList();
     }));
+  }
+
+  function renderSpecSheet(){
+    const el = document.getElementById('spec-sheet');
+    let lines = [];
+    lines.push(`VAN SHELL (real measurements)`);
+    lines.push(`==============================`);
+    lines.push(`Usable length:      ${SHELL.L}"  (rear to base line)`);
+    lines.push(`Floor width:        ${SHELL.W}"`);
+    lines.push(`C-pillar width:     63"  (4" narrower than floor)`);
+    lines.push(`Interior height:    ${SHELL.H}"`);
+    lines.push(`Counter plane:      ${SHELL.counterZ}"`);
+    lines.push(``);
+    lines.push(`NAMING SCHEME`);
+    lines.push(`-------------`);
+    lines.push(`DC = Driver Cabinet (electrical, rear, driver wall)`);
+    lines.push(`PC = Passenger Cabinet (plumbing, rear, pass wall)`);
+    lines.push(`WS = Workspace (forward, driver wall)`);
+    lines.push(`G  = Galley (forward, passenger wall, w/ toilet)`);
+    lines.push(`UC = Upper Cabinet (ceiling, driver side)`);
+    lines.push(`GB = Garage / Bed (between rear cabinets)`);
+    lines.push(`BT = Bike Tray (in garage, under bed)`);
+    lines.push(`Bays: A = frontmost, then B, C, D... going back`);
+    lines.push(`Axes: X=length · Y=depth · Z=height`);
+    lines.push(``);
+    lines.push(`SLIDING SIDE DOOR (passenger)`);
+    lines.push(`-----------------------------`);
+    lines.push(`X: ${SIDE_DOOR.x0}" to ${SIDE_DOOR.x1}"  (${SIDE_DOOR.x1 - SIDE_DOOR.x0}" wide)`);
+    lines.push(``);
+    lines.push(`WHEEL WELLS (both sides)`);
+    lines.push(`------------------------`);
+    lines.push(`X: ${WHEELWELL.xStart}-${WHEELWELL.xStart + WHEELWELL.length}"  D: ${WHEELWELL.depth}"  Z: ${WHEELWELL.height}"`);
+    lines.push(``);
+    lines.push(`VELIT 4000 HEATER (in WS-A)`);
+    lines.push(`---------------------------`);
+    lines.push(`Dims:      ${VELIT.x}" X × ${VELIT.y}" Y × ${VELIT.z}" Z`);
+    lines.push(`Position:  Inside WS-A bay, oriented Y-axis (14.6" fits in 20" depth)`);
+    lines.push(`Shelf:     z=${VELIT.shelfZ}" (4" clearance above heater)`);
+    lines.push(`Shelf area: 8" × 17" (~136 sq in)`);
+    lines.push(`Access:    Open from aisle side (no door on WS-A interior face)`);
+    lines.push(`Support:   2 corner z-legs at WS-A front (x=130) double as shelf feet`);
+    lines.push(``);
+    lines.push(`TOILET (in G-B)`);
+    lines.push(`---------------`);
+    lines.push(`Dims:        ${TOILET.width}"W × ${TOILET.depth}"D × ${TOILET.height}"H`);
+    lines.push(`Stored in G-B (18.5" clear width, ~2" each side)`);
+    lines.push(`Pulls forward into 27" aisle for use`);
+    lines.push(``);
+    lines.push(`SECTION FOOTPRINTS`);
+    lines.push(`==================`);
+
+    sections.forEach(s => {
+      if (s.id === 'GB') return;
+      if (!s.anchor) return;
+      const b = getBounds(s);
+      if (!b) return;
+      const side = (b.y0 < 0) ? 'P (passenger)' : 'D (driver)';
+      lines.push(``);
+      lines.push(`[${s.code}] ${s.label}`);
+      lines.push(`  X:    ${b.x0}" → ${b.x1}"  (length ${b.x1 - b.x0}")`);
+      lines.push(`  Y:    ${b.y0.toFixed(1)}" → ${b.y1.toFixed(1)}"  (depth ${(b.y1 - b.y0).toFixed(1)}")`);
+      lines.push(`  Z:    ${b.z0}" → ${b.z1}"  (height ${b.z1 - b.z0}")`);
+      lines.push(`  Side: ${side}`);
+      lines.push(`  Profile: ${PROFILES[s.profile].label}`);
+      if (s.id === 'G'){
+        lines.push(`  G-A (front, storage): 13" clear`);
+        lines.push(`  G-B (rear, toilet):   18.5" clear`);
+        lines.push(`  NO mid-leg between bays — PVC divider panel`);
+        lines.push(`  Bracket needed: PVC divider anchor at toe-kick midpoint`);
+      }
+      if (s.doors) lines.push(`  Doors: ${s.doors}`);
+      if (s.bays){
+        lines.push(`  Bays (rear → front):`);
+        let cursorX = b.x0;
+        s.bays.forEach((bay, i) => {
+          const x0 = cursorX;
+          const x1 = cursorX + bay.length;
+          const kick = bay.toeKick ? ' [toe kick]' : ' [flush — airflow]';
+          lines.push(`    [${bay.code}] ${bay.label} (${bay.length}") at x=${x0}–${x1}${kick}`);
+          if (bay.type === 'heater'){
+            lines.push(`         Velit 4000 heater + shelf at z=10"`);
+            lines.push(`         NO counter top above (open above shelf)`);
+            lines.push(`         NO door on aisle side (open shelving)`);
+          }
+          if (bay.type === 'drawers') lines.push(`         ${bay.drawerCount} drawers — slides mount on bay-divider z-legs`);
+          cursorX = x1;
+        });
+      }
+    });
+
+    const bed = sections.find(s => s.id === 'GB');
+    if (bed){
+      const p = getBounds(sections.find(s => s.id === 'PC'));
+      const e = getBounds(sections.find(s => s.id === 'DC'));
+      const g = getBounds(sections.find(s => s.id === 'G'));
+      const w = getBounds(sections.find(s => s.id === 'WS'));
+      lines.push(``);
+      lines.push(`[GB] ${bed.label}`);
+      lines.push(`  Bed rails span: ${(e.y0 - p.y1).toFixed(1)}" (Y), at z=${SHELL.counterZ - 1.5}"`);
+      lines.push(`  Step Y span:    ${g && w ? (w.y0 - g.y1).toFixed(1) : '-'}" at z=${STEP_Z}"`);
+      lines.push(`  Bike tray (BT): 65" L × 36" W slide-out at floor, fits between cabinets`);
+    }
+
+    lines.push(``);
+    lines.push(`AISLES`);
+    lines.push(`======`);
+    lines.push(`Rear (x=0-65):    36"  (67 - 15.5 - 15.5)`);
+    lines.push(`Forward (x=65+):  27"  (67 - 20 - 20)`);
+
+    el.innerHTML = lines.map(l => {
+      if (l.match(/^={3,}/)) return `<div class="sub-heading">${l}</div>`;
+      if (l.match(/^[A-Z][A-Z ]+$/) || l.match(/^\[[A-Z]/) ) return `<div class="heading">${l}</div>`;
+      return l;
+    }).join('\n');
   }
 
   function getShippablePieces(){
@@ -1283,6 +1495,227 @@
       }
     });
     return pieces;
+  }
+
+  // ===== v24.0: Inventory tab UI =====
+  let inventoryFormOpen = false;
+  let inventoryEditId = null;
+
+  function fitCheckItem(item){
+    // Returns { status: 'ok'|'warn'|'bad', messages: [] }
+    // v24.0 stub: simple bay-containment + above-counter heuristics.
+    // v24.1 will add full AABB collision detection with sticks & other items.
+    const msgs = [];
+    const sec = sections.find(s => s.id === item.sectionId);
+    if (!sec) {
+      msgs.push('Unknown section');
+      return { status: 'warn', messages: msgs };
+    }
+    let status = 'ok';
+    // Above counter check (z=37) for sections that have a counter
+    if (sec.height === 37 && item.z + item.dz > 37 + 0.5 && item.mountMode !== 'cutout'){
+      msgs.push('Top above 37" counter plane');
+      status = 'warn';
+    }
+    // Below floor check
+    if (item.z < -0.01){
+      msgs.push('Below floor (z<0)');
+      status = 'bad';
+    }
+    return { status, messages: msgs };
+  }
+
+  function renderInventoryPanel(){
+    const el = document.getElementById('inventory-panel');
+    if (!el) return;
+    let html = '';
+    if (inventoryFormOpen){
+      html += renderInventoryForm();
+    }
+    inventory.forEach(item => {
+      const fit = fitCheckItem(item);
+      const cls = 'fit-' + (fit.status === 'bad' ? 'bad' : (fit.status === 'warn' ? 'warn' : 'ok'));
+      const statusCls = fit.status === 'bad' ? 'bad' : (fit.status === 'warn' ? 'warn' : 'ok');
+      const statusLbl = fit.status === 'bad' ? 'COLLIDE' : (fit.status === 'warn' ? 'CHECK' : 'OK');
+      const sec = sections.find(s => s.id === item.sectionId);
+      const secLbl = sec ? sec.code : '?';
+      const visLbl = item.visible ? 'Hide' : 'Show';
+      const visCls = item.visible ? '' : 'off';
+      html += `<div class="inv-row ${cls}" data-id="${item.id}">
+        <div class="inv-row-head">
+          <div class="inv-row-name">${escapeHtml(item.name)}</div>
+          <span class="inv-row-section">${secLbl}</span>
+          <span class="inv-row-status ${statusCls}">${statusLbl}</span>
+        </div>
+        <div class="inv-row-dims">${item.dx}&times;${item.dy}&times;${item.dz}&quot; @ (${item.x}, ${item.y}, ${item.z})</div>
+        <div class="inv-row-mount">${MOUNT_MODES[item.mountMode] || item.mountMode}${item.notes ? ' &middot; ' + escapeHtml(item.notes) : ''}</div>`;
+      if (fit.messages.length){
+        html += `<div class="inv-fitnote ${statusCls}">${fit.messages.map(escapeHtml).join('<br>')}</div>`;
+      }
+      html += `<div class="inv-row-actions">
+          <button class="vis-toggle ${visCls}" data-act="toggle" data-id="${item.id}">${visLbl}</button>
+          <button data-act="edit" data-id="${item.id}">Edit</button>
+          <button data-act="delete" data-id="${item.id}">Delete</button>
+        </div>
+      </div>`;
+    });
+    if (inventory.length === 0){
+      html += `<div style="font-size:11px;color:var(--text-tert);padding:8px;">No items. Click + Add equipment.</div>`;
+    }
+    el.innerHTML = html;
+    el.querySelectorAll('button[data-act]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        const act = btn.dataset.act;
+        if (act === 'toggle') toggleInventoryVisible(id);
+        else if (act === 'edit') openInventoryForm(id);
+        else if (act === 'delete') deleteInventoryItem(id);
+      });
+    });
+    // Form input listeners
+    el.querySelectorAll('.inv-form input, .inv-form select').forEach(inp => {
+      inp.addEventListener('input', () => {/* live edit captured on save */});
+    });
+    const saveBtn = el.querySelector('.inv-form-save');
+    if (saveBtn) saveBtn.addEventListener('click', saveInventoryForm);
+    const cancelBtn = el.querySelector('.inv-form-cancel');
+    if (cancelBtn) cancelBtn.addEventListener('click', closeInventoryForm);
+  }
+
+  function escapeHtml(s){
+    return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
+  function renderInventoryForm(){
+    const editing = inventoryEditId ? inventory.find(i => i.id === inventoryEditId) : null;
+    const it = editing || {
+      name: '', sectionId: 'WS', mountMode: 'sits-on',
+      x: 0, y: 0, z: 0, dx: 10, dy: 10, dz: 10,
+      clearance: 1, visible: true, notes: ''
+    };
+    const sectionOpts = sections.filter(s => s.anchor || s.id === 'GB').map(s =>
+      `<option value="${s.id}" ${it.sectionId === s.id ? 'selected' : ''}>${s.code} &mdash; ${escapeHtml(s.label)}</option>`
+    ).join('');
+    const modeOpts = Object.entries(MOUNT_MODES).map(([k, v]) =>
+      `<option value="${k}" ${it.mountMode === k ? 'selected' : ''}>${escapeHtml(v)}</option>`
+    ).join('');
+    return `<div class="inv-form">
+      <label>Name</label>
+      <input id="if-name" type="text" value="${escapeHtml(it.name)}" placeholder="e.g. Microwave">
+      <div class="row2">
+        <div>
+          <label>Section</label>
+          <select id="if-section">${sectionOpts}</select>
+        </div>
+        <div>
+          <label>Mount mode</label>
+          <select id="if-mount">${modeOpts}</select>
+        </div>
+      </div>
+      <label>Position x, y, z (in)</label>
+      <div class="row3">
+        <input id="if-x" type="number" step="0.1" value="${it.x}">
+        <input id="if-y" type="number" step="0.1" value="${it.y}">
+        <input id="if-z" type="number" step="0.1" value="${it.z}">
+      </div>
+      <label>Dimensions dx, dy, dz (in)</label>
+      <div class="row3">
+        <input id="if-dx" type="number" step="0.1" value="${it.dx}">
+        <input id="if-dy" type="number" step="0.1" value="${it.dy}">
+        <input id="if-dz" type="number" step="0.1" value="${it.dz}">
+      </div>
+      <label>Clearance (in)</label>
+      <input id="if-clr" type="number" step="0.1" value="${it.clearance}">
+      <label>Notes</label>
+      <input id="if-notes" type="text" value="${escapeHtml(it.notes || '')}">
+      <div class="inv-form-actions">
+        <button class="inv-form-cancel">Cancel</button>
+        <button class="primary inv-form-save">${editing ? 'Save' : 'Add'}</button>
+      </div>
+    </div>`;
+  }
+
+  function openInventoryForm(id){
+    inventoryFormOpen = true;
+    inventoryEditId = id || null;
+    renderInventoryPanel();
+  }
+
+  function closeInventoryForm(){
+    inventoryFormOpen = false;
+    inventoryEditId = null;
+    renderInventoryPanel();
+  }
+
+  function saveInventoryForm(){
+    const get = (id) => document.getElementById(id);
+    const name = (get('if-name').value || '').trim();
+    if (!name) { alert('Name required'); return; }
+    const data = {
+      name,
+      sectionId: get('if-section').value,
+      mountMode: get('if-mount').value,
+      x: parseFloat(get('if-x').value) || 0,
+      y: parseFloat(get('if-y').value) || 0,
+      z: parseFloat(get('if-z').value) || 0,
+      dx: parseFloat(get('if-dx').value) || 1,
+      dy: parseFloat(get('if-dy').value) || 1,
+      dz: parseFloat(get('if-dz').value) || 1,
+      clearance: parseFloat(get('if-clr').value) || 0,
+      visible: true,
+      notes: get('if-notes').value || ''
+    };
+    if (inventoryEditId){
+      const it = inventory.find(i => i.id === inventoryEditId);
+      if (it) Object.assign(it, data);
+    } else {
+      data.id = 'inv-' + Date.now().toString(36);
+      inventory.push(data);
+    }
+    saveInventory();
+    closeInventoryForm();
+    renderScene();
+  }
+
+  function deleteInventoryItem(id){
+    if (!confirm('Delete this item?')) return;
+    inventory = inventory.filter(i => i.id !== id);
+    saveInventory();
+    renderInventoryPanel();
+    renderScene();
+  }
+
+  function toggleInventoryVisible(id){
+    const it = inventory.find(i => i.id === id);
+    if (!it) return;
+    it.visible = !it.visible;
+    saveInventory();
+    renderInventoryPanel();
+    renderScene();
+  }
+
+  function renderSectionInventoryList(){
+    const el = document.getElementById('section-inv-list');
+    if (!el) return;
+    if (!activeSection) { el.innerHTML = '<div style="font-size:11px;color:var(--text-tert);">No section selected</div>'; return; }
+    const items = inventory.filter(i => i.sectionId === activeSection);
+    if (items.length === 0){
+      el.innerHTML = '<div style="font-size:11px;color:var(--text-tert);">No items in this section</div>';
+      return;
+    }
+    let html = '';
+    items.forEach(item => {
+      const fit = fitCheckItem(item);
+      const cls = 'fit-' + (fit.status === 'bad' ? 'bad' : (fit.status === 'warn' ? 'warn' : 'ok'));
+      html += `<div class="inv-row ${cls}">
+        <div class="inv-row-head">
+          <div class="inv-row-name">${escapeHtml(item.name)}</div>
+        </div>
+        <div class="inv-row-dims">${item.dx}&times;${item.dy}&times;${item.dz}&quot; @ (${item.x}, ${item.y}, ${item.z})</div>
+        <div class="inv-row-mount">${MOUNT_MODES[item.mountMode] || item.mountMode}</div>
+      </div>`;
+    });
+    el.innerHTML = html;
   }
 
   function renderOrderList(){
@@ -1307,7 +1740,7 @@
       const oversizePieces = pieces.filter(p => p.oversize).length;
       const within47 = pieces.filter(p => p.length <= SOFT_CEILING).length;
       let html = `<div class="header">${totalPieces} pieces · ${linfeet} ft · ${splicedSticks} spliced</div>`;
-      html += `<div class="header">${within47}/${totalPieces} fit ≤47" · ${oversizePieces} oversize (48"-94")</div>`;
+      html += `<div class="header">${within47}/${totalPieces} fit ≤47" · ${oversizePieces} oversize</div>`;
       const byProfile = {};
       sorted.forEach(g => { if (!byProfile[g.profile]) byProfile[g.profile] = []; byProfile[g.profile].push(g); });
       ['1515', '1515-lite', '1010'].forEach(prof => {
@@ -1334,7 +1767,7 @@
         byProfile[s.profile][key].count += 1;
       });
       const totalSticks = allSticks.length;
-      let html = `<div class="header">${totalSticks} logical sticks (model view)</div>`;
+      let html = `<div class="header">${totalSticks} logical sticks</div>`;
       ['1515', '1515-lite', '1010'].forEach(prof => {
         if (!byProfile[prof]) return;
         const list = Object.values(byProfile[prof]).sort((a, b) => b.length - a.length);
@@ -1374,7 +1807,7 @@
       if (a.profile !== b.profile) return pOrder.indexOf(a.profile) - pOrder.indexOf(b.profile);
       return b.length - a.length;
     });
-    let text = `VanIQ Build - Cut List\n${'='.repeat(40)}\n\n`;
+    let text = `VanIQ Build v23 - Cut List\n${'='.repeat(40)}\n\n`;
     ['1515', '1515-lite', '1010'].forEach(prof => {
       const list = sorted.filter(g => g.profile === prof);
       if (list.length === 0) return;
@@ -1386,7 +1819,7 @@
       });
       text += `\n`;
     });
-    text += `Shipping notes:\n  - All pieces <= 94" (hard ceiling)\n  - Pieces marked OVERSIZE are 48"-94" (UPS surcharge)\n  - Please cut at $0.50/cut\n`;
+    text += `Notes:\n  - All <= 94"\n  - OVERSIZE = 48-94"\n  - Cuts $0.50 each\n  - PVC divider for G-B not in this list\n  - Brackets not in this list\n`;
     if (navigator.clipboard){
       navigator.clipboard.writeText(text).then(() => {
         const btn = document.getElementById('copy-order');
@@ -1407,8 +1840,38 @@
     }
   });
 
-  ['shell','counter','floor','wheelwells'].forEach(k => {
-    document.getElementById('show-' + k).addEventListener('change', e => {
+  document.querySelectorAll('button[data-v]').forEach(b => {
+    b.addEventListener('click', () => {
+      const v = b.dataset.v;
+      const fpView = document.getElementById('floor-plan-view');
+      const canvas3D = document.getElementById('c');
+      if (v === 'floorplan'){
+        fpView.classList.add('active');
+        canvas3D.style.display = 'none';
+        renderFloorPlan();
+        document.querySelectorAll('button[data-v]').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        return;
+      }
+      fpView.classList.remove('active');
+      canvas3D.style.display = 'block';
+      camUpAxis = 'z';
+      if (v === 'iso')   { camTheta = -Math.PI*0.6; camPhi = Math.PI*0.42; camRadius = 8; }
+      if (v === 'top')   { camUpAxis = 'x'; camRadius = 5; }
+      if (v === 'rear')  { camTheta = Math.PI; camPhi = Math.PI/2; camRadius = 8; }
+      if (v === 'front') { camTheta = 0; camPhi = Math.PI/2; camRadius = 8; }
+      if (v === 'drv')   { camTheta = Math.PI/2; camPhi = Math.PI/2; camRadius = 8; }
+      if (v === 'pass')  { camTheta = -Math.PI/2; camPhi = Math.PI/2; camRadius = 8; }
+      updateCamera();
+      document.querySelectorAll('button[data-v]').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+    });
+  });
+
+  ['shell','counter','floor','wheelwells','door','equipment'].forEach(k => {
+    const cb = document.getElementById('show-' + k);
+    if (!cb) return;
+    cb.addEventListener('change', e => {
       view[k] = e.target.checked; renderScene();
     });
   });
@@ -1423,17 +1886,132 @@
     renderScene();
   });
 
+  // ===== v24.0: Tab bar + section picker =====
+  function showPanel(name){
+    activeTab = name;
+    document.querySelectorAll('.right-panel').forEach(p => {
+      p.classList.toggle('active', p.dataset.panel === name);
+    });
+    // Update tab-bar buttons
+    document.querySelectorAll('#tab-bar > button[data-tab]').forEach(b => {
+      b.classList.toggle('active', b.dataset.tab === name);
+    });
+    // Section picker label
+    const picker = document.getElementById('section-picker-btn');
+    if (name === 'section' && activeSection){
+      const sec = sections.find(s => s.id === activeSection);
+      picker.textContent = (sec ? sec.code : '?') + ' \u25BE';
+      picker.classList.add('active');
+    } else {
+      picker.textContent = 'Sections \u25BE';
+      picker.classList.remove('active');
+    }
+    if (name === 'inventory') renderInventoryPanel();
+    if (name === 'section') {
+      renderSectionTabInfo();
+      renderSectionInventoryList();
+    }
+    if (name === 'spec') renderSpecSheet();
+    if (name === 'order') renderOrderList();
+    if (name === 'master') renderSectionList();
+  }
+
+  function renderSectionTabInfo(){
+    const titleEl = document.getElementById('section-tab-title');
+    const infoEl = document.getElementById('section-tab-info');
+    if (!activeSection) {
+      titleEl.textContent = 'No section';
+      infoEl.innerHTML = '<div style="color:var(--text-tert);">Select a section from the dropdown above.</div>';
+      return;
+    }
+    const sec = sections.find(s => s.id === activeSection);
+    if (!sec) return;
+    titleEl.innerHTML = `<span style="font-family:ui-monospace,monospace;background:#${sec.color.toString(16).padStart(6,'0')};color:white;padding:2px 6px;border-radius:3px;">${sec.code}</span> ${escapeHtml(sec.label)}`;
+    const b = getBounds(sec);
+    const n = allSticks.filter(k => k.sections.has(sec.id)).length;
+    let html = '';
+    if (b){
+      html += `<div><b>Bounds:</b> x ${b.x0}&ndash;${b.x1}, y ${b.y0.toFixed(1)}&ndash;${b.y1.toFixed(1)}, z ${b.z0}&ndash;${b.z1}</div>`;
+      html += `<div><b>Length:</b> ${(b.x1-b.x0).toFixed(1)}&quot; &middot; <b>Depth:</b> ${(b.y1-b.y0).toFixed(1)}&quot; &middot; <b>Height:</b> ${(b.z1-b.z0).toFixed(1)}&quot;</div>`;
+    }
+    html += `<div><b>Profile:</b> ${PROFILES[sec.profile].label}</div>`;
+    html += `<div><b>Sticks:</b> ${n}</div>`;
+    if (sec.bays){
+      html += `<div style="margin-top:6px;"><b>Bays (rear &rarr; front):</b></div>`;
+      sec.bays.forEach(bay => {
+        html += `<div style="font-family:ui-monospace,monospace;font-size:11px;">&nbsp;&nbsp;[${bay.code}] ${escapeHtml(bay.label)} (${bay.length}&quot;)</div>`;
+      });
+    }
+    infoEl.innerHTML = html;
+  }
+
+  function renderSectionPickerMenu(){
+    const menu = document.getElementById('section-picker-menu');
+    const sectionSecs = sections.filter(s => s.anchor || s.id === 'GB');
+    menu.innerHTML = sectionSecs.map(s =>
+      `<div class="sec-opt" data-id="${s.id}">
+        <div class="swatch" style="background:#${s.color.toString(16).padStart(6,'0')}"></div>
+        <span class="code">${s.code}</span>
+        <span>${escapeHtml(s.label)}</span>
+      </div>`
+    ).join('');
+    menu.querySelectorAll('.sec-opt').forEach(opt => {
+      opt.addEventListener('click', () => {
+        activeSection = opt.dataset.id;
+        menu.classList.remove('open');
+        showPanel('section');
+        renderScene();
+      });
+    });
+  }
+  renderSectionPickerMenu();
+
+  document.getElementById('section-picker-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const menu = document.getElementById('section-picker-menu');
+    menu.classList.toggle('open');
+  });
+  document.addEventListener('click', (e) => {
+    const menu = document.getElementById('section-picker-menu');
+    if (!menu.contains(e.target) && e.target.id !== 'section-picker-btn'){
+      menu.classList.remove('open');
+    }
+  });
+
+  // Tab bar button wiring
+  document.querySelectorAll('#tab-bar > button[data-tab]').forEach(b => {
+    b.addEventListener('click', () => {
+      if (b.dataset.tab === 'master') activeSection = null;
+      showPanel(b.dataset.tab);
+      renderScene();
+    });
+  });
+
+  // Inventory add button + reset
+  document.getElementById('inv-add-btn').addEventListener('click', () => {
+    if (inventoryFormOpen && !inventoryEditId) closeInventoryForm();
+    else openInventoryForm(null);
+  });
+  document.getElementById('reset-inv').addEventListener('click', () => {
+    if (!confirm('Reset inventory to defaults? Your custom items will be lost.')) return;
+    resetInventory();
+    renderInventoryPanel();
+    renderScene();
+  });
+
+
   window.addEventListener('resize', () => {
     cw = wrap.clientWidth; ch = wrap.clientHeight;
     renderer.setSize(cw, ch, false);
     camera.aspect = cw/ch; camera.updateProjectionMatrix();
-    renderPlanOverlay();
   });
 
+  loadInventory();
   renderScene();
   renderSectionList();
-  renderOrderList();
   renderSpecSheet();
+  renderOrderList();
+  renderInventoryPanel();
   document.querySelector('button[data-v="iso"]').classList.add('active');
   function loop(){ renderer.render(scene, camera); requestAnimationFrame(loop); }
   loop();
