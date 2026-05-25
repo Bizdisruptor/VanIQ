@@ -445,7 +445,13 @@
       // 60 X x 78 Y x 0.25 Z, top of GB cross-rails at z=37
       // mattress center offset y=+0.75 due to capsule asymmetry, planning 78" usable
       x: 0, y: -38.25, z: 37, dx: 60, dy: 78, dz: 0.25, clearance: 0, visible: true,
-      notes: '78" via Vanspeed capsules (driver +5.75, pass +4.25), 1/4 in hexa' }
+      notes: '78" via Vanspeed capsules (driver +5.75, pass +4.25), 1/4 in hexa' },
+    { id: 'microwave', name: 'GE 1.1 cu ft microwave', sectionId: 'UCP', mountMode: 'sits-on',
+      // 20.625 W x 16.625 D x 11.875 H, GE JES1145 countertop in UCP-B (rear bay)
+      // UCP-B bay X-range: ~65 to 87 (22" wide rear bay)
+      // sits on UCP bottom rail at z=67+1=68 (1" inside top of bottom Y-arm thickness)
+      x: 66, y: -32.5, z: 68, dx: 20.625, dy: 16.625, dz: 11.875, clearance: 1, visible: true,
+      notes: 'GE JES1145 countertop in UCP-B' }
   ];
 
   const INV_STORAGE_KEY = 'vaniq.inventory.v24';
@@ -504,7 +510,10 @@
         { type: 'heater',  length: 8, toeKick: true, code: 'WS-A', label: 'heater + shelf' }
       ] },
     { id: 'UC', code: 'UC', label: 'Upper Cabinet (driver ceiling)', color: 0xC9A227, profile: '1010',
-      length: 112, depth: 10, height: 14, anchor: 'ceiling_driver', doors: 6 }
+      length: 112, depth: 10, height: 14, anchor: 'ceiling_driver', doors: 6 },
+    // v24.0: UCP - Upper Cabinet Passenger, over galley, deeper for microwave
+    { id: 'UCP', code: 'UCP', label: 'Upper Cabinet Passenger (over galley)', color: 0xE89B3A, profile: '1010',
+      length: 35, depth: 18, height: 14, anchor: 'ceiling_passenger', xStart: 65, doors: 2 },
   ];
 
   let activeSection = null;
@@ -581,10 +590,27 @@
     }
 
     const legLen = Lz - 2*EX;
+    // v24.0: WW-aware Z-legs. Back-face legs that land inside the wheel-well X-range
+    // are physically impossible (WW intrudes 9" into cabinet up to z=17).
+    // Skip those back legs entirely and tag the corresponding front leg as a
+    // rivnut-to-van-wall attachment point.
+    const wwSpanX0 = ww ? ww.x0 : null;
+    const wwSpanX1 = ww ? ww.x1 : null;
     vXs.forEach((vx, idx) => {
       const role = (idx === 0 || idx === vXs.length - 1) ? 'corner leg' : 'door divider';
-      addStick(sec.profile, 'z', legLen, vx, frontY, z0 + EX, sec.id, role + ' (front)');
-      addStick(sec.profile, 'z', legLen, vx, backY,  z0 + EX, sec.id, role + ' (back)');
+      const inWW = ww && (vx + EX > wwSpanX0) && (vx < wwSpanX1) && (idx !== 0 && idx !== vXs.length - 1);
+      // Front-face Z-leg: always present
+      const frontRole = inWW ? (role + ' (front, rivnut to wall via top rail)') : (role + ' (front)');
+      addStick(sec.profile, 'z', legLen, vx, frontY, z0 + EX, sec.id, frontRole);
+      // Back-face Z-leg: skip if it conflicts with WW (back leg sits at the van wall y position)
+      if (inWW){
+        // Add an above-WW back stub instead, from z=18 (above WW top) to z=top
+        const stubZ0 = WHEELWELL.height + 1;
+        const stubLen = (z1 - EX) - stubZ0;
+        if (stubLen > 1) addStick(sec.profile, 'z', stubLen, vx, backY, stubZ0, sec.id, role + ' (back stub, above WW)');
+      } else {
+        addStick(sec.profile, 'z', legLen, vx, backY,  z0 + EX, sec.id, role + ' (back)');
+      }
     });
 
     const railStartX = rearLegX;
@@ -799,6 +825,12 @@
       const z1 = SHELL.H, z0 = z1 - sec.height;
       return { x0: 0, x1: sec.length, y0: SHELL.W/2 - sec.depth, y1: SHELL.W/2, z0, z1 };
     }
+    if (sec.anchor === 'ceiling_passenger'){
+      // UCP: passenger-side ceiling cabinet, positioned at sec.xStart along van length
+      const z1 = SHELL.H, z0 = z1 - sec.height;
+      const x0 = sec.xStart != null ? sec.xStart : 0;
+      return { x0, x1: x0 + sec.length, y0: -SHELL.W/2, y1: -SHELL.W/2 + sec.depth, z0, z1 };
+    }
     return null;
   }
 
@@ -877,6 +909,9 @@
   function buildSticksGroup(){
     const group = new THREE.Group();
     allSticks.forEach(s => {
+      // v24.0: When a section is active, only render sticks from that section
+      if (activeSection && !s.sections.has(activeSection)) return;
+
       const sz_ = PROFILES[s.profile].size;
       let sx, sy, sz;
       if (s.axis === 'x') { sx = s.length; sy = sz_; sz = sz_; }
@@ -892,8 +927,7 @@
         if (sec) material = mat(sec.color);
       }
       if (activeSection){
-        if (s.sections.has(activeSection)) material = mat(sections.find(x => x.id === activeSection).color);
-        else material = mat(0x666666, 0.2);
+        material = mat(sections.find(x => x.id === activeSection).color);
       }
       const mesh = new THREE.Mesh(geo, material);
       mesh.position.set(M(s.x0 + sx/2), M(s.y0 + sy/2), M(s.z0 + sz/2));
@@ -965,6 +999,8 @@
       // mount mode informs styling (cutout=very faint, others=normal).
       inventory.forEach(item => {
         if (!item.visible) return;
+        // v24.0: When a section is active, only render inventory from that section
+        if (activeSection && item.sectionId !== activeSection) return;
         // Determine block color: use section color, fall back to neutral
         const sec = sections.find(s => s.id === item.sectionId);
         const sectionColor = sec ? sec.color : 0x6c6c6c;
@@ -1007,17 +1043,20 @@
 
       // Heater shelf: still hardcoded — it's a structural panel, not equipment
       // (counter-like horizontal plane in WS-A bay at z=10)
-      const wsB = getBounds(sections.find(s => s.id === 'WS'));
-      if (wsB){
-        const shelfX = wsB.x1 - 8;
-        const shelfY = wsB.y0 + 1.5;
-        const shelfW = 8;
-        const shelfD = 17;
-        const shelfGeo = new THREE.BoxGeometry(M(shelfW), M(shelfD), M(0.5));
-        const shelfMat = new THREE.MeshLambertMaterial({ color: 0xB47CE0, transparent: true, opacity: 0.4 });
-        const shelfMesh = new THREE.Mesh(shelfGeo, shelfMat);
-        shelfMesh.position.set(M(shelfX + shelfW/2), M(shelfY + shelfD/2), M(VELIT.shelfZ));
-        group.add(shelfMesh);
+      // Only render in master view or when WS is the active section
+      if (!activeSection || activeSection === 'WS'){
+        const wsB = getBounds(sections.find(s => s.id === 'WS'));
+        if (wsB){
+          const shelfX = wsB.x1 - 8;
+          const shelfY = wsB.y0 + 1.5;
+          const shelfW = 8;
+          const shelfD = 17;
+          const shelfGeo = new THREE.BoxGeometry(M(shelfW), M(shelfD), M(0.5));
+          const shelfMat = new THREE.MeshLambertMaterial({ color: 0xB47CE0, transparent: true, opacity: 0.4 });
+          const shelfMesh = new THREE.Mesh(shelfGeo, shelfMat);
+          shelfMesh.position.set(M(shelfX + shelfW/2), M(shelfY + shelfD/2), M(VELIT.shelfZ));
+          group.add(shelfMesh);
+        }
       }
     }
     const len = 0.3;
@@ -1436,6 +1475,28 @@
         lines.push(`  G-B (rear, toilet):   18.5" clear`);
         lines.push(`  NO mid-leg between bays — PVC divider panel`);
         lines.push(`  Bracket needed: PVC divider anchor at toe-kick midpoint`);
+      }
+      if (s.id === 'PC' || s.id === 'DC'){
+        // Compute door divider X-positions that conflict with WW
+        const EX_local = PROFILES[s.profile].size;
+        const doorsLocal = s.doors || 3;
+        const totalVLocal = doorsLocal + 1;
+        const rearLegXLocal = b.x0;
+        const fwdLegXLocal = b.x1 - EX_local;
+        const conflictXs = [];
+        for (let i = 1; i < totalVLocal - 1; i++){
+          const t = i / (totalVLocal - 1);
+          const vx = rearLegXLocal + t * (fwdLegXLocal - rearLegXLocal);
+          if (vx + EX_local > WHEELWELL.xStart && vx < WHEELWELL.xStart + WHEELWELL.length){
+            conflictXs.push(vx.toFixed(1));
+          }
+        }
+        lines.push(`  WW intrudes: x=${WHEELWELL.xStart}-${WHEELWELL.xStart + WHEELWELL.length}", 9"D, ${WHEELWELL.height}"H`);
+        if (conflictXs.length){
+          lines.push(`  Back Z-legs at x=${conflictXs.join(', ')}" SKIPPED (WW conflict)`);
+          lines.push(`  -> Door dividers at those X anchor via RIVNUT to van wall`);
+          lines.push(`  -> Above-WW back stubs added (z=${WHEELWELL.height + 1}" to top)`);
+        }
       }
       if (s.doors) lines.push(`  Doors: ${s.doors}`);
       if (s.bays){
