@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VanIQ v24.0 - Plumbing Master Plan</title>
+<style>
+  :root {
+    --bg: #fbfaf6;
+    --text: #2c2c2a;
+    --text-sec: #555;
+    --text-tert: #888;
+    --border: #ddd6c4;
+    --panel: #f4f1ea;
+    --cold: #1F6FB8;
+    --hot: #C9302C;
+    --gray: #6B5544;
+    --drain: #888;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    line-height: 1.5;
+  }
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 24px 48px;
+  }
+  header {
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+  }
+  h1 {
+    margin: 0 0 4px;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  h2 {
+    margin: 32px 0 12px;
+    font-size: 16px;
+    font-weight: 700;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 4px;
+  }
+  .meta {
+    margin: 0;
+    color: var(--text-sec);
+    font-size: 13px;
+  }
+  .diagram {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px;
+    overflow: hidden;
+  }
+  .diagram svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 8px 0;
+  }
+  th, td {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    background: var(--panel);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-sec);
+  }
+  .code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 6px;
+    vertical-align: -1px;
+    border-radius: 1px;
+  }
+  .badge-cold { background: var(--cold); }
+  .badge-hot  { background: var(--hot);  }
+  .badge-gray { background: var(--gray); }
+  .badge-drain { background: var(--drain); }
+  .totals {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin: 12px 0;
+    font-size: 13px;
+  }
+  .totals p { margin: 4px 0; }
+  .warn { color: var(--hot); font-weight: 600; }
+  .notes { background: #fef9eb; border-left: 3px solid #d4a017; padding: 10px 14px; font-size: 13px; }
+  .notes p { margin: 4px 0; }
+  @media print {
+    body { background: #fff; }
+    .wrap { max-width: 100%; padding: 0; }
+    h2 { page-break-after: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>VanIQ v24.0 &mdash; Plumbing Master Plan</h1>
+  <p class="meta">132&quot; L &times; 67&quot; W &middot; 4 px/inch &middot; rear at left &middot; passenger bottom &middot; PEX-A throughout (expansion fittings only)</p>
+</header>
+
+<section class="diagram">
+<svg viewBox="0 0 680 720" role="img" xmlns="http://www.w3.org/2000/svg">
+<title>VanIQ v24.0 plumbing master plan</title>
+<desc>Top-down floor plan with water system core in PC, distribution to galley sink and rear shower mixer.</desc>
+
+<rect x="0" y="0" width="680" height="720" fill="#fbfaf6"/>
+
+<text x="14" y="18" font-family="sans-serif" font-size="10" fill="#2c2c2a" font-weight="600">VanIQ v24.0 &mdash; Plumbing master plan (top view, 4 px/inch)</text>
+<text x="14" y="32" font-family="sans-serif" font-size="8.5" fill="#555">132&quot; L &times; 67&quot; W &middot; PEX-A 1/2&quot; with expansion fittings &middot; pressure core in PC, sink in G</text>
+
+<line x1="380" y1="14" x2="404" y2="14" stroke="#1F6FB8" stroke-width="2.4"/>
+<text x="410" y="17" font-family="sans-serif" font-size="8.5" fill="#2c2c2a">Cold (1/2&quot; PEX-A blue)</text>
+<line x1="380" y1="28" x2="404" y2="28" stroke="#C9302C" stroke-width="2.4"/>
+<text x="410" y="31" font-family="sans-serif" font-size="8.5" fill="#2c2c2a">Hot (1/2&quot; PEX-A red)</text>
+<line x1="380" y1="42" x2="404" y2="42" stroke="#6B5544" stroke-width="2.4"/>
+<text x="410" y="45" font-family="sans-serif" font-size="8.5" fill="#2c2c2a">Gray (sanitation hose)</text>
+<line x1="540" y1="14" x2="564" y2="14" stroke="#888" stroke-width="2" stroke-dasharray="4 3"/>
+<text x="570" y="17" font-family="sans-serif" font-size="8.5" fill="#2c2c2a">Low-point drain</text>
+
+<text x="14" y="58" font-family="sans-serif" font-size="9" fill="#888">x=0  REAR</text>
+<text x="608" y="58" font-family="sans-serif" font-size="9" fill="#888" text-anchor="end">x=132  FRONT</text>
+
+<rect x="80" y="64" width="528" height="350" fill="none" stroke="#999" stroke-width="1.4"/>
+<line x1="80" y1="239" x2="608" y2="239" stroke="#bbb" stroke-width="0.4" stroke-dasharray="3 3"/>
+<text x="612" y="242" font-family="sans-serif" font-size="8" fill="#888">CL</text>
+<text x="78" y="68" font-family="sans-serif" font-size="9" fill="#aa3060" text-anchor="end">DRIVER (y=+33.5)</text>
+<text x="78" y="412" font-family="sans-serif" font-size="9" fill="#0F6E56" text-anchor="end">PASSENGER (y=-33.5)</text>
+
+<!-- DC, GB, WS, UC, etc. shown faintly for context but no equipment -->
+<rect x="80" y="84" width="260" height="68" fill="#f5e4eb" stroke="#cea6b5" stroke-width="0.8" stroke-dasharray="3 2"/>
+<text x="210" y="124" font-family="sans-serif" font-size="9" fill="#a07c8a" text-anchor="middle">DC (electrical) &mdash; not in plumbing scope</text>
+
+<rect x="80" y="156" width="260" height="160" fill="#f5efe0" stroke="#c7baa2" stroke-width="0.8" stroke-dasharray="3 2"/>
+<text x="210" y="240" font-family="sans-serif" font-size="9" fill="#998866" text-anchor="middle">GB (garage / bed) &mdash; pass-through only</text>
+
+<rect x="340" y="84" width="268" height="68" fill="#efe5fa" stroke="#c0a4d8" stroke-width="0.8" stroke-dasharray="3 2"/>
+<text x="474" y="124" font-family="sans-serif" font-size="9" fill="#7c5fa0" text-anchor="middle">WS (workspace) &mdash; not in plumbing scope</text>
+
+<!-- PC - Passenger Cabinet (water core) -->
+<rect x="80" y="324" width="260" height="90" fill="#dbf0e8" stroke="#1D9E75" stroke-width="1.4"/>
+<text x="210" y="340" font-family="sans-serif" font-size="11" font-weight="700" fill="#0F6E56" text-anchor="middle">PC &mdash; Passenger Cabinet (water core)</text>
+
+<!-- Tank footprint -->
+<rect x="96" y="358" width="200" height="44" fill="none" stroke="#7da3c4" stroke-width="0.8" stroke-dasharray="3 2"/>
+<text x="196" y="383" font-family="sans-serif" font-size="9" fill="#5a7a90" text-anchor="middle">tank33 (33gal water tank footprint, below floor of PC)</text>
+
+<!-- Rear cluster: city water inlet + shower mixer + low-point drain -->
+<rect x="82" y="345" width="14" height="14" fill="#1F6FB8" stroke="#143f6e" stroke-width="0.6"/>
+<text x="89" y="354" font-family="sans-serif" font-size="6" fill="#fff" text-anchor="middle" font-weight="700">CITY</text>
+<text x="89" y="360" font-family="sans-serif" font-size="5" fill="#fff" text-anchor="middle">INLET</text>
+
+<rect x="82" y="362" width="14" height="22" fill="#8a4f78" stroke="#5a3050" stroke-width="0.6"/>
+<text x="89" y="370" font-family="sans-serif" font-size="6" fill="#fff" text-anchor="middle" font-weight="700">SHWR</text>
+<text x="89" y="377" font-family="sans-serif" font-size="5" fill="#fff" text-anchor="middle">MIX</text>
+<text x="89" y="382" font-family="sans-serif" font-size="4.5" fill="#fff" text-anchor="middle">H/C</text>
+
+<rect x="82" y="388" width="10" height="10" fill="#fff" stroke="#888" stroke-width="0.8" stroke-dasharray="2 1.5"/>
+<text x="87" y="395" font-family="sans-serif" font-size="5" fill="#888" text-anchor="middle" font-weight="700">DRN</text>
+
+<text x="58" y="375" font-family="sans-serif" font-size="6.5" fill="#5a2050" text-anchor="middle" transform="rotate(-90 58 375)">rear face: city inlet + outdoor shower</text>
+
+<!-- Pump cluster (forward of tank, in front of tank33 footprint) -->
+<rect x="148" y="345" width="22" height="11" fill="#7E57C2" stroke="#4A2F8A" stroke-width="0.8"/>
+<text x="159" y="353" font-family="sans-serif" font-size="6.5" fill="#fff" text-anchor="middle" font-weight="700">PUMP</text>
+
+<rect x="172" y="345" width="22" height="11" fill="#90A4AE" stroke="#546E7A" stroke-width="0.8"/>
+<text x="183" y="353" font-family="sans-serif" font-size="6.5" fill="#fff" text-anchor="middle" font-weight="700">ACCUM</text>
+
+<rect x="196" y="345" width="22" height="11" fill="#A1887F" stroke="#5D4037" stroke-width="0.8"/>
+<text x="207" y="353" font-family="sans-serif" font-size="6.5" fill="#fff" text-anchor="middle" font-weight="700">FILTER</text>
+
+<text x="183" y="343" font-family="sans-serif" font-size="6.5" fill="#0F6E56" text-anchor="middle">pump/accumulator/filter cluster</text>
+
+<!-- Water heater (Isotemp Slim 25L, in PC, on rails above tank/pump area) -->
+<rect x="230" y="345" width="60" height="14" fill="#A8C8E8" stroke="#185FA5" stroke-width="0.8"/>
+<text x="260" y="355" font-family="sans-serif" font-size="7" fill="#fff" text-anchor="middle" font-weight="700">WH (Isotemp 25L)</text>
+<text x="260" y="343" font-family="sans-serif" font-size="6.5" fill="#185FA5" text-anchor="middle">on rails at z=20&quot;</text>
+
+<!-- G - Galley -->
+<rect x="340" y="324" width="140" height="90" fill="#dceaf8" stroke="#378ADD" stroke-width="1.4"/>
+<text x="410" y="340" font-family="sans-serif" font-size="11" font-weight="700" fill="#185FA5" text-anchor="middle">G &mdash; Galley</text>
+
+<!-- Sink -->
+<rect x="352" y="358" width="44" height="28" fill="#fff" stroke="#185FA5" stroke-width="0.8" stroke-dasharray="2 2"/>
+<text x="374" y="375" font-family="sans-serif" font-size="8.5" fill="#185FA5" text-anchor="middle" font-weight="700">SINK</text>
+
+<!-- Faucet symbol above sink -->
+<rect x="368" y="354" width="12" height="6" fill="#cfd8dc" stroke="#90a4ae" stroke-width="0.5"/>
+<text x="374" y="365" font-family="sans-serif" font-size="4.5" fill="#37474f" text-anchor="middle">faucet</text>
+
+<!-- Gray tank in G-A bay (under sink) -->
+<rect x="352" y="390" width="44" height="20" fill="#d7ccc8" stroke="#6B5544" stroke-width="0.8"/>
+<text x="374" y="402" font-family="sans-serif" font-size="7" fill="#3e2723" text-anchor="middle" font-weight="700">GRAY 5gal</text>
+<text x="374" y="408" font-family="sans-serif" font-size="5" fill="#3e2723" text-anchor="middle">(G-A, vented)</text>
+
+<!-- Stub-up labels for cold/hot at sink (subtle) -->
+<text x="402" y="368" font-family="sans-serif" font-size="6" fill="#1F6FB8">C</text>
+<text x="402" y="376" font-family="sans-serif" font-size="6" fill="#C9302C">H</text>
+
+<!-- ========== Plumbing line routes ========== -->
+
+<!-- COLD water lines (blue) -->
+
+<!-- 1. City inlet drop to tank top fill (short line down inside rear PC) -->
+<path d="M 96 352 L 110 352 L 110 380 L 130 380" fill="none" stroke="#1F6FB8" stroke-width="2.4"/>
+<text x="120" y="375" font-family="sans-serif" font-size="6" fill="#1F6FB8">to tank fill</text>
+
+<!-- 2. Tank suction to pump (short forward run from tank to pump inlet) -->
+<path d="M 145 380 L 155 380 L 155 356" fill="none" stroke="#1F6FB8" stroke-width="2.4"/>
+<text x="142" y="386" font-family="sans-serif" font-size="6" fill="#1F6FB8">suction</text>
+
+<!-- 3. Pump -> Accumulator -> Filter (short horizontal hops) -->
+<line x1="170" y1="350" x2="172" y2="350" stroke="#1F6FB8" stroke-width="2.4"/>
+<line x1="194" y1="350" x2="196" y2="350" stroke="#1F6FB8" stroke-width="2.4"/>
+
+<!-- 4. Filter output -> 3-way manifold split (just forward of filter, around x=222) -->
+<line x1="218" y1="350" x2="225" y2="350" stroke="#1F6FB8" stroke-width="2.4"/>
+<circle cx="225" cy="350" r="2" fill="#1F6FB8"/>
+<text x="225" y="334" font-family="sans-serif" font-size="6.5" fill="#1F6FB8" text-anchor="middle">cold manifold (3-way tee)</text>
+
+<!-- 4a. Manifold -> WH cold input (short run forward) -->
+<path d="M 225 350 L 240 350 L 240 352" fill="none" stroke="#1F6FB8" stroke-width="2.4"/>
+<text x="246" y="349" font-family="sans-serif" font-size="6" fill="#1F6FB8">to WH cold</text>
+
+<!-- 4b. Manifold -> Galley sink cold (forward through bulkhead to G) -->
+<path d="M 225 350 L 225 370 L 402 370" fill="none" stroke="#1F6FB8" stroke-width="2.4"/>
+
+<!-- 4c. Manifold -> Shower cold (loop back to rear) -->
+<path d="M 225 350 L 225 360 L 100 360 L 100 366 L 96 366" fill="none" stroke="#1F6FB8" stroke-width="2.4"/>
+
+<!-- HOT water lines (red) -->
+
+<!-- WH hot output -> 2-way tee, then fwd to galley + rearward to shower -->
+<line x1="290" y1="352" x2="305" y2="352" stroke="#C9302C" stroke-width="2.4"/>
+<circle cx="305" cy="352" r="2" fill="#C9302C"/>
+<text x="305" y="334" font-family="sans-serif" font-size="6.5" fill="#C9302C" text-anchor="middle">hot tee</text>
+
+<!-- Hot to galley sink (fwd) -->
+<path d="M 305 352 L 305 374 L 402 374" fill="none" stroke="#C9302C" stroke-width="2.4"/>
+
+<!-- Hot to shower (rearward, loop back along the inside top of PC) -->
+<path d="M 305 352 L 305 332 L 108 332 L 108 376 L 96 376" fill="none" stroke="#C9302C" stroke-width="2.4"/>
+
+<!-- GRAY drain - sink to gray tank (very short, straight down) -->
+<line x1="374" y1="386" x2="374" y2="390" stroke="#6B5544" stroke-width="3"/>
+<text x="385" y="389" font-family="sans-serif" font-size="6" fill="#6B5544">drain (sanitation hose)</text>
+
+<!-- LOW-POINT DRAIN - dashed line from manifold to floor pass-through -->
+<path d="M 225 350 L 225 392 L 92 392" fill="none" stroke="#888" stroke-width="1.6" stroke-dasharray="4 3"/>
+<circle cx="92" cy="392" r="3" fill="none" stroke="#888" stroke-width="1.2"/>
+<text x="118" y="402" font-family="sans-serif" font-size="6" fill="#666">low-point drain &middot; ball valve thru floor</text>
+
+<!-- ========== Manifest panel ========== -->
+
+<rect x="14" y="448" width="652" height="262" fill="#f4f1ea" stroke="#ddd6c4" stroke-width="0.6" rx="4"/>
+
+<text x="24" y="466" font-family="sans-serif" font-size="11" font-weight="700" fill="#2c2c2a">Plumbing line manifest</text>
+<text x="24" y="478" font-family="sans-serif" font-size="8" fill="#555">All lines 1/2&quot; PEX-A unless noted. Lengths follow realistic routing along van structure and inside cabinet shell.</text>
+
+<line x1="20" y1="486" x2="660" y2="486" stroke="#ddd6c4" stroke-width="0.5"/>
+
+<text x="32" y="498" font-family="ui-monospace,monospace" font-size="8" fill="#888">ID</text>
+<text x="60" y="498" font-family="ui-monospace,monospace" font-size="8" fill="#888">Function</text>
+<text x="280" y="498" font-family="ui-monospace,monospace" font-size="8" fill="#888">Color</text>
+<text x="335" y="498" font-family="ui-monospace,monospace" font-size="8" fill="#888">Routing</text>
+<text x="600" y="498" font-family="ui-monospace,monospace" font-size="8" fill="#888">Length</text>
+<line x1="20" y1="502" x2="660" y2="502" stroke="#ddd6c4" stroke-width="0.5"/>
+
+<!-- Cold lines -->
+<rect x="20" y="508" width="6" height="9" fill="#1F6FB8"/>
+<text x="32" y="516" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">C-1</text>
+<text x="60" y="516" font-family="sans-serif" font-size="8" fill="#2c2c2a">City inlet drop &rarr; tank fill</text>
+<text x="280" y="516" font-family="sans-serif" font-size="8" fill="#1F6FB8">cold (blue)</text>
+<text x="335" y="516" font-family="sans-serif" font-size="7.5" fill="#666">rear PC inlet down, fwd to tank top fill port</text>
+<text x="600" y="516" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">3 ft</text>
+
+<rect x="20" y="520" width="6" height="9" fill="#1F6FB8"/>
+<text x="32" y="528" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">C-2</text>
+<text x="60" y="528" font-family="sans-serif" font-size="8" fill="#2c2c2a">Tank suction &rarr; pump inlet</text>
+<text x="280" y="528" font-family="sans-serif" font-size="8" fill="#1F6FB8">cold (blue)</text>
+<text x="335" y="528" font-family="sans-serif" font-size="7.5" fill="#666">tank low port fwd to pump inlet strainer</text>
+<text x="600" y="528" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">2 ft</text>
+
+<rect x="20" y="532" width="6" height="9" fill="#1F6FB8"/>
+<text x="32" y="540" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">C-3</text>
+<text x="60" y="540" font-family="sans-serif" font-size="8" fill="#2c2c2a">Pump &rarr; accumulator &rarr; filter</text>
+<text x="280" y="540" font-family="sans-serif" font-size="8" fill="#1F6FB8">cold (blue)</text>
+<text x="335" y="540" font-family="sans-serif" font-size="7.5" fill="#666">three short hops, inline cluster on pump bracket</text>
+<text x="600" y="540" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">2 ft</text>
+
+<rect x="20" y="544" width="6" height="9" fill="#1F6FB8"/>
+<text x="32" y="552" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">C-4a</text>
+<text x="60" y="552" font-family="sans-serif" font-size="8" fill="#2c2c2a">Manifold &rarr; WH cold input</text>
+<text x="280" y="552" font-family="sans-serif" font-size="8" fill="#1F6FB8">cold (blue)</text>
+<text x="335" y="552" font-family="sans-serif" font-size="7.5" fill="#666">manifold tee fwd to BSPP adapter on Isotemp</text>
+<text x="600" y="552" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">2 ft</text>
+
+<rect x="20" y="556" width="6" height="9" fill="#1F6FB8"/>
+<text x="32" y="564" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">C-4b</text>
+<text x="60" y="564" font-family="sans-serif" font-size="8" fill="#2c2c2a">Manifold &rarr; galley sink cold</text>
+<text x="280" y="564" font-family="sans-serif" font-size="8" fill="#1F6FB8">cold (blue)</text>
+<text x="335" y="564" font-family="sans-serif" font-size="7.5" fill="#666">thru PC/G bulkhead to under-sink cold stub</text>
+<text x="600" y="564" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">7 ft</text>
+
+<rect x="20" y="568" width="6" height="9" fill="#1F6FB8"/>
+<text x="32" y="576" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">C-4c</text>
+<text x="60" y="576" font-family="sans-serif" font-size="8" fill="#2c2c2a">Manifold &rarr; shower mixer cold</text>
+<text x="280" y="576" font-family="sans-serif" font-size="8" fill="#1F6FB8">cold (blue)</text>
+<text x="335" y="576" font-family="sans-serif" font-size="7.5" fill="#666">loop rearward to outdoor shower box on rear face</text>
+<text x="600" y="576" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">5 ft</text>
+
+<!-- Hot lines -->
+<rect x="20" y="582" width="6" height="9" fill="#C9302C"/>
+<text x="32" y="590" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">H-1a</text>
+<text x="60" y="590" font-family="sans-serif" font-size="8" fill="#2c2c2a">WH out &rarr; galley sink hot</text>
+<text x="280" y="590" font-family="sans-serif" font-size="8" fill="#C9302C">hot (red)</text>
+<text x="335" y="590" font-family="sans-serif" font-size="7.5" fill="#666">WH mixing valve fwd to under-sink hot stub</text>
+<text x="600" y="590" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">5 ft</text>
+
+<rect x="20" y="594" width="6" height="9" fill="#C9302C"/>
+<text x="32" y="602" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">H-1b</text>
+<text x="60" y="602" font-family="sans-serif" font-size="8" fill="#2c2c2a">WH out &rarr; shower mixer hot</text>
+<text x="280" y="602" font-family="sans-serif" font-size="8" fill="#C9302C">hot (red)</text>
+<text x="335" y="602" font-family="sans-serif" font-size="7.5" fill="#666">WH mixing valve rearward to shower box</text>
+<text x="600" y="602" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">7 ft</text>
+
+<!-- Gray and drain -->
+<rect x="20" y="606" width="6" height="9" fill="#6B5544"/>
+<text x="32" y="614" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">G-1</text>
+<text x="60" y="614" font-family="sans-serif" font-size="8" fill="#2c2c2a">Sink drain &rarr; gray tank</text>
+<text x="280" y="614" font-family="sans-serif" font-size="8" fill="#6B5544">gray (hose)</text>
+<text x="335" y="614" font-family="sans-serif" font-size="7.5" fill="#666">1-1/2&quot; sanitation hose, straight down into G-A bay</text>
+<text x="600" y="614" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">2 ft</text>
+
+<rect x="20" y="618" width="6" height="9" fill="#888"/>
+<text x="32" y="626" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">D-1</text>
+<text x="60" y="626" font-family="sans-serif" font-size="8" fill="#2c2c2a">Low-point drain &rarr; floor pass-thru</text>
+<text x="280" y="626" font-family="sans-serif" font-size="8" fill="#666">drain (dashed)</text>
+<text x="335" y="626" font-family="sans-serif" font-size="7.5" fill="#666">tapped at lowest point, brass ball valve, sealed grommet</text>
+<text x="600" y="626" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">4 ft</text>
+
+<line x1="20" y1="634" x2="660" y2="634" stroke="#ddd6c4" stroke-width="0.5"/>
+
+<!-- Material totals -->
+<text x="24" y="648" font-family="sans-serif" font-size="9" fill="#2c2c2a" font-weight="700">PEX-A material totals (15% slack included)</text>
+
+<rect x="24" y="654" width="9" height="9" fill="#1F6FB8"/>
+<text x="38" y="662" font-family="sans-serif" font-size="7.5" fill="#2c2c2a"><tspan font-weight="700">1/2&quot; PEX-A blue (cold):</tspan> 21 ft raw &rarr; order 25 ft</text>
+
+<rect x="24" y="666" width="9" height="9" fill="#C9302C"/>
+<text x="38" y="674" font-family="sans-serif" font-size="7.5" fill="#2c2c2a"><tspan font-weight="700">1/2&quot; PEX-A red (hot):</tspan> 12 ft raw &rarr; order 15 ft</text>
+
+<rect x="24" y="678" width="9" height="9" fill="#6B5544"/>
+<text x="38" y="686" font-family="sans-serif" font-size="7.5" fill="#2c2c2a"><tspan font-weight="700">1-1/2&quot; sanitation hose (gray):</tspan> 2 ft raw &rarr; order 4 ft</text>
+
+<rect x="24" y="690" width="9" height="9" fill="#888"/>
+<text x="38" y="698" font-family="sans-serif" font-size="7.5" fill="#2c2c2a"><tspan font-weight="700">1/2&quot; PEX-A (drain stub):</tspan> 4 ft raw &rarr; order 5 ft (off blue spool)</text>
+
+<text x="380" y="662" font-family="sans-serif" font-size="7.5" fill="#2c2c2a"><tspan font-weight="700">Expansion rings 1/2&quot;:</tspan> 50 pk</text>
+<text x="380" y="674" font-family="sans-serif" font-size="7.5" fill="#2c2c2a"><tspan font-weight="700">1/2&quot; tees:</tspan> 4 ea</text>
+<text x="380" y="686" font-family="sans-serif" font-size="7.5" fill="#2c2c2a"><tspan font-weight="700">1/2&quot; 90 elbows:</tspan> 8 ea</text>
+<text x="380" y="698" font-family="sans-serif" font-size="7.5" fill="#2c2c2a"><tspan font-weight="700">FNPT adapters:</tspan> 4 ea &middot; <tspan font-weight="700">BSPP adapters:</tspan> 2 ea</text>
+
+<text x="530" y="662" font-family="sans-serif" font-size="7.5" fill="#2c2c2a"><tspan font-weight="700">Ball valve (brass):</tspan> 1 ea</text>
+<text x="530" y="674" font-family="sans-serif" font-size="7.5" fill="#2c2c2a"><tspan font-weight="700">Cushion P-clips:</tspan> 30 pk</text>
+<text x="530" y="686" font-family="sans-serif" font-size="7.5" fill="#2c2c2a"><tspan font-weight="700">Floor grommet:</tspan> 1 ea</text>
+<text x="530" y="698" font-family="sans-serif" font-size="7.5" fill="#2c2c2a"><tspan font-weight="700">Expansion tool:</tspan> 1 ea (M12 ProPEX or manual)</text>
+
+</svg>
+</section>
+
+<h2>Plumbing line manifest</h2>
+<p>All supply lines are 1/2&quot; PEX-A with expansion fittings (ProPEX brass or EP plastic). No crimp rings or cinch clamps. Sanitation hose used for gray drain only.</p>
+
+<table>
+<thead>
+  <tr>
+    <th class="code">ID</th>
+    <th>Function</th>
+    <th>Material</th>
+    <th>Routing</th>
+    <th class="code">Length</th>
+  </tr>
+</thead>
+<tbody>
+  <tr><td class="code"><span class="swatch badge-cold"></span>C-1</td><td>City inlet drop &rarr; tank top fill</td><td>1/2&quot; PEX-A blue</td><td>rear face of PC down inner wall, fwd to tank fill port</td><td class="code">3 ft</td></tr>
+  <tr><td class="code"><span class="swatch badge-cold"></span>C-2</td><td>Tank suction &rarr; pump inlet</td><td>1/2&quot; PEX-A blue</td><td>tank low port fwd to pump inlet strainer</td><td class="code">2 ft</td></tr>
+  <tr><td class="code"><span class="swatch badge-cold"></span>C-3</td><td>Pump &rarr; accumulator &rarr; filter</td><td>1/2&quot; PEX-A blue</td><td>three short hops, inline service cluster on pump bracket</td><td class="code">2 ft</td></tr>
+  <tr><td class="code"><span class="swatch badge-cold"></span>C-4a</td><td>Manifold &rarr; WH cold input</td><td>1/2&quot; PEX-A blue</td><td>3-way tee fwd to BSPP adapter on Isotemp cold port</td><td class="code">2 ft</td></tr>
+  <tr><td class="code"><span class="swatch badge-cold"></span>C-4b</td><td>Manifold &rarr; galley sink cold</td><td>1/2&quot; PEX-A blue</td><td>through PC/G bulkhead to under-sink cold stub-up</td><td class="code">7 ft</td></tr>
+  <tr><td class="code"><span class="swatch badge-cold"></span>C-4c</td><td>Manifold &rarr; shower mixer cold</td><td>1/2&quot; PEX-A blue</td><td>loop rearward to outdoor shower mixing box on rear face</td><td class="code">5 ft</td></tr>
+  <tr><td class="code"><span class="swatch badge-hot"></span>H-1a</td><td>WH out &rarr; galley sink hot</td><td>1/2&quot; PEX-A red</td><td>WH mixing valve fwd parallel to cold to under-sink hot stub</td><td class="code">5 ft</td></tr>
+  <tr><td class="code"><span class="swatch badge-hot"></span>H-1b</td><td>WH out &rarr; shower mixer hot</td><td>1/2&quot; PEX-A red</td><td>WH mixing valve rearward to outdoor shower box hot side</td><td class="code">7 ft</td></tr>
+  <tr><td class="code"><span class="swatch badge-gray"></span>G-1</td><td>Sink drain &rarr; gray tank</td><td>1-1/2&quot; sanitation hose</td><td>straight down from sink trap into G-A bay 5-gal portable</td><td class="code">2 ft</td></tr>
+  <tr><td class="code"><span class="swatch badge-drain"></span>D-1</td><td>Low-point drain &rarr; floor pass-thru</td><td>1/2&quot; PEX-A + brass ball valve</td><td>tapped at lowest point of PC core, sealed grommet thru floor</td><td class="code">4 ft</td></tr>
+</tbody>
+</table>
+
+<h2>Pressure core layout (PC)</h2>
+<p>The water system is intentionally clustered in PC to minimize total run length, simplify service access, and isolate noise. The rear face of PC carries all external interfaces (city water inlet on top, outdoor shower mixer below). The forward face of the pressure cluster (pump &rarr; accumulator &rarr; filter) sits in a tight line on a single service bracket, with the Isotemp Slim 25L water heater on rails directly above it. Cold and hot manifold tees sit at the forward edge of the pressure cluster so all four destination lines (WH cold, sink cold, shower cold from the cold tee; sink hot, shower hot from the hot tee) start from a single accessible point. The low-point drain ball valve taps the cold manifold and runs straight to a sealed floor grommet for gravity winterization.</p>
+
+<h2>Bill of materials</h2>
+
+<div class="totals">
+  <p><span class="swatch badge-cold"></span><strong>1/2&quot; PEX-A tubing (blue, cold):</strong> 21 ft raw &rarr; order <strong>25 ft</strong></p>
+  <p><span class="swatch badge-hot"></span><strong>1/2&quot; PEX-A tubing (red, hot):</strong> 12 ft raw &rarr; order <strong>15 ft</strong></p>
+  <p><span class="swatch badge-gray"></span><strong>1-1/2&quot; marine sanitation hose (gray drain):</strong> 2 ft raw &rarr; order <strong>4 ft</strong></p>
+  <p style="margin:0"><span class="swatch badge-drain"></span><strong>1/2&quot; PEX-A (low-point drain stub):</strong> 4 ft, draw from blue spool</p>
+</div>
+
+<div class="totals" style="margin-top:8px">
+  <p style="margin:0 0 4px"><strong>Expansion fittings (PEX-A, ProPEX brass or EP plastic)</strong></p>
+  <p>1/2&quot; expansion rings: <strong>50-pack</strong> (sleeves slip over pipe before expansion)</p>
+  <p>1/2&quot; PEX-A tees: <strong>4 ea</strong> (cold manifold, hot tee, low-point drain tap, spare)</p>
+  <p>1/2&quot; PEX-A 90-degree elbows: <strong>8 ea</strong></p>
+  <p>1/2&quot; PEX-A to 1/2&quot; FNPT adapters: <strong>4 ea</strong> (pump, filter, shower mixer threads)</p>
+  <p>1/2&quot; PEX-A to 1/2&quot; BSPP adapters: <strong>2 ea</strong> (Isotemp metric thread profile)</p>
+  <p style="margin:0">1/2&quot; PEX-A shut-off ball valve (brass): <strong>1 ea</strong> (low-point drain)</p>
+</div>
+
+<div class="totals" style="margin-top:8px">
+  <p style="margin:0 0 4px"><strong>Tooling and accessories</strong></p>
+  <p>PEX-A expansion tool: <strong>1 ea</strong> (Milwaukee M12 ProPEX or manual lever expander)</p>
+  <p>Insulated rubber cushion P-clips: <strong>30-pack</strong> (bolt PEX to 80/20 t-slot framing)</p>
+  <p>Food-grade silicone thread sealant or PTFE tape: <strong>1 roll</strong></p>
+  <p>Marine outdoor shower mixing box: <strong>1 ea</strong> (flush-mount lockable with hot/cold knobs and shower wand)</p>
+  <p style="margin:0">Floor pass-through grommet: <strong>1 ea</strong> (sealed, for low-point drain)</p>
+</div>
+
+<h2>Critical install notes</h2>
+<div class="notes">
+  <p><strong>PEX-A memory shrink:</strong> after expansion, let the connection rest 2-3 minutes at room temperature before pressurizing. The pipe shrinks back over the brass teeth and forms a permanent seal. Do not rush this step.</p>
+  <p><strong>Anchor near the pump:</strong> cushioned P-clips within 6-12 inches of the pump inlet and outlet kill vibration transfer down the line. Without this the rigid pipe broadcasts pump noise through the entire passenger wall.</p>
+  <p><strong>Vent the gray tank:</strong> the 5-gallon portable inside G-A must have a small cracked top vent. A fully sealed tank glug-drains and the sink will run slow.</p>
+  <p><strong>Low-point drain accessibility:</strong> the ball valve handle must be reachable without removing cabinet panels. Mount it just inside the PC floor access, oriented so the handle clears any plumbing or wiring above it.</p>
+  <p><strong>No CCA or crimp on PEX-A:</strong> only expansion fittings. Crimp rings and cinch clamps are spec'd for PEX-B, not PEX-A; mixing systems will leak.</p>
+  <p><strong>Cushion-clip the BSPP adapters at the WH:</strong> Isotemp casings use a metric thread profile that PEX-A brass FNPT adapters will not seal against. Use dedicated BSPP-to-PEX-A adapters and seal with PTFE tape rated for hot water.</p>
+  <p style="margin:0"><strong>Test pressure before closing cabinets:</strong> charge the system to operating pressure (40-50 psi) and walk every joint with a paper towel. Drips show immediately on white paper. Fix any seep before paneling goes back on.</p>
+</div>
+
+</div>
+</body>
+</html>
