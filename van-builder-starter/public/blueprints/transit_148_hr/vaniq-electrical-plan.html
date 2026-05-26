@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VanIQ v24.0 - Electrical Master Plan</title>
+<style>
+  :root {
+    --bg: #fbfaf6;
+    --text: #2c2c2a;
+    --text-sec: #555;
+    --text-tert: #888;
+    --border: #ddd6c4;
+    --panel: #f4f1ea;
+    --ac: #8B1A1A;
+    --dc-heavy: #1D9E75;
+    --dc-gen: #185FA5;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    line-height: 1.5;
+  }
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 20px 48px;
+  }
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 18px;
+    margin-bottom: 20px;
+  }
+  h1 {
+    font-size: 22px;
+    margin: 0 0 6px;
+    font-weight: 600;
+  }
+  .subtitle {
+    color: var(--text-sec);
+    font-size: 14px;
+    margin: 0;
+  }
+  .meta {
+    color: var(--text-tert);
+    font-size: 12px;
+    margin-top: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .diagram {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    margin-bottom: 28px;
+    overflow: auto;
+  }
+  .diagram svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    min-width: 680px;
+  }
+  h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 28px 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  p {
+    font-size: 14px;
+    color: var(--text-sec);
+    margin: 0 0 12px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  th, td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    background: var(--panel);
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--text-sec);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  td.code, th.code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    white-space: nowrap;
+  }
+  .swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    vertical-align: middle;
+    margin-right: 6px;
+    border-radius: 2px;
+  }
+  .badge-ac { background: var(--ac); }
+  .badge-dch { background: var(--dc-heavy); }
+  .badge-dcg { background: var(--dc-gen); }
+  .totals {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+  }
+  .totals strong { color: var(--text); }
+  .notes {
+    font-size: 12px;
+    color: var(--text-tert);
+    border-left: 3px solid var(--border);
+    padding: 8px 12px;
+    margin: 10px 0;
+  }
+  .warn {
+    color: var(--ac);
+    font-weight: 600;
+  }
+  footer {
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-tert);
+    text-align: center;
+  }
+  @media print {
+    body { background: white; }
+    .diagram { border: none; padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>VanIQ v24.0 &mdash; Electrical Master Plan</h1>
+  <p class="subtitle">Ford Transit 148&quot; HR custom built layout (top view)</p>
+  <p class="meta">132&quot; L &times; 67&quot; W &middot; 4 px/inch &middot; rear at left &middot; driver top &middot; wire lengths follow perimeter routing</p>
+</header>
+
+<section class="diagram">
+<svg viewBox="0 0 680 720" role="img" xmlns="http://www.w3.org/2000/svg">
+<title>VanIQ v24.0 electrical master plan</title>
+<desc>Top-down floor plan with cabinets, equipment, ceiling fixtures, and wire manifest.</desc>
+
+<rect x="0" y="0" width="680" height="720" fill="#fbfaf6"/>
+
+<text x="14" y="18" font-family="sans-serif" font-size="10" fill="#2c2c2a" font-weight="600">VanIQ v24.0 &mdash; Electrical master plan (top view, 4 px/inch)</text>
+<text x="14" y="32" font-family="sans-serif" font-size="8.5" fill="#555">132&quot; L &times; 67&quot; W &middot; wire lengths follow perimeter routing &middot; ceiling fixtures shown over GB</text>
+
+<line x1="380" y1="14" x2="404" y2="14" stroke="#8B1A1A" stroke-width="2"/>
+<text x="410" y="17" font-family="sans-serif" font-size="8.5" fill="#2c2c2a">110V AC &mdash; Ancor 12/3 triplex</text>
+<line x1="380" y1="28" x2="404" y2="28" stroke="#1D9E75" stroke-width="2"/>
+<text x="410" y="31" font-family="sans-serif" font-size="8.5" fill="#2c2c2a">12V DC heavy &mdash; 10 AWG tinned copper</text>
+<line x1="380" y1="42" x2="404" y2="42" stroke="#185FA5" stroke-width="2"/>
+<text x="410" y="45" font-family="sans-serif" font-size="8.5" fill="#2c2c2a">12V DC general &mdash; 14/2 Ancor marine</text>
+
+<text x="20" y="68" font-family="ui-monospace,monospace" font-size="8" fill="#888">x=0 REAR</text>
+<text x="610" y="68" font-family="ui-monospace,monospace" font-size="8" fill="#888">x=132 FRONT</text>
+<text x="92" y="76" font-family="ui-monospace,monospace" font-size="8" fill="#D4537E">DRIVER (y=+33.5)</text>
+<text x="92" y="406" font-family="ui-monospace,monospace" font-size="8" fill="#1D9E75">PASSENGER (y=-33.5)</text>
+
+<rect x="80" y="84" width="528" height="308" fill="none" stroke="#444" stroke-width="1.5"/>
+<line x1="80" y1="238" x2="608" y2="238" stroke="#aaa" stroke-width="0.4" stroke-dasharray="4 4"/>
+<text x="612" y="241" font-family="ui-monospace,monospace" font-size="7.5" fill="#888">CL</text>
+
+<rect x="80" y="156" width="260" height="166" fill="#f0e6d0" stroke="#a89c70" stroke-width="1.2" stroke-dasharray="6 3" opacity="0.55"/>
+<text x="120" y="174" font-family="sans-serif" font-size="11" font-weight="700" fill="#5a4a20">GB &mdash; Garage / Bed</text>
+<text x="120" y="186" font-family="sans-serif" font-size="7.5" fill="#5a4a20">36&quot; aisle &middot; bed deck at z=37&quot;</text>
+<text x="120" y="316" font-family="sans-serif" font-size="6.5" fill="#5a4a20" font-style="italic">local grid: reading lights, over-tank LEDs, 12V/USB</text>
+
+<rect x="80" y="84" width="260" height="68" fill="#fbe1ea" stroke="#D4537E" stroke-width="1.2"/>
+<rect x="96" y="116" width="36" height="28" fill="#1D9E75" stroke="#0F6E56" stroke-width="0.8"/>
+<text x="114" y="134" font-family="sans-serif" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">EF</text>
+<rect x="138" y="116" width="32" height="28" fill="#444" stroke="#222" stroke-width="0.8"/>
+<text x="154" y="134" font-family="sans-serif" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">BAT</text>
+<rect x="176" y="116" width="36" height="28" fill="#5DA8E0" stroke="#185FA5" stroke-width="0.8"/>
+<text x="194" y="134" font-family="sans-serif" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">DP</text>
+<rect x="220" y="118" width="14" height="8" fill="#888"/>
+<rect x="220" y="134" width="14" height="8" fill="#888"/>
+<text x="280" y="100" font-family="sans-serif" font-size="11" font-weight="700" fill="#8a2050" text-anchor="middle">DC &mdash; Driver Cabinet</text>
+<text x="280" y="124" font-family="sans-serif" font-size="8" fill="#8a2050" text-anchor="middle">electrical core</text>
+<text x="248" y="134" font-family="sans-serif" font-size="7.5" fill="#444">2x fans</text>
+
+<rect x="80" y="324" width="260" height="68" fill="#dbf0e8" stroke="#1D9E75" stroke-width="1.2"/>
+<rect x="96" y="352" width="200" height="14" fill="none" stroke="#7da3c4" stroke-width="0.8" stroke-dasharray="3 2"/>
+<text x="196" y="362" font-family="sans-serif" font-size="7.5" fill="#5a7a90" text-anchor="middle">33gal water tank footprint</text>
+<rect x="120" y="372" width="120" height="14" fill="#A8C8E8" stroke="#185FA5" stroke-width="0.8"/>
+<text x="180" y="382" font-family="sans-serif" font-size="8" fill="#fff" text-anchor="middle" font-weight="700">WH &mdash; Isotemp Slim 25L</text>
+<rect x="248" y="372" width="38" height="14" fill="#7E57C2" stroke="#4A2F8A" stroke-width="0.8"/>
+<text x="267" y="382" font-family="sans-serif" font-size="8" fill="#fff" text-anchor="middle" font-weight="700">PUMP</text>
+<text x="280" y="340" font-family="sans-serif" font-size="11" font-weight="700" fill="#0F6E56" text-anchor="middle">PC &mdash; Passenger Cabinet</text>
+
+<rect x="340" y="84" width="64" height="68" fill="#efe5fa" stroke="#B47CE0" stroke-width="1.2"/>
+<text x="372" y="102" font-family="sans-serif" font-size="10" font-weight="700" fill="#5e2a8a" text-anchor="middle">WS-D</text>
+<text x="372" y="142" font-family="sans-serif" font-size="8" fill="#5e2a8a" text-anchor="middle">closet</text>
+
+<rect x="404" y="84" width="68" height="68" fill="#efe5fa" stroke="#B47CE0" stroke-width="1.2"/>
+<text x="438" y="102" font-family="sans-serif" font-size="10" font-weight="700" fill="#5e2a8a" text-anchor="middle">WS-C</text>
+<rect x="418" y="116" width="40" height="24" fill="#444" stroke="#222" stroke-width="0.8"/>
+<text x="438" y="132" font-family="sans-serif" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">IC</text>
+
+<rect x="472" y="84" width="88" height="68" fill="#efe5fa" stroke="#B47CE0" stroke-width="1.2"/>
+<text x="516" y="102" font-family="sans-serif" font-size="10" font-weight="700" fill="#5e2a8a" text-anchor="middle">WS-B</text>
+<rect x="486" y="112" width="60" height="28" fill="#7BB5E0" stroke="#185FA5" stroke-width="0.8"/>
+<text x="516" y="130" font-family="sans-serif" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">FR</text>
+<rect x="486" y="143" width="26" height="7" fill="#8B1A1A" stroke="#5a0c0c" stroke-width="0.6"/>
+<text x="499" y="149" font-family="sans-serif" font-size="6" fill="#fff" text-anchor="middle" font-weight="700">AC</text>
+<rect x="514" y="143" width="32" height="7" fill="#5DA8E0" stroke="#185FA5" stroke-width="0.6"/>
+<text x="530" y="149" font-family="sans-serif" font-size="6" fill="#fff" text-anchor="middle" font-weight="700">USB</text>
+<text x="565" y="148" font-family="sans-serif" font-size="6.5" fill="#5e2a8a">wall outlets</text>
+
+<rect x="560" y="84" width="48" height="68" fill="#efe5fa" stroke="#B47CE0" stroke-width="1.2"/>
+<text x="584" y="102" font-family="sans-serif" font-size="10" font-weight="700" fill="#5e2a8a" text-anchor="middle">WS-A</text>
+<rect x="568" y="116" width="32" height="24" fill="#F5A623" stroke="#985F0E" stroke-width="0.8"/>
+<text x="584" y="132" font-family="sans-serif" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">VH</text>
+
+<rect x="340" y="324" width="140" height="68" fill="#dceaf8" stroke="#378ADD" stroke-width="1.2"/>
+<text x="410" y="342" font-family="sans-serif" font-size="11" font-weight="700" fill="#185FA5" text-anchor="middle">G &mdash; Galley</text>
+<rect x="352" y="354" width="34" height="22" fill="#fff" stroke="#185FA5" stroke-width="0.8" stroke-dasharray="2 2"/>
+<text x="369" y="368" font-family="sans-serif" font-size="7.5" fill="#185FA5" text-anchor="middle" font-weight="600">sink</text>
+<rect x="390" y="354" width="34" height="22" fill="#5DA8E0" stroke="#185FA5" stroke-width="0.8"/>
+<text x="407" y="368" font-family="sans-serif" font-size="8" fill="#fff" text-anchor="middle" font-weight="700">USB</text>
+<rect x="428" y="354" width="34" height="22" fill="#8B1A1A" stroke="#5a0c0c" stroke-width="0.8"/>
+<text x="445" y="368" font-family="sans-serif" font-size="8" fill="#fff" text-anchor="middle" font-weight="700">AC</text>
+
+<rect x="480" y="324" width="128" height="68" fill="none" stroke="#bbb" stroke-width="0.6" stroke-dasharray="4 3"/>
+<text x="544" y="358" font-family="sans-serif" font-size="9" fill="#888" text-anchor="middle" font-style="italic">forward aisle 27&quot;</text>
+<rect x="484" y="396" width="96" height="8" fill="#FFD580" stroke="#c08020" stroke-width="0.8" stroke-dasharray="3 2"/>
+<text x="540" y="418" font-family="sans-serif" font-size="8" fill="#a07020" text-anchor="middle">sliding door &middot; x=101-125</text>
+
+<rect x="340" y="406" width="140" height="22" fill="#fff6e0" stroke="#E89B3A" stroke-width="1.2"/>
+<text x="370" y="421" font-family="sans-serif" font-size="9" fill="#854F0B" font-weight="700">UCP-B</text>
+<rect x="402" y="410" width="40" height="14" fill="#444" stroke="#222" stroke-width="0.6"/>
+<text x="422" y="420" font-family="sans-serif" font-size="8" fill="#fff" text-anchor="middle" font-weight="700">MW</text>
+<text x="460" y="420" font-family="sans-serif" font-size="8" fill="#854F0B">overhead</text>
+
+<path d="M 194 144 L 194 88 L 438 88 L 438 114" fill="none" stroke="#8B1A1A" stroke-width="1.6"/>
+<path d="M 194 144 L 194 92 L 530 92 L 530 143" fill="none" stroke="#8B1A1A" stroke-width="1.6"/>
+<path d="M 530 143 L 530 304 L 422 304 L 422 408" fill="none" stroke="#8B1A1A" stroke-width="1.6"/>
+<path d="M 194 144 L 194 96 L 88 96 L 88 388 L 180 388 L 180 372" fill="none" stroke="#8B1A1A" stroke-width="1.6"/>
+<path d="M 194 144 L 194 100 L 92 100 L 92 384 L 445 384 L 445 376" fill="none" stroke="#8B1A1A" stroke-width="1.6"/>
+
+<path d="M 194 144 L 194 388 L 584 388 L 584 114" fill="none" stroke="#1D9E75" stroke-width="2"/>
+<path d="M 194 144 L 194 384 L 516 384 L 516 140" fill="none" stroke="#1D9E75" stroke-width="2"/>
+
+<path d="M 194 144 L 194 80 L 530 80 L 530 144" fill="none" stroke="#185FA5" stroke-width="1.6"/>
+<path d="M 194 144 L 194 78 L 88 78 L 88 380 L 407 380 L 407 376" fill="none" stroke="#185FA5" stroke-width="1.6"/>
+<path d="M 194 144 L 194 76 L 84 76 L 84 392 L 267 392 L 267 386" fill="none" stroke="#185FA5" stroke-width="1.6"/>
+
+<path d="M 194 144 L 194 74 L 230 74 L 230 218 L 140 218" fill="none" stroke="#185FA5" stroke-width="1.4" stroke-dasharray="6 3"/>
+<path d="M 140 218 L 140 258 L 200 258 L 200 218 L 260 218 L 260 258 L 320 258 L 320 218" fill="none" stroke="#185FA5" stroke-width="1.4" stroke-dasharray="6 3"/>
+
+<path d="M 194 144 L 194 72 L 216 72 L 216 208" fill="none" stroke="#185FA5" stroke-width="1.6"/>
+
+<g>
+<circle cx="140" cy="218" r="7" fill="#FAC775" stroke="#854F0B" stroke-width="1.2"/>
+<circle cx="140" cy="258" r="7" fill="#FAC775" stroke="#854F0B" stroke-width="1.2"/>
+<circle cx="200" cy="218" r="7" fill="#FAC775" stroke="#854F0B" stroke-width="1.2"/>
+<circle cx="200" cy="258" r="7" fill="#FAC775" stroke="#854F0B" stroke-width="1.2"/>
+<circle cx="260" cy="218" r="7" fill="#FAC775" stroke="#854F0B" stroke-width="1.2"/>
+<circle cx="260" cy="258" r="7" fill="#FAC775" stroke="#854F0B" stroke-width="1.2"/>
+<circle cx="320" cy="218" r="7" fill="#FAC775" stroke="#854F0B" stroke-width="1.2"/>
+<circle cx="320" cy="258" r="7" fill="#FAC775" stroke="#854F0B" stroke-width="1.2"/>
+</g>
+<text x="230" y="295" font-family="sans-serif" font-size="7.5" fill="#854F0B" text-anchor="middle">8 ceiling puck lights (2 rows of 4 down centerline)</text>
+
+<g>
+<rect x="195" y="208" width="42" height="60" fill="#fbfaf6" stroke="#444" stroke-width="1.2" stroke-dasharray="3 2"/>
+<line x1="207" y1="220" x2="231" y2="256" stroke="#444" stroke-width="1.2"/>
+<line x1="231" y1="220" x2="207" y2="256" stroke="#444" stroke-width="1.2"/>
+<text x="216" y="241" font-family="sans-serif" font-size="7" fill="#444" text-anchor="middle" font-weight="700">FAN</text>
+</g>
+<text x="216" y="200" font-family="sans-serif" font-size="7.5" fill="#444" text-anchor="middle">Maxxair &middot; centered over bed</text>
+
+<rect x="14" y="448" width="652" height="266" fill="#f4f1ea" stroke="#ddd6c4" stroke-width="0.6" rx="4"/>
+
+<text x="24" y="466" font-family="sans-serif" font-size="9.5" fill="#2c2c2a" font-weight="700">Component key</text>
+
+<rect x="24" y="474" width="14" height="10" fill="#1D9E75"/>
+<text x="44" y="483" font-family="sans-serif" font-size="8" fill="#2c2c2a"><tspan font-weight="700">EF</tspan> EcoFlow Power Hub</text>
+<rect x="160" y="474" width="14" height="10" fill="#444"/>
+<text x="180" y="483" font-family="sans-serif" font-size="8" fill="#2c2c2a"><tspan font-weight="700">BAT</tspan> 2x 5kWh</text>
+<rect x="270" y="474" width="14" height="10" fill="#5DA8E0"/>
+<text x="290" y="483" font-family="sans-serif" font-size="8" fill="#2c2c2a"><tspan font-weight="700">DP</tspan> Distribution Panel</text>
+<rect x="410" y="474" width="14" height="10" fill="#A8C8E8"/>
+<text x="430" y="483" font-family="sans-serif" font-size="8" fill="#2c2c2a"><tspan font-weight="700">WH</tspan> water heater</text>
+<rect x="540" y="474" width="14" height="10" fill="#7E57C2"/>
+<text x="560" y="483" font-family="sans-serif" font-size="8" fill="#2c2c2a"><tspan font-weight="700">PUMP</tspan> water pump</text>
+
+<rect x="24" y="490" width="14" height="10" fill="#F5A623"/>
+<text x="44" y="499" font-family="sans-serif" font-size="8" fill="#2c2c2a"><tspan font-weight="700">VH</tspan> Velit heater</text>
+<rect x="160" y="490" width="14" height="10" fill="#7BB5E0"/>
+<text x="180" y="499" font-family="sans-serif" font-size="8" fill="#2c2c2a"><tspan font-weight="700">FR</tspan> Isotherm fridge</text>
+<rect x="270" y="490" width="14" height="10" fill="#444"/>
+<text x="290" y="499" font-family="sans-serif" font-size="8" fill="#2c2c2a"><tspan font-weight="700">IC</tspan> induction cooktop</text>
+<rect x="410" y="490" width="14" height="10" fill="#444"/>
+<text x="430" y="499" font-family="sans-serif" font-size="8" fill="#2c2c2a"><tspan font-weight="700">MW</tspan> microwave</text>
+<circle cx="548" cy="495" r="5" fill="#FAC775" stroke="#854F0B" stroke-width="0.8"/>
+<text x="558" y="499" font-family="sans-serif" font-size="8" fill="#2c2c2a">puck light &middot; fan (x)</text>
+
+<text x="24" y="520" font-family="sans-serif" font-size="9.5" fill="#2c2c2a" font-weight="700">Wire manifest &mdash; all runs originate at DP, lengths follow perimeter routing</text>
+
+<line x1="20" y1="528" x2="660" y2="528" stroke="#ddd6c4" stroke-width="0.5"/>
+<text x="20" y="540" font-family="ui-monospace,monospace" font-size="8" fill="#888">ID</text>
+<text x="60" y="540" font-family="ui-monospace,monospace" font-size="8" fill="#888">Load</text>
+<text x="270" y="540" font-family="ui-monospace,monospace" font-size="8" fill="#888">Cable</text>
+<text x="395" y="540" font-family="ui-monospace,monospace" font-size="8" fill="#888">Routing</text>
+<text x="555" y="540" font-family="ui-monospace,monospace" font-size="8" fill="#888">Run</text>
+<text x="610" y="540" font-family="ui-monospace,monospace" font-size="8" fill="#888">Fuse</text>
+<line x1="20" y1="544" x2="660" y2="544" stroke="#ddd6c4" stroke-width="0.5"/>
+
+<rect x="20" y="548" width="6" height="9" fill="#8B1A1A"/>
+<text x="32" y="556" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">AC-1</text>
+<text x="60" y="556" font-family="sans-serif" font-size="8" fill="#2c2c2a">Induction cooktop (WS-C)</text>
+<text x="270" y="556" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">12/3 AWG triplex</text>
+<text x="395" y="556" font-family="sans-serif" font-size="7.5" fill="#666">up to ceiling &middot; fwd 4 ft &middot; down to counter</text>
+<text x="555" y="556" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">12 ft</text>
+<text x="610" y="556" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">15A</text>
+
+<rect x="20" y="560" width="6" height="9" fill="#8B1A1A"/>
+<text x="32" y="568" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">AC-2</text>
+<text x="60" y="568" font-family="sans-serif" font-size="8" fill="#2c2c2a">Isotemp Slim 25L water heater</text>
+<text x="270" y="568" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">12/3 AWG triplex</text>
+<text x="395" y="568" font-family="sans-serif" font-size="7.5" fill="#666">down &middot; floor &middot; cross to PC &middot; up to WH</text>
+<text x="555" y="568" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">14 ft</text>
+<text x="610" y="568" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">15A</text>
+
+<rect x="20" y="572" width="6" height="9" fill="#8B1A1A"/>
+<text x="32" y="580" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">AC-3</text>
+<text x="60" y="580" font-family="sans-serif" font-size="8" fill="#2c2c2a">WS-B wall outlet + UCP-B MW</text>
+<text x="270" y="580" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">12/3 AWG triplex</text>
+<text x="395" y="580" font-family="sans-serif" font-size="7.5" fill="#666">up &middot; fwd to WS-B &middot; cross ceil to UCP-B</text>
+<text x="555" y="580" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">22 ft</text>
+<text x="610" y="580" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">15A</text>
+
+<rect x="20" y="584" width="6" height="9" fill="#8B1A1A"/>
+<text x="32" y="592" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">AC-4</text>
+<text x="60" y="592" font-family="sans-serif" font-size="8" fill="#2c2c2a">Galley duplex outlets (G)</text>
+<text x="270" y="592" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">12/3 AWG triplex</text>
+<text x="395" y="592" font-family="sans-serif" font-size="7.5" fill="#666">up &middot; ceiling &middot; down pass wall</text>
+<text x="555" y="592" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">18 ft</text>
+<text x="610" y="592" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">15A</text>
+
+<rect x="20" y="596" width="6" height="9" fill="#1D9E75"/>
+<text x="32" y="604" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">DC-1</text>
+<text x="60" y="604" font-family="sans-serif" font-size="8" fill="#2c2c2a">Velit 4000 (WS-A) &mdash; never switch</text>
+<text x="270" y="604" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">10/2 AWG duplex</text>
+<text x="395" y="604" font-family="sans-serif" font-size="7.5" fill="#666">down &middot; driver wall fwd &middot; up at WS-A</text>
+<text x="555" y="604" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">13 ft</text>
+<text x="610" y="604" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">20A</text>
+
+<rect x="20" y="608" width="6" height="9" fill="#1D9E75"/>
+<text x="32" y="616" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">DC-2</text>
+<text x="60" y="616" font-family="sans-serif" font-size="8" fill="#2c2c2a">Isotherm fridge (WS-B)</text>
+<text x="270" y="616" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">14/2 AWG duplex</text>
+<text x="395" y="616" font-family="sans-serif" font-size="7.5" fill="#666">driver wall fwd &middot; into WS-B back</text>
+<text x="555" y="616" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">9 ft</text>
+<text x="610" y="616" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">15A</text>
+
+<rect x="20" y="620" width="6" height="9" fill="#185FA5"/>
+<text x="32" y="628" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">DC-3</text>
+<text x="60" y="628" font-family="sans-serif" font-size="8" fill="#2c2c2a">WS-B wall USB hub (4x USB-C)</text>
+<text x="270" y="628" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">14/2 AWG duplex</text>
+<text x="395" y="628" font-family="sans-serif" font-size="7.5" fill="#666">up &middot; fwd &middot; down to WS-B wall panel</text>
+<text x="555" y="628" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">11 ft</text>
+<text x="610" y="628" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">15A</text>
+
+<rect x="20" y="632" width="6" height="9" fill="#185FA5"/>
+<text x="32" y="640" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">DC-4</text>
+<text x="60" y="640" font-family="sans-serif" font-size="8" fill="#2c2c2a">Galley USB hub (4x USB-C)</text>
+<text x="270" y="640" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">14/2 AWG duplex</text>
+<text x="395" y="640" font-family="sans-serif" font-size="7.5" fill="#666">up &middot; ceiling &middot; down pass wall to G</text>
+<text x="555" y="640" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">18 ft</text>
+<text x="610" y="640" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">15A</text>
+
+<rect x="20" y="644" width="6" height="9" fill="#185FA5"/>
+<text x="32" y="652" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">DC-5</text>
+<text x="60" y="652" font-family="sans-serif" font-size="8" fill="#2c2c2a">Water pump (in PC, tank-&gt;sink)</text>
+<text x="270" y="652" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">14/2 AWG duplex</text>
+<text x="395" y="652" font-family="sans-serif" font-size="7.5" fill="#666">down &middot; floor &middot; cross to PC pump</text>
+<text x="555" y="652" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">13 ft</text>
+<text x="610" y="652" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">10A</text>
+
+<rect x="20" y="656" width="6" height="9" fill="#185FA5"/>
+<text x="32" y="664" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">DC-6</text>
+<text x="60" y="664" font-family="sans-serif" font-size="8" fill="#2c2c2a">8 puck lights &middot; daisy-chain loop</text>
+<text x="270" y="664" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">14/2 AWG duplex</text>
+<text x="395" y="664" font-family="sans-serif" font-size="7.5" fill="#666">ceiling &middot; 2 rows x 4 fixtures &middot; return</text>
+<text x="555" y="664" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">42 ft</text>
+<text x="610" y="664" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">10A</text>
+
+<rect x="20" y="668" width="6" height="9" fill="#185FA5"/>
+<text x="32" y="676" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">DC-7</text>
+<text x="60" y="676" font-family="sans-serif" font-size="8" fill="#2c2c2a">Maxxair fan (centered over bed)</text>
+<text x="270" y="676" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">14/2 AWG duplex</text>
+<text x="395" y="676" font-family="sans-serif" font-size="7.5" fill="#666">up to ceiling &middot; fwd to fan housing</text>
+<text x="555" y="676" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">14 ft</text>
+<text x="610" y="676" font-family="ui-monospace,monospace" font-size="8" fill="#2c2c2a">15A</text>
+
+<line x1="20" y1="684" x2="660" y2="684" stroke="#ddd6c4" stroke-width="0.5"/>
+
+<text x="24" y="697" font-family="sans-serif" font-size="9" fill="#2c2c2a" font-weight="700">Total cable to order (15% slack included)</text>
+
+<rect x="24" y="702" width="10" height="10" fill="#8B1A1A"/>
+<text x="40" y="710" font-family="sans-serif" font-size="8.5" fill="#2c2c2a"><tspan font-weight="700">Ancor 12/3 AWG AC triplex:</tspan> 66 raw -&gt; <tspan font-weight="700" fill="#8B1A1A">75 ft</tspan></text>
+<rect x="240" y="702" width="10" height="10" fill="#1D9E75"/>
+<text x="256" y="710" font-family="sans-serif" font-size="8.5" fill="#2c2c2a"><tspan font-weight="700">Ancor 10/2 AWG DC duplex:</tspan> 13 raw -&gt; <tspan font-weight="700" fill="#1D9E75">15 ft</tspan></text>
+<rect x="450" y="702" width="10" height="10" fill="#185FA5"/>
+<text x="466" y="710" font-family="sans-serif" font-size="8.5" fill="#2c2c2a"><tspan font-weight="700">Ancor 14/2 AWG DC duplex:</tspan> 107 raw -&gt; <tspan font-weight="700" fill="#185FA5">125 ft</tspan></text>
+</svg>
+</section>
+
+<h2>Wire manifest</h2>
+<p>All circuits originate at the EcoFlow Smart Distribution Panel (DP) in the driver cabinet. Lengths follow realistic perimeter routing (floor &rarr; wall &rarr; ceiling &rarr; drop) rather than straight-line distance.</p>
+
+<table>
+<thead>
+  <tr>
+    <th class="code">ID</th>
+    <th>Load</th>
+    <th>Cable</th>
+    <th>Routing</th>
+    <th class="code">Run</th>
+    <th class="code">Fuse</th>
+  </tr>
+</thead>
+<tbody>
+  <tr><td class="code"><span class="swatch badge-ac"></span>AC-1</td><td>Induction cooktop (WS-C)</td><td class="code">12/3 AWG triplex</td><td>up to ceiling, forward 4 ft, down to counter</td><td class="code">12 ft</td><td class="code">15A</td></tr>
+  <tr><td class="code"><span class="swatch badge-ac"></span>AC-2</td><td>Isotemp Slim 25L water heater</td><td class="code">12/3 AWG triplex</td><td>down, floor, cross to PC, up to WH</td><td class="code">14 ft</td><td class="code">15A</td></tr>
+  <tr><td class="code"><span class="swatch badge-ac"></span>AC-3</td><td>WS-B wall outlet + UCP-B microwave</td><td class="code">12/3 AWG triplex</td><td>up, forward to WS-B, cross ceiling to UCP-B</td><td class="code">22 ft</td><td class="code">15A</td></tr>
+  <tr><td class="code"><span class="swatch badge-ac"></span>AC-4</td><td>Galley duplex outlets (G)</td><td class="code">12/3 AWG triplex</td><td>up, ceiling, down passenger wall</td><td class="code">18 ft</td><td class="code">15A</td></tr>
+  <tr><td class="code"><span class="swatch badge-dch"></span>DC-1</td><td>Velit 4000 heater (WS-A) &mdash; <span class="warn">never on a hard switch</span></td><td class="code">10/2 AWG duplex</td><td>down, driver wall forward, up at WS-A</td><td class="code">13 ft</td><td class="code">20A</td></tr>
+  <tr><td class="code"><span class="swatch badge-dch"></span>DC-2</td><td>Isotherm DC fridge (WS-B)</td><td class="code">14/2 AWG duplex</td><td>driver wall forward, into WS-B back</td><td class="code">9 ft</td><td class="code">15A</td></tr>
+  <tr><td class="code"><span class="swatch badge-dcg"></span>DC-3</td><td>WS-B wall USB hub (4x USB-C)</td><td class="code">14/2 AWG duplex</td><td>up, forward, down to WS-B wall panel</td><td class="code">11 ft</td><td class="code">15A</td></tr>
+  <tr><td class="code"><span class="swatch badge-dcg"></span>DC-4</td><td>Galley USB hub (4x USB-C)</td><td class="code">14/2 AWG duplex</td><td>up, ceiling, down passenger wall to G</td><td class="code">18 ft</td><td class="code">15A</td></tr>
+  <tr><td class="code"><span class="swatch badge-dcg"></span>DC-5</td><td>Water pump (PC, tank to sink)</td><td class="code">14/2 AWG duplex</td><td>down, floor, cross to PC pump</td><td class="code">13 ft</td><td class="code">10A</td></tr>
+  <tr><td class="code"><span class="swatch badge-dcg"></span>DC-6</td><td>8 ceiling puck lights (daisy-chain)</td><td class="code">14/2 AWG duplex</td><td>ceiling, 2 rows x 4 fixtures, return</td><td class="code">42 ft</td><td class="code">10A</td></tr>
+  <tr><td class="code"><span class="swatch badge-dcg"></span>DC-7</td><td>Maxxair ceiling fan (over bed)</td><td class="code">14/2 AWG duplex</td><td>up to ceiling, forward to fan housing</td><td class="code">14 ft</td><td class="code">15A</td></tr>
+</tbody>
+</table>
+
+<h2>Cable order totals</h2>
+<p>Raw runs plus 15% slack for service loops, termination, and trim. All cable must be pure tinned-copper marine-grade (Ancor or equivalent). No CCA wire under any circumstance.</p>
+
+<div class="totals">
+  <p><span class="swatch badge-ac"></span><strong>Ancor 12/3 AWG AC triplex:</strong> 66 ft raw &rarr; order <strong>75 ft</strong></p>
+  <p><span class="swatch badge-dch"></span><strong>Ancor 10/2 AWG DC duplex (tinned):</strong> 13 ft raw &rarr; order <strong>15 ft</strong></p>
+  <p style="margin:0"><span class="swatch badge-dcg"></span><strong>Ancor 14/2 AWG DC duplex (tinned, marine):</strong> 107 ft raw &rarr; order <strong>125 ft</strong></p>
+</div>
+
+<h2>Component key</h2>
+<table>
+<tbody>
+  <tr><td class="code">EF</td><td>EcoFlow Power Hub (3.6kVA inverter-charger)</td></tr>
+  <tr><td class="code">BAT</td><td>2x EcoFlow 5kWh batteries (stacked in DC)</td></tr>
+  <tr><td class="code">DP</td><td>EcoFlow Smart Distribution Panel (6 AC + 12 DC circuits)</td></tr>
+  <tr><td class="code">VH</td><td>Velit 4000 diesel heater (WS-A, on shelf at z=10&quot;)</td></tr>
+  <tr><td class="code">FR</td><td>Isotherm DC drawer fridge (WS-B)</td></tr>
+  <tr><td class="code">IC</td><td>Induction cooktop (WS-C counter, 1800W max)</td></tr>
+  <tr><td class="code">MW</td><td>GE JES1145 1.1 cu ft microwave (UCP-B overhead)</td></tr>
+  <tr><td class="code">WH</td><td>Isotemp Slim 25L water heater (PC, on rails at z=20&quot;)</td></tr>
+  <tr><td class="code">PUMP</td><td>12V water pump (PC, draws from tank below, feeds sink in G)</td></tr>
+</tbody>
+</table>
+
+<h2>Critical safety notes</h2>
+<div class="notes">
+  <p style="margin:0 0 6px"><span class="warn">CCA wire prohibited.</span> High vibration and moisture inside vehicle framing cause stress-fracturing and galvanic crystallization in Copper Clad Aluminum. All power and accessory runs must use pure tinned-copper marine-grade cable.</p>
+  <p style="margin:0 0 6px"><span class="warn">Velit 4000 must never be on a hard switch.</span> Cutting source current while the chamber is fired prevents the automatic cool-down fan cycle, causing meltdown of electrical parts. Operate by thermostat controller only.</p>
+  <p style="margin:0">Bed and garage zone (GB) is wired as an independent local grid &mdash; reading lights, over-tank LEDs, and 12V socket plus USB hub use integrated base switches rather than running loops forward to the main panel. Not included in the manifest above.</p>
+</div>
+
+<footer>
+  Based on VanIQ v24.0 layout &middot; Ford Transit 148&quot; high roof &middot; built for the Disruptive Business Solutions LLC camper conversion
+</footer>
+
+</div>
+</body>
+</html>
