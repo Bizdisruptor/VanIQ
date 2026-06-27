@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E-Bike Door Lift - Ground Load</title>
+<style>
+  :root{--ink:#1f3a5f;--steel:#64b5f6;--alu:#9aa6b2;--gold:#D4AF37;--red:#c0392b;
+    --grn:#2e7d32;--bg:#0e1726;--panel:#152238;--frame:#2c3e50;}
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);
+    color:#dfe7f2;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:16px;}
+  h1{font-size:17px;margin:4px 0;color:#fff;}
+  .sub{font-size:12px;color:#9fb0c6;margin-bottom:10px;text-align:center;max-width:790px;}
+  .stage{background:#f5f7fb;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.4);}
+  .controls{display:flex;flex-wrap:wrap;gap:13px;align-items:center;background:var(--panel);
+    padding:14px 18px;border-radius:10px;margin-top:12px;max-width:850px;width:100%;}
+  .controls .row{display:flex;flex-direction:column;gap:2px;font-size:11px;min-width:150px;}
+  .controls label{color:#9fb0c6;}
+  .controls input[type=range]{width:100%;}
+  .val{color:var(--steel);font-weight:600;}
+  button{background:var(--steel);color:#06121f;border:none;padding:9px 16px;border-radius:7px;
+    font-weight:700;cursor:pointer;font-size:13px;}
+  button.secondary{background:#33455f;color:#dfe7f2;}
+  .readout{font-size:12px;color:#9fb0c6;margin-top:8px;max-width:850px;}
+  .readout b{color:var(--gold);} .readout .ok{color:#5fd35f;} .readout .bad{color:#ff6b6b;}
+  .phase{display:inline-block;padding:3px 9px;border-radius:20px;font-size:12px;font-weight:700;
+    background:var(--grn);color:#fff;margin-left:8px;}
+  .legend{font-size:11px;color:#9fb0c6;margin-top:6px;max-width:850px;}
+  .legend span{display:inline-block;margin-right:13px;}
+  .sw{display:inline-block;width:12px;height:4px;vertical-align:middle;margin-right:4px;border-radius:2px;}
+  svg text{font-family:system-ui,sans-serif;}
+</style>
+</head>
+<body>
+  <h1>E-Bike Door Lift — Ground Load <span id="phaseTag" class="phase">READY</span></h1>
+  <div class="sub">LOAD: bike stands on the ground, both wheels at 0". Front wheel rolls into the cradle (arm at a shallow ~25° angle). Winch sweeps the arm up to 90°; the bike rotates up off the ground to vertical stow. Roof, bumper, ground all to scale.</div>
+
+  <svg id="scene" class="stage" width="840" height="680" viewBox="0 0 840 680"></svg>
+
+  <div class="legend">
+    <span><span class="sw" style="background:#2c3e50"></span>door frame / anchor</span>
+    <span><span class="sw" style="background:#9aa6b2"></span>parallel arms</span>
+    <span><span class="sw" style="background:#64b5f6"></span>cradle</span>
+    <span><span class="sw" style="background:#c0392b"></span>rope/pulley</span>
+    <span><span class="sw" style="background:#2e7d32"></span>bike</span>
+    <span><span class="sw" style="background:#D4AF37"></span>mount/standoff</span>
+  </div>
+
+  <div class="controls">
+    <button id="playBtn">▶ Run Lift</button>
+    <button id="resetBtn" class="secondary">Reset to ground</button>
+    <button id="validateBtn" style="background:#2e7d32;color:#fff;">✓ Validate</button>
+    <div class="row"><label>Arm length: <span class="val" id="armVal"></span> in</label>
+      <input type="range" id="armLen" min="30" max="48" step="0.5" value="40"></div>
+    <div class="row"><label>Anchor height: <span class="val" id="pivVal"></span> in</label>
+      <input type="range" id="pivHt" min="14" max="72" step="0.5" value="19"></div>
+    <div class="row"><label>Anchor standoff: <span class="val" id="stdVal"></span> in</label>
+      <input type="range" id="standoff" min="0" max="14" step="0.5" value="6"></div>
+    <div class="row"><label>Load arm angle (shallow): <span class="val" id="loadVal"></span>°</label>
+      <input type="range" id="loadAng" min="-40" max="-10" step="1" value="-25"></div>
+    <div class="row"><label>Stow arm angle: <span class="val" id="stowVal"></span>°</label>
+      <input type="range" id="stowAng" min="75" max="90" step="1" value="90"></div>
+    <div class="row"><label>Arm spacing: <span class="val" id="spcVal"></span> in</label>
+      <input type="range" id="armSpc" min="6" max="14" step="0.5" value="10"></div>
+    <div class="row"><label>Wheel dia: <span class="val" id="whVal"></span> in</label>
+      <input type="range" id="wheelD" min="24" max="29" step="0.5" value="27.5"></div>
+    <div class="row"><label>Wheelbase: <span class="val" id="wbVal"></span> in</label>
+      <input type="range" id="wbase" min="40" max="52" step="0.5" value="50.3"></div>
+  </div>
+
+  <div id="cradlePanel" style="font-size:13px;color:#dfe7f2;margin-top:10px;max-width:850px;width:100%;
+       background:#152238;border:1px solid #33455f;border-radius:8px;padding:10px 14px;"></div>
+
+  <div class="readout" id="readout"></div>
+
+  <div id="validation" style="max-width:850px;width:100%;margin-top:10px;"></div>
+
+<script>
+const SVG=document.getElementById('scene');
+const W=840,H=680,PXPERIN=5.2,GROUND_Y=H-40,DOOR_X=600;
+const el=id=>document.getElementById(id);
+function wy(yin){return GROUND_Y-yin*PXPERIN;}
+const BUMPER=28.0, ROOF=110.0, BUMPER_OUT=8.0;
+
+let params={arm:40,pivH:19,standoff:6,loadAng:-25,stowAng:90,spc:10,wheelD:27.5,wbase:50.3};
+let theta=0,LOAD_T,RAISE_T,anim=null;
+
+function svgEl(t,a){const e=document.createElementNS('http://www.w3.org/2000/svg',t);
+  for(const k in a)e.setAttribute(k,a[k]);return e;}
+function clear(){while(SVG.firstChild)SVG.removeChild(SVG.firstChild);}
+function add(t,a){const e=svgEl(t,a);SVG.appendChild(e);return e;}
+function txt(x,y,s,fill,size,anchor,weight){const t=svgEl('text',{x,y,fill,'font-size':size||11,
+  'text-anchor':anchor||'start','font-weight':weight||400});t.textContent=s;SVG.appendChild(t);return t;}
+
+function syncLabels(){
+  el('armVal').textContent=params.arm.toFixed(1);el('pivVal').textContent=params.pivH.toFixed(1);
+  el('stdVal').textContent=params.standoff.toFixed(1);el('loadVal').textContent=params.loadAng.toFixed(0);
+  el('stowVal').textContent=params.stowAng.toFixed(0);el('spcVal').textContent=params.spc.toFixed(1);
+  el('whVal').textContent=params.wheelD.toFixed(1);el('wbVal').textContent=params.wbase.toFixed(1);
+}
+
+function geom(thetaDeg){
+  const a=thetaDeg*Math.PI/180,r=params.wheelD/2;
+  const stdPx=params.standoff*PXPERIN;
+  const lowPiv={x:DOOR_X-6-stdPx,y:wy(params.pivH)};
+  const upPiv ={x:DOOR_X-6-stdPx,y:wy(params.pivH+params.spc)};
+  const dx=-params.arm*PXPERIN*Math.cos(a), dy=-params.arm*PXPERIN*Math.sin(a);
+  const lowTip={x:lowPiv.x+dx,y:lowPiv.y+dy};
+  const upTip ={x:upPiv.x +dx,y:upPiv.y +dy};
+  // front wheel center sits in cradle pocket: r above seat (lowTip), against back-leg
+  const fw={x:lowTip.x-r*PXPERIN, y:lowTip.y-r*PXPERIN};
+  return {lowPiv,upPiv,lowTip,upTip,fw,r};
+}
+
+// Bike tilt is SOLVED, not chosen:
+// At any moment the front wheel is at the cradle (front axle height = cradle seat + r).
+// While the rear wheel is on the ground, the bike tilt satisfies:
+//   sin(tilt) = (frontAxleHeight - r) / wbase   (rear axle at height r, on ground)
+// Once the geometry would push the front so high the rear must leave the ground, the rear lifts.
+function frontAxleHeight(g){ return (GROUND_Y - g.fw.y)/PXPERIN; }
+
+function bikeTiltAndRear(g){
+  const r=params.wheelD/2;
+  const fA=frontAxleHeight(g);              // front axle height (inches)
+  let s=(fA - r)/params.wbase;              // sin(tilt) if rear grounded
+  if(s<=1){
+    // rear stays on ground; tilt solved
+    const tilt=Math.asin(Math.max(-1,s));
+    return {tilt, rearGrounded:true};
+  } else {
+    // front too high for rear to stay down -> bike vertical, rear lifts off
+    return {tilt:Math.PI/2, rearGrounded:false};
+  }
+}
+
+function drawBike(g){
+  const r=params.wheelD/2,R=r*PXPERIN;
+  const span=params.wbase*PXPERIN;
+  const fw=g.fw;
+  const sol=bikeTiltAndRear(g);
+  const tilt=sol.tilt;
+  // rear wheel center: 'span' from front along bike axis (front down toward rear)
+  const ux=-Math.cos(tilt), uy=Math.sin(tilt);
+  let rw={x:fw.x+ux*span, y:fw.y+uy*span};
+  // If rear is grounded, force its center exactly to ground height (r off ground) to honor the rule
+  if(sol.rearGrounded){
+    rw.y=GROUND_Y - r*PXPERIN;
+  }
+  [fw,rw].forEach(wc=>{
+    add('circle',{cx:wc.x,cy:wc.y,r:R,fill:'none',stroke:'#1b5e20','stroke-width':4});
+    add('circle',{cx:wc.x,cy:wc.y,r:R-4,fill:'none',stroke:'#2e7d32','stroke-width':2,'opacity':.5});
+    add('circle',{cx:wc.x,cy:wc.y,r:4,fill:'#777'});
+    for(let k=0;k<8;k++){const sa=k*Math.PI/4;
+      add('line',{x1:wc.x,y1:wc.y,x2:wc.x+(R-4)*Math.cos(sa),y2:wc.y+(R-4)*Math.sin(sa),stroke:'#bbb','stroke-width':1});}
+  });
+  const mid={x:(fw.x+rw.x)/2,y:(fw.y+rw.y)/2};
+  const pxn=-uy,pyn=ux, top={x:mid.x+pxn*R*0.85,y:mid.y+pyn*R*0.85};
+  [[fw,top],[rw,top],[fw,mid],[rw,mid],[mid,top]].forEach(([p,q])=>
+    add('line',{x1:p.x,y1:p.y,x2:q.x,y2:q.y,stroke:'#2e7d32','stroke-width':3}));
+  return {fw,rw,rearGrounded:sol.rearGrounded};
+}
+
+function draw(){
+  clear();
+  const r=params.wheelD/2;
+  add('rect',{x:0,y:GROUND_Y,width:W,height:H-GROUND_Y,fill:'#e7e2d8'});
+  add('line',{x1:0,y1:GROUND_Y,x2:W,y2:GROUND_Y,stroke:'#888','stroke-width':2});
+  txt(12,GROUND_Y+16,'GROUND 0"','#777',12);
+
+  // van + roof to scale
+  add('rect',{x:DOOR_X,y:wy(ROOF),width:W-DOOR_X-8,height:wy(0)-wy(ROOF),fill:'#eef1f5',stroke:'#1f3a5f','stroke-width':2.5});
+  add('line',{x1:DOOR_X-150,y1:wy(ROOF),x2:W-8,y2:wy(ROOF),stroke:'#1f3a5f','stroke-width':1,'stroke-dasharray':'4 5','opacity':.5});
+  txt(DOOR_X-148,wy(ROOF)-4,'ROOF 110"','#1f3a5f',11,'start',700);
+  txt(DOOR_X+90,wy(ROOF)+18,'VAN','#1f3a5f',13,'start',700);
+  // bumper sticking out
+  const bumpRearX=DOOR_X-BUMPER_OUT*PXPERIN;
+  add('rect',{x:bumpRearX,y:wy(BUMPER),width:DOOR_X-bumpRearX+4,height:wy(0)-wy(BUMPER),fill:'#1f3a5f','opacity':.30});
+  add('line',{x1:bumpRearX,y1:wy(BUMPER),x2:DOOR_X+4,y2:wy(BUMPER),stroke:'#1f3a5f','stroke-width':2});
+  txt(bumpRearX-4,wy(BUMPER)-4,'BUMPER 28"','#1f3a5f',11,'end',700);
+
+  // door frame
+  const frameTop=wy(ROOF-4), frameBot=wy(BUMPER-2), frX=DOOR_X-6;
+  add('rect',{x:frX-2,y:frameTop,width:16,height:frameBot-frameTop,fill:'none',stroke:'#2c3e50','stroke-width':6});
+  txt(frX+20,frameTop+16,'DOOR FRAME','#2c3e50',11,'start',700);
+  [frameTop+18,(frameTop+frameBot)/2,frameBot-20].forEach((my,i)=>{
+    add('rect',{x:frX+14,y:my-5,width:13,height:10,fill:'#D4AF37',stroke:'#7a5c00','stroke-width':1});
+    add('line',{x1:frX+27,y1:my,x2:DOOR_X+2,y2:my,stroke:'#D4AF37','stroke-width':2});
+    txt(frX+30,my+4,['hinge','hinge','door pt'][i],'#9a7400',9,'start',700);
+  });
+  // pulley at top
+  const apex={x:frX+5,y:frameTop+6};
+  add('circle',{cx:apex.x,cy:apex.y,r:7,fill:'none',stroke:'#c0392b','stroke-width':3});
+  txt(apex.x-10,apex.y-5,'pulley','#c0392b',11,'end',700);
+
+  const g=geom(theta);
+
+  // anchor standoff bracket
+  const stdPx=params.standoff*PXPERIN, pivColX=DOOR_X-6-stdPx;
+  if(stdPx>2){
+    [g.lowPiv.y,g.upPiv.y].forEach(py=>add('line',{x1:frX,y1:py,x2:pivColX,y2:py,stroke:'#7a5c00','stroke-width':4}));
+    add('line',{x1:pivColX,y1:g.lowPiv.y+16,x2:frX,y2:g.lowPiv.y+16,stroke:'#9a7400','stroke-width':1});
+    txt((pivColX+frX)/2,g.lowPiv.y+28,'standoff '+params.standoff.toFixed(1)+'"','#9a7400',9,'middle',700);
+  }
+  add('line',{x1:pivColX,y1:g.lowPiv.y,x2:pivColX,y2:g.upPiv.y,stroke:'#2c3e50','stroke-width':5});
+  txt(pivColX-6,(g.lowPiv.y+g.upPiv.y)/2,'ANCHOR','#2c3e50',10,'end',700);
+
+  // ANCHOR HEIGHT dimension (gold) from ground to lower pivot
+  add('line',{x1:pivColX-22,y1:GROUND_Y,x2:pivColX-22,y2:g.lowPiv.y,stroke:'#D4AF37','stroke-width':1.5});
+  add('line',{x1:pivColX-27,y1:GROUND_Y,x2:pivColX-17,y2:GROUND_Y,stroke:'#D4AF37','stroke-width':1.5});
+  add('line',{x1:pivColX-27,y1:g.lowPiv.y,x2:pivColX-17,y2:g.lowPiv.y,stroke:'#D4AF37','stroke-width':1.5});
+  txt(pivColX-30,(GROUND_Y+g.lowPiv.y)/2,'anchor '+params.pivH.toFixed(0)+'"','#9a7400',10,'end',700);
+
+  // arms
+  add('line',{x1:g.lowPiv.x,y1:g.lowPiv.y,x2:g.lowTip.x,y2:g.lowTip.y,stroke:'#9aa6b2','stroke-width':7,'stroke-linecap':'round'});
+  add('line',{x1:g.upPiv.x,y1:g.upPiv.y,x2:g.upTip.x,y2:g.upTip.y,stroke:'#9aa6b2','stroke-width':7,'stroke-linecap':'round'});
+  [g.lowPiv,g.upPiv].forEach(p=>add('circle',{cx:p.x,cy:p.y,r:5,fill:'#1f3a5f'}));
+
+  // cradle (right triangle), upright
+  add('line',{x1:g.upTip.x,y1:g.upTip.y,x2:g.lowTip.x,y2:g.lowTip.y,stroke:'#64b5f6','stroke-width':6,'stroke-linecap':'round'});
+  const seatEnd={x:g.lowTip.x-(r+2)*PXPERIN,y:g.lowTip.y};
+  add('line',{x1:g.lowTip.x,y1:g.lowTip.y,x2:seatEnd.x,y2:seatEnd.y,stroke:'#64b5f6','stroke-width':6,'stroke-linecap':'round'});
+  add('line',{x1:g.upTip.x,y1:g.upTip.y,x2:seatEnd.x,y2:seatEnd.y,stroke:'#64b5f6','stroke-width':2.5,'opacity':.6});
+
+  // CRADLE BASE height dimension (blue) from ground up to the seat (lowTip)
+  const cbx=seatEnd.x-10;
+  add('line',{x1:cbx,y1:GROUND_Y,x2:cbx,y2:g.lowTip.y,stroke:'#64b5f6','stroke-width':1.5});
+  add('line',{x1:cbx-5,y1:GROUND_Y,x2:cbx+5,y2:GROUND_Y,stroke:'#64b5f6','stroke-width':1.5});
+  add('line',{x1:cbx-5,y1:g.lowTip.y,x2:cbx+5,y2:g.lowTip.y,stroke:'#64b5f6','stroke-width':1.5});
+  const cradleBase=(GROUND_Y-g.lowTip.y)/PXPERIN;
+  txt(cbx-8,(GROUND_Y+g.lowTip.y)/2,'cradle base '+cradleBase.toFixed(0)+'"','#2a6fb0',10,'end',700);
+
+  const bike=drawBike(g);
+
+  // rope
+  add('line',{x1:apex.x,y1:apex.y,x2:g.upTip.x,y2:g.upTip.y,stroke:'#c0392b','stroke-width':2,'stroke-dasharray':'5 4'});
+
+  // phase
+  if(theta<=LOAD_T+1){
+    txt(bike.rw.x,GROUND_Y-4,'rear wheel ON GROUND (0")','#2e7d32',11,'middle',700);
+    txt(g.fw.x-r*PXPERIN-8,g.fw.y,'owner lifts front wheel into cradle','#2e7d32',11,'end',700);
+  } else if(bike.rearGrounded){
+    txt(bike.rw.x,GROUND_Y-4,'rear still grounded','#2e7d32',10,'middle',600);
+  } else {
+    txt(bike.rw.x+r*PXPERIN+4,bike.rw.y,'rear lifted off','#b8860b',10,'start',700);
+  }
+  if(theta>=RAISE_T-1){
+    add('circle',{cx:g.lowPiv.x-6,cy:g.lowPiv.y-8,r:5,fill:'#c0392b',stroke:'#000'});
+    txt(g.lowPiv.x-12,g.lowPiv.y-14,'PIN','#c0392b',10,'end',700);
+  }
+  // live clearances
+  const fwTop=(GROUND_Y-bike.fw.y)/PXPERIN + r;
+  const rwBot=(GROUND_Y-bike.rw.y)/PXPERIN - r;
+  const roofClr=ROOF-fwTop;
+  txt(bike.fw.x,bike.fw.y-r*PXPERIN-6,(roofClr>=0?'roof +':'OVER ')+roofClr.toFixed(0)+'"',roofClr>=0?'#2e7d32':'#c0392b',10,'middle',700);
+  txt(bike.rw.x+r*PXPERIN+4,bike.rw.y,'rear '+rwBot.toFixed(0)+'"',rwBot>=0?'#2e7d32':'#c0392b',10,'start',700);
+
+  txt(20,wy(ROOF)+34,'Load grounded → sweep up → stow vertical. Cradle stays upright (parallel arms).','#1f3a5f',11,'start',600);
+  updateCradlePanel();
+}
+
+function seatAt(t){return params.pivH+params.arm*Math.sin(t*Math.PI/180);}
+function updateReadout(){
+  const r=params.wheelD/2;
+  // LOAD: cradle seat at load angle; front axle = seat + r; solve tilt with rear grounded
+  const loadSeat=seatAt(LOAD_T);
+  const frontAxleLoad=loadSeat+r;
+  let sLoad=(frontAxleLoad-r)/params.wbase;
+  const loadTilt = Math.abs(sLoad)<=1 ? Math.asin(sLoad)*180/Math.PI : 90;
+  const ownerLift=frontAxleLoad; // height owner raises the front axle to
+  // STOW
+  const stowSeat=seatAt(RAISE_T);
+  const fwTop=stowSeat+params.wheelD;
+  const frontAxleStow=stowSeat+r;
+  let sStow=(frontAxleStow-r)/params.wbase;
+  const stowRearGrounded = sStow<=1;
+  const rwBot = stowRearGrounded ? 0 : (frontAxleStow - params.wbase - r);
+  const roofClr=ROOF-fwTop;
+  el('readout').innerHTML=
+    `<b>LOAD:</b> owner lifts front wheel to <b>${ownerLift.toFixed(0)}"</b> (cradle at ${loadSeat.toFixed(0)}"), `+
+    `bike tilts to <b>${loadTilt.toFixed(0)}°</b>, <span class="ok">rear wheel stays at 0"</span>. `+
+    `<br><b>STOW (${params.stowAng}°):</b> front wheel top <b>${fwTop.toFixed(1)}"</b> `+
+    (roofClr>=0?`<span class="ok">(roof +${roofClr.toFixed(1)}")</span>`:`<span class="bad">(OVER ROOF ${(-roofClr).toFixed(1)}")</span>`)+`, `+
+    `rear wheel bottom <b>${rwBot.toFixed(1)}"</b> `+
+    (rwBot>0?`<span class="ok">(off ground)</span>`:`<span class="bad">(still grounded — raise anchor or arm)</span>`)+`. `+
+    `<br><span style="color:#c0392b">Raise the anchor and the cradle's load position rises — the bike pivots up more on its grounded rear wheel. Rear always stays at 0" at load by the rule.</span>`;
+}
+
+function recompute(){LOAD_T=params.loadAng;RAISE_T=params.stowAng;if(theta<LOAD_T)theta=LOAD_T;}
+function reset(){if(anim)cancelAnimationFrame(anim);recompute();theta=LOAD_T;
+  el('phaseTag').textContent='READY — bike on ground, load front wheel';el('phaseTag').style.background='#2e7d32';draw();updateReadout();}
+function run(){if(anim)cancelAnimationFrame(anim);recompute();theta=LOAD_T;
+  el('phaseTag').textContent='LIFTING…';el('phaseTag').style.background='#b8860b';
+  const sp=0.8;
+  (function step(){theta+=sp;
+    if(theta>=RAISE_T){theta=RAISE_T;draw();updateReadout();
+      el('phaseTag').textContent='STOW — insert pin';el('phaseTag').style.background='#1f6e1f';return;}
+    draw();updateReadout();anim=requestAnimationFrame(step);})();}
+
+// ---- live cradle-height panel ----
+function updateCradlePanel(){
+  const r=params.wheelD/2;
+  const loadSeat=seatAt(params.loadAng);
+  const stowSeat=seatAt(params.stowAng);
+  const curSeat=seatAt(theta);
+  const loadFrontAxle=loadSeat+r;
+  el('cradlePanel').innerHTML=
+    `<div style="margin-bottom:6px;"><b style="color:#D4AF37">ANCHOR (pivot) height:</b> `+
+    `<b style="color:#fff;font-size:15px;">${params.pivH.toFixed(1)}"</b> off ground `+
+    `&nbsp;(${params.standoff.toFixed(1)}" standoff, arm ${params.arm.toFixed(1)}")</div>`+
+    `<div><b style="color:#64b5f6">CRADLE BASE height (seat off ground):</b></div>`+
+    `<div style="margin-top:3px;">`+
+    `&bull; at LOAD (${params.loadAng}°): <b style="color:#5fd35f;font-size:15px;">${loadSeat.toFixed(1)}"</b> `+
+    `&nbsp;(owner lifts front wheel axle to ${loadFrontAxle.toFixed(1)}")<br>`+
+    `&bull; at STOW (${params.stowAng}°): <b style="color:#D4AF37;font-size:15px;">${stowSeat.toFixed(1)}"</b><br>`+
+    `&bull; current frame: <b style="color:#fff;">${curSeat.toFixed(1)}"</b></div>`;
+}
+
+// ---- full configuration validation ----
+function validate(){
+  const r=params.wheelD/2;
+  const checks=[];
+  const loadSeat=seatAt(params.loadAng);
+  const stowSeat=seatAt(params.stowAng);
+  const loadFrontAxle=loadSeat+r;
+  const stowFrontAxle=stowSeat+r;
+  const fwTop=stowSeat+params.wheelD;
+
+  // 1. Load reachable with rear grounded
+  const sLoad=(loadFrontAxle-r)/params.wbase;
+  if(loadFrontAxle < r-0.5){
+    checks.push([false,`Load cradle (${loadSeat.toFixed(1)}") is below the grounded front wheel (${r.toFixed(1)}"). Bike can't reach it.`]);
+  } else if(sLoad>1){
+    checks.push([false,`Load cradle too high (${loadFrontAxle.toFixed(1)}") — exceeds rear-grounded reach of ${(r+params.wbase).toFixed(1)}". Rear can't stay on ground.`]);
+  } else {
+    const lt=Math.asin(sLoad)*180/Math.PI;
+    checks.push([true,`Load reachable: bike tilts ${lt.toFixed(0)}°, rear stays at 0". OK.`]);
+  }
+
+  // 2. Owner lift height comfortable
+  if(loadFrontAxle<=42){
+    checks.push([true,`Owner lifts front wheel to ${loadFrontAxle.toFixed(0)}" — comfortable.`]);
+  } else if(loadFrontAxle<=52){
+    checks.push([true,`Owner lifts front wheel to ${loadFrontAxle.toFixed(0)}" — doable but high.`]);
+  } else {
+    checks.push([false,`Owner must lift front wheel to ${loadFrontAxle.toFixed(0)}" — too high to lift comfortably. Lower anchor or steepen load angle.`]);
+  }
+
+  // 3. Roof clearance at stow
+  const roofClr=ROOF-fwTop;
+  if(roofClr>=2){
+    checks.push([true,`Front wheel top ${fwTop.toFixed(1)}" — clears roof by ${roofClr.toFixed(1)}". OK.`]);
+  } else if(roofClr>=0){
+    checks.push([true,`Front wheel top ${fwTop.toFixed(1)}" — only ${roofClr.toFixed(1)}" under roof. Tight.`]);
+  } else {
+    checks.push([false,`Front wheel top ${fwTop.toFixed(1)}" — OVER roof by ${(-roofClr).toFixed(1)}". Shorten arm or lower anchor.`]);
+  }
+
+  // 4. Rear wheel off ground at stow
+  const sStow=(stowFrontAxle-r)/params.wbase;
+  const stowGrounded = sStow<=1;
+  const rwBot = stowGrounded ? 0 : (stowFrontAxle - params.wbase - r);
+  if(!stowGrounded && rwBot>=2){
+    checks.push([true,`Rear wheel ${rwBot.toFixed(1)}" off ground at stow — clear for transport. OK.`]);
+  } else if(!stowGrounded){
+    checks.push([true,`Rear wheel ${rwBot.toFixed(1)}" off ground at stow — barely clear.`]);
+  } else {
+    checks.push([false,`Rear wheel still grounded at stow. Raise anchor or lengthen arm so the bike fully lifts.`]);
+  }
+
+  // 5. Bumper strike at load
+  const reachOut = params.standoff + params.arm*Math.cos(params.loadAng*Math.PI/180);
+  if(loadSeat < BUMPER+2 && reachOut < BUMPER_OUT+2){
+    checks.push([false,`At load the cradle (${loadSeat.toFixed(1)}", ${reachOut.toFixed(1)}" out) is in the bumper zone. Add standoff or raise anchor.`]);
+  } else {
+    checks.push([true,`Cradle clears the bumper at load (${reachOut.toFixed(1)}" out, ${loadSeat.toFixed(1)}" high). OK.`]);
+  }
+
+  // 6. Load cradle not below ground
+  if(loadSeat < -1){
+    checks.push([false,`Load cradle goes below ground (${loadSeat.toFixed(1)}"). Raise anchor or shorten arm.`]);
+  } else {
+    checks.push([true,`Load cradle above ground (${loadSeat.toFixed(1)}"). OK.`]);
+  }
+
+  // 7. Sweep sanity
+  if(params.stowAng<=params.loadAng+30){
+    checks.push([false,`Stow angle (${params.stowAng}°) too close to load angle (${params.loadAng}°) — not enough lift sweep.`]);
+  } else {
+    checks.push([true,`Sweep ${(params.stowAng-params.loadAng).toFixed(0)}° from load to stow. OK.`]);
+  }
+
+  const pass=checks.every(c=>c[0]);
+  let html=`<div style="background:${pass?'#163a1f':'#3a1616'};border:1px solid ${pass?'#2e7d32':'#c0392b'};`+
+    `border-radius:8px;padding:12px 16px;">`+
+    `<div style="font-size:15px;font-weight:700;color:${pass?'#5fd35f':'#ff6b6b'};margin-bottom:8px;">`+
+    `${pass?'\u2713 CONFIGURATION VALID \u2014 this will fit and work':'\u2717 CONFIGURATION HAS ISSUES \u2014 see below'}</div>`;
+  checks.forEach(c=>{
+    html+=`<div style="font-size:12.5px;margin:3px 0;color:${c[0]?'#cfe8cf':'#f3c0c0'};">`+
+      `${c[0]?'\u2713':'\u2717'} ${c[1]}</div>`;
+  });
+  html+=`<div style="font-size:11px;color:#9fb0c6;margin-top:8px;">`+
+    `Config: anchor ${params.pivH}" high / ${params.standoff}" standoff, arm ${params.arm}", `+
+    `load ${params.loadAng}\u00b0, stow ${params.stowAng}\u00b0, wheelbase ${params.wbase}", wheel ${params.wheelD}".</div></div>`;
+  el('validation').innerHTML=html;
+}
+
+['armLen','pivHt','standoff','loadAng','stowAng','armSpc','wheelD','wbase'].forEach(id=>{
+  el(id).addEventListener('input',()=>{
+    params.arm=parseFloat(el('armLen').value);params.pivH=parseFloat(el('pivHt').value);
+    params.standoff=parseFloat(el('standoff').value);params.loadAng=parseFloat(el('loadAng').value);
+    params.stowAng=parseFloat(el('stowAng').value);params.spc=parseFloat(el('armSpc').value);
+    params.wheelD=parseFloat(el('wheelD').value);params.wbase=parseFloat(el('wbase').value);
+    syncLabels();reset();
+    el('validation').innerHTML='';  // config changed; clear stale validation
+  });
+});
+el('playBtn').addEventListener('click',run);
+el('resetBtn').addEventListener('click',reset);
+el('validateBtn').addEventListener('click',validate);
+syncLabels();reset();
+</script>
+</body>
+</html>
